@@ -39,12 +39,11 @@ typedef struct ep_table_entry
 void print_endp(char *head, endp ep) {
   fprintf(stderr,head);
   // Use of "> 1000" used to catch cases of bad pointers
-  fprintf(stderr,"[%s.%s.%s addr 0x%lx COUNT %d INSTANCE %d(%d) c:0x%lx i:0x%lx f:0x%lx a:0x%lx]\n", 
+  fprintf(stderr,"[%s.%s.%s addr 0x%lx INSTANCE %d(%d) c:0x%lx i:0x%lx f:0x%lx a:0x%lx]\n", 
       ((ep->component)?ep->component->name:"null"),
       ((ep->interface)?ep->interface->name:"null"),
       ((ep->function)?ep->function->name:"null"),
       (unsigned long)ep, 
-      ep->MDW_hack_count, 
       ep->instance,
       ((ep->component)?ep->component->instance_number:-2),
       (unsigned long)ep->component, 
@@ -120,7 +119,6 @@ gnode fn_lookup(cgraph cg, data_declaration fndecl, int instance_num)
 {
   struct endp ep;
 
-  ep.MDW_hack_count = 777777; 
   ep.component = ep.interface = NULL;
   ep.function = fndecl;
   ep.args = NULL;

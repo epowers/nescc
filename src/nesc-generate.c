@@ -86,8 +86,13 @@ static void prt_vdecl_initializer_part(declaration d) {
       variable_decl vdd = CAST(variable_decl, vd);
       data_declaration vdecl = vdd->ddecl;
       expression initializer = vdd->arg1;
-      prt_expression(initializer, P_ASSIGN);
-      output(" /* %s */ ", vdecl->name);
+      if (initializer) {
+	prt_expression(initializer, P_ASSIGN);
+	output(" /* %s */ ", vdecl->name);
+      } else {
+	// XXX FIX THIS - should be error
+	output(" 0 /* XXX XXX YO! MDW! No initializer for %s! */", vdecl->name);
+      }
     }
   }
 }
@@ -220,8 +225,7 @@ void prt_nesc_abstract_declarations(nesc_declaration mod)
 	    if (!strcmp(vdecl->name, NESC_INSTANCENUM_LITERAL)) {
 	      output("  %d /* %s */, ", i, NESC_INSTANCENUM_LITERAL);
 	    } else {
-	      /* XXX Need to determine constant initializers */
-	      output(" 0 /* XXX PLACEHOLDER */, ");
+	      prt_vdecl_initializer_part(d);
 	    }
 	  }
 	}
@@ -1160,8 +1164,7 @@ static void prt_nido_initializations(nesc_declaration mod) {
 	    if (!strcmp(vdecl->name, NESC_INSTANCENUM_LITERAL)) {
 	      outputln("%d;", instance);
 	    } else {
-	      /* XXX Need to determine constant initializers */
-	      outputln("0 /* XXX PLACEHOLDER */;");
+	      prt_vdecl_initializer_part(d);
 	    }
 	  }
 	}

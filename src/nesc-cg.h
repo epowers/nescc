@@ -28,7 +28,6 @@ struct endp
 		      constant_integral(e->cst) for all expressions e in args
 		   */
   int instance;
-  int MDW_hack_count;
 };
 
 typedef struct endp *endp;

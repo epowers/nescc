@@ -274,45 +274,74 @@ static void check_generic_arguments(expression args, typelist gparms)
     error_with_location(args->location, "too few arguments");
 }
 
-static void check_abstract_parameters(expression args, typelist aparms)
-{
+static void check_abstract_parameters(expression args, declaration aparms) {
   expression arg;
-  typelist_scanner scan_aparms;
+  declaration aparm;
+  data_decl dd;
+  variable_decl vd;
   type aparm_type;
 
-  typelist_scan(aparms, &scan_aparms);
-  aparm_type = typelist_next(&scan_aparms);
+  // Start head of aparms list, skipping _INSTANCENUM
+  assert(aparms != NULL);
+  if (aparms->next == NULL && args != NULL) {
+    error_with_location(args->location, "too few initialization parameters for abstract component");
+  }
+  aparm = CAST(declaration, aparms->next);
+  assert(is_data_decl(aparm));
+  dd = CAST(data_decl, aparm);
+  vd = CAST(variable_decl, dd->decls);
+  aparm_type = vd->ddecl->type;
   if (!aparm_type) {
     error("abstract component does not have _INSTANCENUM variable? This is a bug - contact mdw@cs.berkeley.edu");
     return;
   }
 
-  scan_expression (arg, args)
-    {
-      location l = arg->location;
-      aparm_type = typelist_next(&scan_aparms);
+  scan_expression(arg, args) {
+    fprintf(stderr, "MDW: check_abstract_parameters: aparm %s\n", vd->ddecl->name);
 
-      if (!aparm_type)
-	{
-	  error_with_location(l, "too many arguments");
-	  return;
-	}
-      else 
-	{
-	  if (!arg->cst || !constant_integral(arg->cst))
-	    error_with_location(l, "constant expression expected");
-	  else
-	    {
-	      if (!cval_inrange(arg->cst->cval, aparm_type))
-		error_with_location(l, "constant out of range for argument type");
-	    }
-	}
+    // XXX: Should fold constants here
+    if (!arg->cst || !constant_integral(arg->cst)) {
+      error_with_location(arg->location, "constant expression expected");
+    } else {
+      if (!cval_inrange(arg->cst->cval, aparm_type))
+	error_with_location(arg->location, "constant out of range for argument type");
     }
-  if (typelist_next(&scan_aparms))
-    error_with_location(args->location, "too few initialization paramaters for abstract component");
-}
 
-static int MDW_LEP_COUNT = 0;
+    // Now, propagate value into vd's initializer
+    vd->arg1 = arg;
+    //vd->arg1 = new_expression(parse_region, arg->location);
+    //vd->arg1->type = aparm_type;
+    //vd->arg1->lvalue = FALSE;
+    //vd->arg1->side_effects = FALSE;
+    //vd->arg1->cst = arg->cst;
+    //vd->arg1->bitfield = FALSE;
+    //vd->arg1->isregister = FALSE;
+    //vd->arg1->static_address = FALSE;
+
+    // Next aparms entry
+    aparm = CAST(declaration, aparm->next);
+    if (aparm == NULL) {
+      if (arg->next != NULL) {
+	error_with_location(args->location, "too few initialization parameters for abstract component");
+      }
+    } else {
+      assert(is_data_decl(aparm));
+      dd = CAST(data_decl, aparm);
+      vd = CAST(variable_decl, dd->decls);
+      aparm_type = vd->ddecl->type;
+      if (!aparm_type) {
+	error_with_location(arg->location, "too many arguments");
+	return;
+      }
+    }
+  }
+
+  if (aparm) {
+    error_with_location(args->location, "too few initialization parameters for abstract component");
+  }
+
+
+}
 
 static bool lookup_endpoint(nesc_configuration_instance cinst, endpoint ep, endp lep)
 {
@@ -323,7 +352,6 @@ static bool lookup_endpoint(nesc_configuration_instance cinst, endpoint ep, endp
   // The default instance is the instance number of the enclosing configuration 
   lep->instance = cinst->instance_number;
   lep->args = NULL;
-  lep->MDW_hack_count = MDW_LEP_COUNT; MDW_LEP_COUNT++;
 
   scan_parameterised_identifier (pid, ep->ids)
     {
@@ -386,7 +414,7 @@ static bool lookup_endpoint(nesc_configuration_instance cinst, endpoint ep, endp
 
 	      // If wiring to a static interface, instance is -1
 	      if (d->static_interface) {
-		fprintf(stderr,"MDW: lookup_endpoint: interface is static (0x%lx)\n", d->interface);
+		fprintf(stderr,"MDW: lookup_endpoint: interface is static (0x%lx)\n", (unsigned long)d->interface);
 		lep->instance = -1;
 	      }
 
@@ -695,7 +723,7 @@ static void require_components(region r, configuration c, nesc_configuration_ins
 	/* Check abstract parameters */
 	if (comp->args) {
 	  fprintf(stderr,"MDW: checking abstract parameters for %s\n", comp->cdecl->name);
-	  check_abstract_parameters(comp->args, comp->cdecl->abs_param_list);
+	  check_abstract_parameters(comp->args, CAST(component, comp->cdecl->ast)->abs_param_list);
 	}                        
       } else {
 	comp->instance_number = instance_number = -1; // Indicates not an abstract component
