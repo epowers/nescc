@@ -57,92 +57,29 @@ Boston, MA 02111-1307, USA.  */
 static FILE *outfile = NULL;
 static region conc_region = NULL;
 
-static inline void check_print_func_args(function_decl fd, data_decl dd, variable_decl vd,
-                                         function_declarator *fdr, data_declaration *ddecl) {
-  if( fd ) {
-    assert(dd==NULL);
-    assert(vd==NULL);
-    if(fdr) *fdr = CAST(function_declarator, fd->fdeclarator);
-    if(ddecl) *ddecl = fd->ddecl;
-  }
-  else {
-    assert(fd==NULL);
-    //assert(dd);    
-    assert(vd);
-    if (is_function_declarator((ast_generic)vd->declarator)) {
-      if(fdr) *fdr = CAST(function_declarator, vd->declarator);
-      if(ddecl) *ddecl = vd->ddecl;
+#undef SEPARATE_CONTAINER
+
+static void print_ddecl(data_declaration ddecl)
+{
+  psd_options opts = psd_print_default;
+
+#ifdef SEPARATE_CONTAINER
+  opts |= psd_skip_container;
+#endif
+
+  if (is_function_decl(ddecl->ast))
+    {
+      function_decl d = CAST(function_decl, ddecl->ast);
+
+      prt_declarator(d->declarator, d->modifiers, d->attributes, ddecl, opts);
     }
-    // Chase down pointers if necessary.
-    else if (is_pointer_declarator((ast_generic)vd->declarator)) {
-      function_declarator fdcl = get_fdeclarator(vd->declarator);
-      if(fdr) *fdr = fdcl;
-      if(ddecl) *ddecl = vd->ddecl;
+  else 
+    {
+      variable_decl d = CAST(variable_decl, ddecl->ast);
+
+      prt_declarator(d->declarator, NULL, d->attributes, ddecl, opts);
     }
-    else {
-      if(ddecl) *ddecl = vd->ddecl;
-    }
-  }
 }
-
-/**
- * print function return type & modifiers
- **/
-static void print_func_return(function_decl fd, data_decl dd, variable_decl vd) 
-{
-  check_print_func_args(fd, dd, vd, NULL, NULL);
-  if(fd) {
-    prt_declarator(NULL, fd->modifiers, fd->attributes, fd->ddecl, 0);//psd_skip_container);
-  } else {
-    // FIXME: reinstate this?
-    //prt_type_elements(dd->modifiers, pte_skip_command_event); 
-  }
-}
-
-/**
- * print function name
- **/
-static void print_func_name(function_decl fd, data_decl dd, variable_decl vd) 
-{
-  function_declarator fdr;
-  data_declaration ddecl; 
-
-  check_print_func_args(fd, dd, vd, &fdr, &ddecl);
-  prt_simple_declarator(fdr->declarator, ddecl, /*psd_skip_container |*/ psd_need_paren_for_star | psd_need_paren_for_qual);
-  
-}
-
-/**
- * print function arguments
- **/
-// FIXME: this should allow an option to print only arg types, and not
-// names - necessary to canonicalize anchors and hrefs.
-static void print_func_args(function_decl fd, data_decl dd, variable_decl vd) 
-{
-  function_declarator fdr;
-  data_declaration ddecl; 
-
-  check_print_func_args(fd, dd, vd, &fdr, &ddecl);
-  prt_parameters(fdr->gparms ? fdr->gparms :
-                 ddecl ? ddecl_get_gparms(ddecl) : NULL,
-                 fdr->parms,
-                 0);//psd_skip_container);
-  
-}
-
-
-/**
- * print the entire header for a function - return name(args)
- **/
-static void print_function_header(function_decl fd, data_decl dd, variable_decl vd) 
-{
-  print_func_return(fd, dd, vd);
-  print_func_name(fd, dd, vd);
-  print_func_args(fd, dd, vd);
-}
-
-
-
 
 
 
@@ -212,17 +149,10 @@ static int mark_functions(gnode parent, entry_point_type type, int indent,
 
   // debugging output
   fprintf(outfile, "%*s",indent,"");
-  if( is_function_decl(fn->ast) )
-    print_function_header(CAST(function_decl, fn->ast),NULL,NULL);
-  else if( is_variable_decl(fn->ast) )
-    print_function_header(NULL, NULL, CAST(variable_decl, fn->ast));
-  else {
-    fprintf(outfile,"************** UNKNOWN AST\n");
-    AST_print(CAST(node,fn->ast));
-    fprintf(outfile,"**************\n");
-    return 0;
-  }
+  print_ddecl(fn);
+#ifdef SEPARATE_CONTAINER
   fprintf(outfile," --- %s", fn->container ? fn->container->name : "null");
+#endif
   if( !iscall ) {
     fprintf(outfile, "  (ref only)");
     if( fn->definition ) {
