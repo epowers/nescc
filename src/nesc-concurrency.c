@@ -224,6 +224,17 @@ static void print_called_functions(enum contexts context,
       return;
     }
 
+  if (fn->checked_contexts & context)
+    {
+      /* We've already seen this node in this context. Ignore it.
+	 (If not, we risk the infamous context-sensitive exponential
+	 blowup) */
+      conc_debug("--already seen in context %d\n", context);
+      pop_f();
+      return;
+    }
+  fn->checked_contexts |= context;
+
   conc_debug("\n");
   
   // error, if this node has already been seen
