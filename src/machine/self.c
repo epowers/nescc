@@ -8,7 +8,7 @@ typedef int __attribute__ ((mode(__HI__))) myint2;
 typedef int __attribute__ ((mode(__SI__))) myint4;
 typedef int __attribute__ ((mode(__DI__))) myint8;
 
-machine_spec self_machine = {
+static machine_spec self_machine = {
   "pc",
   TRUE				/* PCC_BITFIELD_TYPE_MATTERS */,
 				/* (should come from configure) */

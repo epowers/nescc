@@ -1,5 +1,5 @@
 /* Basic pointer sizes and alignments for the TI MSP430 */
-machine_spec msp430_machine = {
+static machine_spec msp430_machine = {
   "msp430",
   FALSE				/* PCC_BITFIELD_TYPE_MATTERS */,
   { 2, 2 },			/* pointer type */

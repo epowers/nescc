@@ -1,5 +1,5 @@
 /* Basic pointer sizes and alignments for the AVR */
-machine_spec avr_machine = {
+static machine_spec avr_machine = {
   "avr",
   FALSE				/* PCC_BITFIELD_TYPE_MATTERS */,
   { 2, 1 },			/* pointer type */
