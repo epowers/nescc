@@ -71,7 +71,11 @@ void handle_decl_attribute(attribute attr, data_declaration ddecl)
   else if (!strcmp(name, "spontaneous"))
     {
       if (ddecl->kind == decl_function && ddecl->ftype == function_normal)
-	ddecl->spontaneous = c_call_nonatomic;
+	{
+	  /* The test avoids overriding the effect of signal */
+	  if (!ddecl->spontaneous)
+	    ddecl->spontaneous = c_call_nonatomic;
+	}
       else
 	error_with_location(attr->location, "`spontaneous' attribute is for external functions only");
     }
