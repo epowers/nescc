@@ -1,7 +1,7 @@
 Summary: galsC compiler 
 Name: galsc
 Version: 0.1.0
-Release: 0w
+Release: 0
 License: GNU GPL Version 2
 Packager: Palo Alto Research Center
 Group: Development/Tools
