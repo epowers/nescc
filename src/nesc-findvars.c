@@ -391,31 +391,9 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write,
   if (!expr)
     return;
 
-  if (is_string(expr))
-    return;
-
   /* A read of an array-type expression actually takes the address of the container */
   if (is_read && type_array(expr->type) && !addressof_expr)
     addressof_expr = expr;
-
-  // skip constant expressions that are not having their address taken
-  if (expr->cst && !addressof_expr) {
-#if 0
-    printf("SKIPPING CST: ");
-    set_unparse_outfile(stdout);
-    prt_expression(expr,TRUE);
-    printf("    %s:%ld\n", expr->location->filename, expr->location->lineno);
-#endif
-    return;
-  }
-#if 0
-  if(expr->cst) {
-    printf("KEEPING CST: ");
-    set_unparse_outfile(stdout);
-    prt_expression(expr,TRUE);
-    printf("    %s:%ld  (%s)\n", expr->location->filename, expr->location->lineno, type_name(fv_region,expr->type));
-  }
-#endif
 
   switch (expr->kind)
     {
@@ -628,6 +606,16 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write,
     }
 
     default:
+      if(expr->cst) {
+#if 0
+        printf("SKIPPING CST: ");
+        set_unparse_outfile(stdout);
+        prt_expression(expr,TRUE);
+        printf("\n");
+#endif
+        return;
+      }
+
       assert(0);
       break;
     }
@@ -660,14 +648,9 @@ static void find_statement_vars(statement stmt, bool is_read, expression address
 	  {
 	    variable_decl vd;
 
-	    scan_variable_decl (vd, CAST(variable_decl, CAST(data_decl, d)->decls)) {
-	      if (vd->ddecl->kind == decl_variable && vd->ddecl->vtype != variable_static) {
-                if( type_pointer(vd->declared_type) || type_array(vd->declared_type) )
-                  find_expression_vars(vd->arg1, TRUE, FALSE, vd->arg1);
-                else
-                  find_expression_vars(vd->arg1, TRUE, FALSE, NULL);
-              }
-            }
+	    scan_variable_decl (vd, CAST(variable_decl, CAST(data_decl, d)->decls))
+	      if (vd->ddecl->kind == decl_variable && vd->ddecl->vtype != variable_static)
+                find_expression_vars(vd->arg1, TRUE, FALSE, NULL);
 	  }
 
       // pass the is_read and addressof_expr flags on to the last statement
