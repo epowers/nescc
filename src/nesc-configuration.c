@@ -357,17 +357,19 @@ static bool resolve_abstract_parameters(declaration parent_aparms, nesc_configur
   fprintf(stderr,"\nMDW: resolve_abstract_parameters: comp %s instance %d\n", cref->comp->cdecl->name, cref->instance_number);
   fprintf(stderr,"\nMDW: aparms ptr is 0x%lx\n", (unsigned long)aparms);
 
-  // Start head of aparms list, skipping _INSTANCENUM
-  assert(aparms != NULL);
-  if (aparms->next == NULL && args != NULL) {
+  // Start head of aparms list, skipping _INSTANCENUM and _NUMINSTANCES
+  assert(aparms != NULL && aparms->next != NULL);
+  aparm = CAST(declaration, aparms->next->next);
+  if (aparm == NULL) {
     error_with_location(args->location, "too few initialization parameters for abstract component");
     return FALSE;
   }
-  aparm = CAST(declaration, aparms->next);
+
   assert(is_data_decl(aparm));
   dd = CAST(data_decl, aparm);
   vd = CAST(variable_decl, dd->decls);
   aparm_type = vd->ddecl->type;
+  fprintf(stderr,"MDW: resolve_abstract_parameters: aparm '%s'\n", vd->ddecl->name);
   if (!aparm_type) {
     error("abstract component does not have _INSTANCENUM variable? This is a bug - contact mdw@cs.berkeley.edu");
     return FALSE;
@@ -415,6 +417,7 @@ static bool resolve_abstract_parameters(declaration parent_aparms, nesc_configur
       dd = CAST(data_decl, aparm);
       vd = CAST(variable_decl, dd->decls);
       aparm_type = vd->ddecl->type;
+      fprintf(stderr,"MDW: resolve_abstract_parameters: aparm '%s'\n", vd->ddecl->name);
       if (!aparm_type) {
 	error_with_location(arg->location, "too many arguments");
 	return FALSE;
@@ -423,7 +426,7 @@ static bool resolve_abstract_parameters(declaration parent_aparms, nesc_configur
   }
 
   if (aparm) {
-    error_with_location(args->location, "too few initialization parameters for abstract component");
+    error_with_location(cref->comp->args->location, "too few initialization parameters for abstract component");
     return FALSE;
   }
 

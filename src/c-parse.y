@@ -476,20 +476,42 @@ abstract_param_decl:
 	'(' ')' 
 	{ 
 	  /* Add magic "_INSTANCENUM" to initialization parameters */
+	  data_decl dd;
 	  declarator d = make_identifier_declarator($1.location, 
 	    make_cstring(pr, "_INSTANCENUM", sizeof("_INSTANCENUM")));
 	  type_element elt = CAST(type_element, new_rid(pr, $1.location, RID_INT));
-	  declaration dl = declare_parameter(d, elt, NULL, FALSE);
-	  $$ = declaration_chain(dl, NULL);
+	  declaration dl1 = declare_parameter(d, elt, NULL, FALSE);
+	  declaration dl2;
+
+	  /* Add magic "_NUMINSTANCES" to initialization parameters */
+	  //d = make_identifier_declarator($1.location, 
+	  //  make_cstring(pr, "_NUMINSTANCES", sizeof("_NUMINSTANCES")));
+	  //elt = CAST(type_element, new_rid(pr, $1.location, RID_INT));
+	  //dl2 = declare_parameter(d, elt, NULL, FALSE);
+	  //dd = CAST(data_decl, dl2);
+	  //CAST(variable_decl, dd->decls)->ddecl->vtype = variable_static;
+	  //$$ = declaration_chain(dl1, declaration_chain(dl2, NULL));
+	  $$ = declaration_chain(dl1, NULL);
 	}
 	| '(' parms ')' 
 	{ 
 	  /* Add magic "_INSTANCENUM" to initialization parameters */
+	  data_decl dd;
 	  declarator d = make_identifier_declarator($1.location, 
 	    make_cstring(pr, "_INSTANCENUM", sizeof("_INSTANCENUM")));
 	  type_element elt = CAST(type_element, new_rid(pr, $1.location, RID_INT));
-	  declaration dl = declare_parameter(d, elt, NULL, FALSE);
-	  $$ = declaration_chain(dl, $2);
+	  declaration dl1 = declare_parameter(d, elt, NULL, FALSE);
+	  declaration dl2;
+
+	  /* Add magic "_NUMINSTANCES" to initialization parameters */
+	  //d = make_identifier_declarator($1.location, 
+	  //  make_cstring(pr, "_NUMINSTANCES", sizeof("_NUMINSTANCES")));
+	  //elt = CAST(type_element, new_rid(pr, $1.location, RID_INT));
+	  //dl2 = declare_parameter(d, elt, NULL, FALSE);
+	  //dd = CAST(data_decl, dl2);
+	  //CAST(variable_decl, dd->decls)->ddecl->vtype = variable_static;
+	  //$$ = declaration_chain(dl1, declaration_chain(dl2, $2));
+	  $$ = declaration_chain(dl1, NULL);
 	}
 	;
 
@@ -664,23 +686,23 @@ parameterised_identifier:
 	;
 
 
-imodule:  IMPLEMENTATION { $<u.env>$ = start_implementation(); } '{' extdefs '}' 
-		{ 
-                  /* Add magic "_NUMINSTANCES" to static variables */
-		  declaration dl;
-     	          declarator d = make_identifier_declarator($1.location, 
-	            make_cstring(pr, "_NUMINSTANCES", sizeof("_NUMINSTANCES")));
-	          type_element elt = CAST(type_element, new_rid(pr, $1.location, RID_INT));
-	          elt = type_element_chain(elt, CAST(type_element, new_rid(pr, $1.location, RID_STATIC)));
-	          //pushlevel(FALSE);
-//		  push_declspec_stack();
-//		  dd = make_data_decl(NULL, d);
-	          dl = start_decl(d, NULL, elt, 0, NULL);
-	          dl = finish_decl(dl, NULL);
-	          //poplevel();
-
-		  $$ = CAST(implementation, new_module(pr, $1.location, $<u.env>2, declaration_reverse($4))); 
-		} ;
+imodule:  IMPLEMENTATION 
+          { $<u.env>$ = start_implementation(); }
+	  {
+            /* Add magic "_NUMINSTANCES" to static variables */
+	    declaration dl, total_dl;
+     	    declarator d = make_identifier_declarator($1.location, 
+	    make_cstring(pr, "_NUMINSTANCES", sizeof("_NUMINSTANCES")));
+	    type_element elt = CAST(type_element, new_rid(pr, $1.location, RID_INT));
+	    elt = type_element_chain(elt, CAST(type_element, new_rid(pr, $1.location, RID_STATIC)));
+	    push_declspec_stack();
+	    dl = start_decl(d, NULL, elt, 0, NULL);
+	    dl = finish_decl(dl, NULL);
+	    $$ = make_data_decl(elt, dl);
+	  } 
+	  '{' extdefs '}' 
+	  { $$ = CAST(implementation, new_module(pr, $1.location, $<u.env>2, declaration_reverse(declaration_chain($<u.decl>3, $5)))); } 
+	  ;
 
 /* the reason for the strange actions in this rule
  is so that notype_initdecls when reached via datadef
@@ -834,7 +856,7 @@ unary_expr:
 			error("only commands can be called");
 		      break;
 		    case event_signal:
-		      if (!type_event(calltype))
+		      if (!type_event(calltype)) 
 			error("only events can be signaled");
 		      break;
 		    case post_task:

@@ -1184,6 +1184,26 @@ void prt_compound_expr(compound_expr e, int context_priority)
   output(")");
 }
 
+static bool prt_interface_deref_initargs(interface_deref id);
+static void prt_fncall_arguments(function_call e) {
+  bool started = FALSE;
+
+  output("(");
+
+  if (is_generic_call(e->arg1)) {
+    generic_call gc = CAST(generic_call, e->arg1);
+    prt_expressions(gc->arg1, P_CALL);
+    started = TRUE;
+
+  } else if (is_interface_deref(e->arg1)) {
+    interface_deref id = CAST(interface_deref, e->arg1);
+    started = prt_interface_deref_initargs(id);
+  }
+
+  prt_expressions(e->args, !started);
+  output(")");
+}
+
 void prt_function_call(function_call e, int context_priority)
 {
   switch (e->call_kind)
@@ -1208,22 +1228,7 @@ void prt_function_call(function_call e, int context_priority)
       else
 	{
 	  prt_expression(e->arg1, P_CALL);
-	  /* Generic calls have already started the argument list.
-	     See prt_generic_call */
-	  if (is_generic_call(e->arg1))
-	    prt_expressions(e->args, FALSE);
-
-	  else if (is_interface_deref(e->arg1) &&
-	      CAST(interface_deref, e->arg1)->ddecl->container &&
-	      CAST(interface_deref, e->arg1)->ddecl->container->is_abstract &&
-	      !(CAST(interface_deref, e->arg1)->ddecl->interface->static_interface)) {
-	    /* prt_interface_deref already started the argument list */
-	    prt_expressions(e->args, FALSE);
-	  } else {
-      	    output("(");
-	    prt_expressions(e->args, TRUE);
-	  }
-	  output(")");
+	  prt_fncall_arguments(e);
 	}
       break;
     }
@@ -1299,25 +1304,10 @@ void prt_instance_ref(instance_ref e, int context_priority)
   }
 }
 
-void prt_interface_deref(interface_deref e, int context_priority)
-{
+static bool prt_interface_deref_initargs(interface_deref e) {
   data_declaration decl = e->ddecl;
   instance_ref iref = NULL;
   bool is_abstract = FALSE;
-
-  fprintf(stderr,"MDW: prt_interface_deref: decl %s kind %d decl->interface %s kind %d static_interface %d\n", decl->name, decl->kind, decl->interface->name, decl->interface->kind, decl->interface->static_interface);
-
-  if (decl->kind == decl_function && decl->uncallable) {
-    if (is_instance_ref(e->arg1)) {
-      iref = CAST(instance_ref, e->arg1);
-      error_with_location(e->location, "%s.%s not connected (MDW: unparse.c 2)",
-	  iref->ddecl->name, e->cstring.data);
-    } else {
-      error_with_location(e->location, "%s.%s not connected (MDW: unparse.c 3)",
-	  CAST(identifier, e->arg1)->cstring.data,
-	  e->cstring.data);
-    }
-  } 
 
   if (decl->kind == decl_function && decl->container && decl->container->is_abstract && !decl->interface->static_interface) {
     is_abstract = TRUE;
@@ -1344,13 +1334,8 @@ void prt_interface_deref(interface_deref e, int context_priority)
     }
   }
 
-  prt_expression(e->arg1, P_CALL);
-  output(function_separator);
-  output_stripped_cstring(e->cstring);
-
   if (is_abstract && !decl->interface->static_interface) {
     // Calling an abstract function
-    output("(");
     if (iref != NULL) {
       output("&(%s$%s[", iref->ddecl->container->name, NESC_INSTANCEARR_LITERAL);
       // XXX MDW: If arg1 is cst, check if it's in range
@@ -1359,8 +1344,34 @@ void prt_interface_deref(interface_deref e, int context_priority)
     } else {
       output_thisptr(e->ddecl->container);
     }
+    return TRUE;
+  } else {
+    return FALSE;
   }
+}
 
+
+void prt_interface_deref(interface_deref e, int context_priority)
+{
+  data_declaration decl = e->ddecl;
+
+  fprintf(stderr,"MDW: prt_interface_deref: decl %s kind %d decl->interface %s kind %d static_interface %d\n", decl->name, decl->kind, decl->interface->name, decl->interface->kind, decl->interface->static_interface);
+
+  if (decl->kind == decl_function && decl->uncallable) {
+    if (is_instance_ref(e->arg1)) {
+      instance_ref iref = CAST(instance_ref, e->arg1);
+      error_with_location(e->location, "%s.%s not connected (MDW: unparse.c 2)",
+	  iref->ddecl->name, e->cstring.data);
+    } else {
+      error_with_location(e->location, "%s.%s not connected (MDW: unparse.c 3)",
+	  CAST(identifier, e->arg1)->cstring.data,
+	  e->cstring.data);
+    }
+  } 
+
+  prt_expression(e->arg1, P_CALL);
+  output(function_separator);
+  output_stripped_cstring(e->cstring);
 }
 
 void prt_unary(unary e, int context_priority)

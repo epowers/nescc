@@ -2565,11 +2565,24 @@ declaration start_decl(declarator d, asm_stmt astmt, type_element elements,
 	      initialised = 0;
 	    }
 #endif
+
+
+
 	  tempdecl.kind = decl_variable;
 	  tempdecl.vtype =
 	    class == RID_REGISTER ? variable_register :
 	    class == RID_STATIC ? variable_static :
 	    variable_normal;
+
+	  fprintf(stderr,"MDW: start_decl: variable '%s' vtype %d current.env 0x%lx\n",
+	      printname, tempdecl.vtype, (unsigned long)current.env);
+
+	  // XXX MDW
+	  if (class == RID_STATIC) {
+	    fprintf(stderr,"MDW: Declaring variable '%s' as variable_static\n",
+		printname);
+	  }
+
 	  tempdecl.isfilescoperef = extern_ref;
 	  if (!extern_ref)
 	    tempdecl.definition = tempdecl.ast;

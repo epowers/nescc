@@ -80,7 +80,11 @@ static void set_aparm_types(declaration aparms)
     assert(is_data_decl(aparm));
     ad = CAST(data_decl, aparm);
     av = CAST(variable_decl, ad->decls);
-    av->ddecl->vtype = variable_absparam;
+    fprintf(stderr,"MDW: set_aparm_types: '%s' (kind %d) in aparm list\n", av->ddecl->name, av->ddecl->vtype);
+    if (av->ddecl->vtype != variable_static) {
+      // For _NUMINSTANCES
+      av->ddecl->vtype = variable_absparam;
+    }
   }
 
 }

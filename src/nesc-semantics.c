@@ -311,6 +311,9 @@ bool is_module_variable(data_declaration ddecl)
 bool is_instance_variable(data_declaration ddecl) 
 {
 
+  fprintf(stderr,"MDW: is_instance_variable: '%s' vtype %d\n",
+      ddecl->name, ddecl->vtype);
+
   return ddecl->kind == decl_variable &&
     ddecl->Cname == FALSE &&
     /* instance-static variable */
@@ -334,19 +337,17 @@ int num_abstract_instances(data_declaration ddecl) {
 
 expression make_instance_ref(location loc, expression index, cstring field) 
 {
-  // XXX For now: Assume that 'field' is an instance variable
-  // For command/event/task, 'field' will be an interface_deref, so
-  // may want to have a separate function for processing those
-  // (Taking interface_deref as argument from c-parse.y)
   instance_ref result;
   data_declaration fdecl;
   cstring fieldstr = field;
 
   fdecl = lookup_id(fieldstr.data, FALSE);
   if (!fdecl) {
-    error("module has no instance variable named `%s'", fieldstr.data);
-    result->type = error_type;
-    return CAST(expression, result);
+    expression e;
+    error("module has no interface or instance variable named `%s'", fieldstr.data);
+    e = new_expression(parse_region, loc);
+    e->type = error_type;
+    return e;
   }
 
   if (fdecl->kind == decl_interface_ref) {

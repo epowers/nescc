@@ -45,6 +45,7 @@ static bool prt_vdecl_variable_part(declaration d) {
 
       // Suppress initializer when printing
       expression initializer = vdd->arg1;
+      if (vdecl->vtype == variable_static) return FALSE;
       if (initializer != NULL) has_initializer = TRUE;
       vdd->arg1 = NULL;
 
@@ -194,6 +195,7 @@ void prt_nesc_abstract_declarations(nesc_declaration mod)
     /* Instance parameters and magic variables need to go first, so 
      * we can initialize them. Only need this for first instance */
     scan_declaration(d, aplist) {
+      fprintf(stderr,"MDW: PNAD: aplist contains %s\n", CAST(variable_decl, CAST(data_decl, d)->decls)->ddecl->name);
       prt_vdecl_variable_part(d);
     }
 
@@ -714,10 +716,26 @@ void prt_nesc_called_function_headers(cgraph cg, nesc_declaration mod)
 
 void prt_toplevel_module_declarations(nesc_declaration mod) {
   /* Print toplevel decls that are not in the instance structure */
+  dd_list_pos ap_instance_list = dd_first(mod->abs_parms);
+  declaration aplist = DD_GET(declaration, ap_instance_list);
   declaration dlist = CAST(module, mod->impl)->decls;
   declaration d;
 
   if (mod->is_abstract) {
+    scan_declaration (d, aplist) {
+      if (d->kind == kind_data_decl) {
+	data_decl dd = CAST(data_decl, d);
+	declaration vd;
+	scan_declaration (vd, dd->decls) {
+	  variable_decl vdd = CAST(variable_decl, vd);
+	  data_declaration vdecl = vdd->ddecl;
+	  if (!is_instance_variable(vdecl)) { 
+	    prt_data_decl(dd);
+	  }
+	}
+      }
+    }
+
     scan_declaration (d, dlist) {
       if (d->kind == kind_data_decl) {
 	data_decl dd = CAST(data_decl, d);
@@ -1018,7 +1036,8 @@ static void prt_nesc_function(data_declaration fn, endp ep)
   if (fn->definition && !fn->suppress_definition) {
     // Only emit one instance 
     if (!fn->container || !fn->container->is_abstract || 
-	fn->interface->static_interface || (ep->instance == 0)) {
+	(!fn->interface || fn->interface->static_interface) || 
+	(ep->instance == 0)) {
       fprintf(stderr, "   MDW: prt_function_body\n");
       prt_function_body(CAST(function_decl, fn->definition));
     }
@@ -1153,8 +1172,6 @@ static void prt_nido_initializations(nesc_declaration mod) {
   if (mod->is_abstract) {
     dd_list ap_instance_list = mod->abs_parms;
     declaration apdecl;
-
-    //declaration aplist = DD_GET(declaration, ap_instance_list);
 
     for (instance = 0; instance < mod->abstract_instance_count; instance++) {
       outputln("/* Module %s instance %d */", mod->name, instance);
