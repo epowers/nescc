@@ -66,8 +66,6 @@ Boston, MA 02111-1307, USA.  */
 #include "graph.h"
 #include "nesc-env.h"
 #include "regions.h"
-#include "unparse.h"
-#include "errors.h"
 
 
 
@@ -1410,26 +1408,18 @@ static int iface_graph_compare(void *entry1, void *entry2)
   return !ret;
 }
 
-static inline unsigned long string_hash(unsigned const char *name) {
-  unsigned long code = 0;
-
-  assert(name);
-  while (*name) {
-    code = ((code << 1) + *name) ^ 0x57954317;
-    name++;
-  }
-
-  return code;
-} 
-
 static unsigned long iface_graph_hash(void *entry) 
 {
   unsigned long rhash, phash, ihash;
   iface_graph_entry e = (iface_graph_entry) entry;
 
-  rhash = string_hash( iface_node_name(e->req) );
-  phash = string_hash( iface_node_name(e->prov) );
-  ihash = string_hash( e->req->interface->name );
+  assert( iface_node_name(e->req) );
+  assert( iface_node_name(e->prov) );
+  assert( e->req->interface->name );
+
+  rhash = hashStr( iface_node_name(e->req) );
+  phash = hashStr( iface_node_name(e->prov) );
+  ihash = hashStr( e->req->interface->name );
 
   return rhash ^ (phash<<1) ^ ihash;
 }

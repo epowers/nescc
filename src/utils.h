@@ -47,4 +47,28 @@ int wcs_mb_size(const wchar_t *wstr);
      or -1 if wstr cannot be converted
 */
 
+
+
+/* a safe version of strcmp, that does something reasonable for NULL args */
+#ifdef STRCMP_HANDLES_NULL
+#define safe_strcmp(a,b)  strcmp((a),(b))
+#else
+#define safe_strcmp(a,b)  (((a)==NULL || (b)==NULL) ? \
+    ((a)==(b) ? 0 : ((a)==NULL ? 1 : -1)) : \
+    strcmp((a),(b)))
+#endif
+
+
+/* some basic hash functions, that are re-used in a number of places */
+
+/* The number of non-significant low-order bits in pointer addresses
+   (typically log2 of the alignment of allocations) */
+#define ALIGNMENT_BITS 3
+
+inline unsigned long hashPtr(const void *p);
+inline int comparePtr(const void *entry1, const void *entry2);
+
+inline unsigned long hashStr(unsigned const char *s);
+
+
 #endif

@@ -18,6 +18,7 @@ Boston, MA 02111-1307, USA.  */
 /* A connection graph */
 #include "parser.h"
 #include "nesc-cg.h"
+#include "utils.h"
 
 struct cgraph
 {
@@ -31,21 +32,12 @@ typedef struct ep_table_entry
   gnode n;
 } *ep_table_entry;
 
-/* The number of non-significant low-order bits in pointer addresses
-   (typically log2 of the alignment of allocations) */
-#define ALIGNMENT_BITS 3
-
 static int ep_compare(void *e1, void *e2)
 {
   ep_table_entry ep1 = e1, ep2 = e2;
 
   return ep1->ep.function == ep2->ep.function &&
     ep1->ep.args == ep2->ep.args;
-}
-
-static unsigned long hashPtr(void *p) 
-{
-  return (unsigned long)p >> ALIGNMENT_BITS;
 }
 
 static unsigned long ep_hash(void *e)
