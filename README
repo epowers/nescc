@@ -6,6 +6,20 @@ the assembler is installed in ncc's support directory (usually
 /usr/local/lib/ncc) based on your installed version of avr-gcc (2.11.2 for
 avr-gcc up to 3.1.1, 2.13.2.1 for later avr-gcc's).
 
+Changes in nesC 1.1.2
+=====================
+- Recognise the gcc noinline attribute and don't automatically inline such
+  functions (patch contributed by Klaus Madsen, nesc@hjernemadsen.org)
+- Mac OS X support; avr-gcc not needed when compiling nesC
+- Support gcc's -I- idiom to prevent searching current dir for components,
+  interfaces, etc.
+- Misc bug fixes (in particular, work around latest-cygwin weirdness which
+  causes file corruption)
+- 64-bit platform support: compile with -DLARGE_ADDRESSES, and 
+  edit the MEMSLICE1 constant in src/libcompat.regions.c to be the number
+  of unused high-order bits on your platform
+- ncg supports C (note that there's no C mig support yet)
+
 Changes in nesC 1.1.1
 =====================
 - Support for platforms and sensorboards in directories other than 
@@ -38,7 +52,7 @@ Changes in nesC 1.1
     commands and events)
   o automatic combining of results of multiply-wired functions
   o initialisers now supported on module variables
-  o uniqueMax(<string>) function to complement unique(<string>), returning
+  o uniqueCount(<string>) function to complement unique(<string>), returning
     the number of uses of the latter (useful for dimensioning arrays...)
 
 - new nesC warning flags/changes:
