@@ -1,4 +1,4 @@
-// $Id: Xvariable_ref.java,v 1.1 2004/12/23 00:14:59 idgay Exp $
+// $Id: Xvariable_ref.java,v 1.2 2004/12/24 00:49:06 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -15,7 +15,7 @@ import org.xml.sax.*;
 
 public class Xvariable_ref extends NDElement
 {
-    public NDElement start(Attributes attrs) {
-	return DataDefinition.find(attrs, Xvariable.class);
+    public NDElement start(NDReader reader, Attributes attrs) {
+	return DataDefinition.find(attrs, "variable");
     }
 }

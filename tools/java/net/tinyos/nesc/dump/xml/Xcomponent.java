@@ -1,4 +1,4 @@
-// $Id: Xfunction_ref.java,v 1.2 2004/12/24 00:49:06 idgay Exp $
+// $Id: Xcomponent.java,v 1.1 2004/12/24 00:49:06 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,9 +13,13 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
-public class Xfunction_ref extends NDElement
+public class Xcomponent extends NescDefinition
 {
-    public NDElement start(NDReader reader, Attributes attrs) {
-	return DataDefinition.find(attrs, "function");
+    boolean instance;
+
+    public NDElement start(Attributes attrs) {
+	Xinterface me = (Xinterface)define(attrs);
+	me.provided = attrs.getValue("provided").equals("1");
+	return me;
     }
 }

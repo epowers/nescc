@@ -1,4 +1,4 @@
-// $Id: NDReader.java,v 1.1 2004/12/23 00:14:59 idgay Exp $
+// $Id: NDReader.java,v 1.2 2004/12/24 00:48:59 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -67,7 +67,7 @@ public class NDReader extends DefaultHandler
 	return (NDElement)Class.forName(pkg + "." + name).newInstance();
     }
 
-    protected NDElement makeElement(String name) throws Exception {
+    public NDElement makeElement(String name) throws Exception {
 	name = "X" + name.replace('-', '_');
 	if (userPkg != null) {
 	    try {
@@ -89,7 +89,7 @@ public class NDReader extends DefaultHandler
 	    System.err.println("element " + localName + " not supported. " + e);
 	}
 	if (element != null)
-	    element = element.start(attrs);
+	    element = element.start(this, attrs);
 	activeElements.push(element);
     }
 

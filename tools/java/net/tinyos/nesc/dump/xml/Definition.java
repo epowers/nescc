@@ -1,4 +1,4 @@
-// $Id: Definition.java,v 1.1 2004/12/23 00:14:59 idgay Exp $
+// $Id: Definition.java,v 1.2 2004/12/24 00:49:06 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -12,7 +12,11 @@
 package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
+import java.util.*;
 
-public class Definition extends NDElement
+abstract public class Definition extends NDElement
 {
+    public boolean definitionAvailable;
+
+    abstract public void init(Attributes attrs);
 }
