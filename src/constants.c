@@ -378,8 +378,9 @@ known_cst foldaddress_field_ref(known_cst object, field_declaration fdecl)
   if (constant_unknown(object))
     return make_unknown_cst(object->type);
 
-  return fold_add(object->type, object,
-		  make_unsigned_cst(fdecl->offset / BITSPERBYTE, size_t_type));
+  return make_cst(cval_add(object->cval,
+			   make_cval_unsigned(fdecl->offset / BITSPERBYTE, size_t_type)),
+		  make_pointer_type(fdecl->type));
 }
 
 #ifndef HAVE_STRTOLD

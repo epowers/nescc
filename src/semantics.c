@@ -3214,9 +3214,12 @@ type_element finish_enum(type_element t, declaration names,
   else
     enum_reptype = type_largest;
 
-  /* int is the smallest possible type for an enum (except if the 
-     enum has the packed attribute) */
-  if (!tdecl->packed && type_size(enum_reptype) < type_size(int_type))
+  /* We use int as the enum type if that fits, except if both:
+     - the values fit in a (strictly) smaller type
+     - the packed attribute was specified 
+  */
+  if (cval_inrange(smallest, int_type) && cval_inrange(largest, int_type) &&
+      !(tdecl->packed && type_size(enum_reptype) < type_size(int_type)))
     enum_reptype = int_type;
 
   tdecl->reptype = enum_reptype;
