@@ -114,7 +114,8 @@ int galsc_prt_parameter_get_call(struct connections *c,
                         type2ast(c->r, dummy_location, c->called->type, NULL, &tdeclarator, &tmodifiers);
                         function_declarator fd = CAST(function_declarator, tdeclarator);
                         bool void_parms = FALSE;
-                        if (is_void_parms(fd->gparms) && is_void_parms(fd->parms)) {
+                        if ((!fd->gparms || is_void_parms(fd->gparms)) &&
+                                (!fd->parms || is_void_parms(fd->parms))) {
                             void_parms = TRUE;
                         }
                         if (!void_parms) {
@@ -205,7 +206,8 @@ void galsc_prt_parameters(declaration gparms, declaration parms, psd_options opt
 
     // Check if the connected function has a void argument list.
     bool void_parms = FALSE;
-    if (is_void_parms(gparms) && is_void_parms(parms))
+    if ((!gparms || is_void_parms(gparms)) &&
+            (!parms || is_void_parms(parms)))
         void_parms = TRUE;
 
     // If the connected function contains actual arguments, print port
