@@ -1045,6 +1045,10 @@ void check_for_conflicts(void)
   while( (v=dhnext(&scanner)) ) {
     conflict = TRUE;
     
+    /* Skip user-flagged "norace" variables */
+    if (v->ddecl->norace)
+      continue;
+
     summarize_var_use(v->refs, &read, &write, &aread, &awrite, TRUE);
 
     // no conflict if all reads
@@ -1087,6 +1091,3 @@ void check_for_conflicts(void)
   print_aliased_vars_debug_summary();
 
 }
-
-
-

@@ -56,6 +56,13 @@ enum rid
   RID_COMPLEX,
   RID_DEFAULT,
 
+  /* for concurrency model specifiers on functions */
+  RID_TASK_ONLY,
+  RID_UNINTERRUPTABLE,
+
+  /* No-race specifier for variables */
+  RID_NORACE,
+
   RID_AUTO,
   RID_STATIC,
   RID_EXTERN,
@@ -64,10 +71,6 @@ enum rid
   RID_COMMAND,
   RID_EVENT,
   RID_TASK,
-
-  /* for concurrency model specifiers on functions */
-  RID_TASK_ONLY,
-  RID_UNINTERRUPTABLE,
 
   RID_MAX
 };

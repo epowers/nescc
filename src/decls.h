@@ -141,10 +141,6 @@ typedef struct data_declaration {
   struct data_declaration *nonreentrant_caller;
   bool multiple_nonreentrant_callers;
 
-  /* keywords for specifying concurrency information about a function */
-  bool task_only;
-  bool uninterruptable;
-
   /* For functions */
   enum { function_implicit, function_normal, function_static, function_nested,
          function_event, function_command }
@@ -152,6 +148,10 @@ typedef struct data_declaration {
   bool isinline;
   bool isexterninline;
   bool defined;			/* nesC: true if defined, false if used */
+  /* keywords for specifying concurrency information about a function */
+  bool task_only;
+  bool uninterruptable;
+
   bool suppress_definition;	/* Prevent code generation */
   bool uncallable;		/* Error if called */
   bool makeinline;		/* Mark this function inline when generating code */
@@ -174,6 +174,7 @@ typedef struct data_declaration {
   bool isparameter; /* implies islocal */
   bool isgeneric; /* nesc: implies isparameter, for the generic parameters of
 		     commands and events */
+  bool norace;			/* Ignore data races on this var */
 
   /* For constants */
   known_cst value;
