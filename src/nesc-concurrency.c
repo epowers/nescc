@@ -224,6 +224,16 @@ static void print_called_functions(enum contexts context,
       return;
     }
 
+  // error, if this node has already been seen
+  if (graph_node_markedp(parent))
+    {
+      conc_debug("LOOP d' LOOP\n");
+      warning("Found a loop in the call graph:");
+      print_current_call_loop(fn, 4);
+      pop_f();
+      return;
+    }
+
   if (fn->checked_contexts & context)
     {
       /* We've already seen this node in this context. Ignore it.
@@ -237,19 +247,6 @@ static void print_called_functions(enum contexts context,
 
   conc_debug("\n");
   
-  // error, if this node has already been seen
-  if (graph_node_markedp(parent))
-    {
-      conc_debug("LOOP d' LOOP\n");
-#undef PRINT_LOOPS_FIXME
-#ifdef PRINT_LOOPS_FIXME
-      warning("Found a loop in the call graph:");
-      print_current_call_loop(fn, 4);
-#endif
-      pop_f();
-      return;
-    }
-
   if (fn->task_only && context != c_task)
     {
       error("task_only function `%s' called from interrupt context.  Call trace follows.", fn->name);
