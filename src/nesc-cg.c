@@ -18,6 +18,7 @@ Boston, MA 02111-1307, USA.  */
 /* A connection graph */
 #include "parser.h"
 #include "nesc-cg.h"
+#include "nesc-semantics.h"
 
 struct cgraph
 {
@@ -35,12 +36,40 @@ typedef struct ep_table_entry
    (typically log2 of the alignment of allocations) */
 #define ALIGNMENT_BITS 3
 
+void print_endp(char *head, endp ep) {
+  fprintf(stderr,head);
+  // Use of "> 1000" used to catch cases of bad pointers
+  fprintf(stderr,"[%s.%s.%s addr 0x%lx COUNT %d INSTANCE %d(%d) c:0x%lx i:0x%lx f:0x%lx a:0x%lx]\n", 
+      ((ep->component>1000)?ep->component->name:"null"),
+      ((ep->interface>1000)?ep->interface->name:"null"),
+      ((ep->function>1000)?ep->function->name:"null"),
+      ep, ep->MDW_hack_count, 
+      ep->instance,
+      ((ep->component>1000)?ep->component->instance_number:-2),
+      ep->component, ep->interface, ep->function, ep->args);
+}
+
 static int ep_compare(void *e1, void *e2)
 {
   ep_table_entry ep1 = e1, ep2 = e2;
 
-  return ep1->ep.function == ep2->ep.function &&
-    ep1->ep.args == ep2->ep.args;
+  // XXX MDW: Clean this up
+  // Tricky: And endpoint matches if the function and args match,
+  // and (either one component is NULL or the components are the same).
+  // This is necessary to match endpoints in different instances of 
+  // the same abstract component correctly.
+  if (ep1->ep.function == ep2->ep.function &&
+      ep1->ep.args == ep2->ep.args &&
+      ep1->ep.instance == ep2->ep.instance) {
+//      (ep1->ep.component == ep2->ep.component ||
+//      ((ep1->ep.component == NULL) ^ (ep2->ep.component == NULL)))) {
+    //print_endp("MDW: ep_compare MATCH ep1 ", &ep1->ep);
+    //print_endp("MDW: ep_compare MATCH ep2 ", &ep2->ep);
+    return TRUE;
+  } else {
+    return FALSE;
+  }
+
 }
 
 static unsigned long hashPtr(void *p) 
@@ -69,6 +98,8 @@ gnode endpoint_lookup(cgraph cg, endp ep)
 {
   ep_table_entry gep;
 
+  //print_endp("MDW: endpoint_lookup for ", ep);
+
   gep = dhlookup(cg->ep_table, ep);
 
   if (gep)
@@ -81,13 +112,19 @@ gnode endpoint_lookup(cgraph cg, endp ep)
   return gep->n = graph_add_node(cg->g, &gep->ep);
 }
 
-gnode fn_lookup(cgraph cg, data_declaration fndecl)
+gnode fn_lookup(cgraph cg, data_declaration fndecl, int instance_num)
 {
   struct endp ep;
 
+  ep.MDW_hack_count = 777777; 
   ep.component = ep.interface = NULL;
   ep.function = fndecl;
   ep.args = NULL;
+
+  // Override 'instance_num' if this is in fact not an abstract component
+  if (!num_abstract_instances(fndecl)) ep.instance = -1;
+  else ep.instance = instance_num;
+
   return endpoint_lookup(cg, &ep);
 }
 

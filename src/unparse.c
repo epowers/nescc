@@ -29,6 +29,7 @@ Boston, MA 02111-1307, USA. */
 #include "AST_utils.h"
 #include "errors.h"
 #include "nesc-semantics.h"
+#include "nesc-generate.h"
 
 /* Set this to 1 to avoid warnings from gcc about paren use with
    -Wparentheses */
@@ -172,6 +173,16 @@ void copy_file_to_output(char *filename)
   fclose(infile);
 }
 
+void output_instancetype(nesc_declaration module) {
+  output("struct ");
+  output_stripped_string_dollar(module->name);
+  output(NESC_INSTANCETYPE_LITERAL);
+}
+
+static void output_thisptr(nesc_declaration module) {
+  output(NESC_THISPTR_LITERAL);
+}
+
 #define STRIP_PREFIX "__nesc_keyword_"
 #define STRIP_PREFIX_LEN (sizeof(STRIP_PREFIX) - 1)
 
@@ -199,7 +210,7 @@ static void output_stripped_string(const char *s)
     fputs(s, of);
 }
 
-static void output_stripped_string_dollar(const char *s)
+void output_stripped_string_dollar(const char *s)
 {
   output_stripped_string(s);
   output(function_separator);
@@ -290,6 +301,7 @@ void prt_compound_expr(compound_expr e, int context_priority);
 void prt_function_call(function_call e, int context_priority);
 void prt_generic_call(generic_call e, int context_priority);
 void prt_array_ref(array_ref e, int context_priority);
+void prt_instance_ref(instance_ref e, int context_priority);
 void prt_interface_deref(interface_deref e, int context_priority);
 void prt_field_ref(field_ref e, int context_priority);
 void prt_unary(unary e, int context_priority);
@@ -522,7 +534,7 @@ void prt_function_decl(function_decl d)
     }
 }
 
-void prt_function_body(function_decl d)
+void prt_function_body(function_decl d) 
 {
   if (d->ddecl->isused && !d->ddecl->suppress_definition)
     {
@@ -607,7 +619,9 @@ void prt_simple_declarator(declarator d, data_declaration ddecl,
 	  prt_parameters(fd->gparms ? fd->gparms :
 			 ddecl ? ddecl_get_gparms(ddecl) : NULL,
 			 fd->parms,
+			 ddecl,
 			 options & psd_rename_parameters);
+
 	  break;
 	}
       case kind_array_declarator:
@@ -901,7 +915,7 @@ void prt_enumerator(enumerator ed, tag_declaration tdecl)
     }
 }
 
-void prt_parameters(declaration gparms, declaration parms, psd_options options)
+void prt_parameters(declaration gparms, declaration parms, data_declaration fndecl, psd_options options)
 {
   declaration d;
   bool forward = FALSE;
@@ -915,6 +929,20 @@ void prt_parameters(declaration gparms, declaration parms, psd_options options)
     options = 0;
 
   output("(");
+
+  /* For abstract functions: Pass thisptr */
+  if (fndecl != NULL &&
+      // XXX MDW: Uncomment below to prevent thisptr for connection functions
+      // fndecl->defined && 
+      fndecl->container != NULL &&
+      fndecl->container->is_abstract &&
+      fndecl->ftype != function_static) {
+    output_instancetype(fndecl->container);
+    output(" *");
+    output_thisptr(fndecl->container);
+    first = FALSE;
+  }
+
   scan_declaration (d, gparms)
     {
       prt_parameter(d, first, FALSE, options);
@@ -1009,6 +1037,7 @@ void prt_expression(expression e, int context_priority)
       PRTEXPR(function_call, e);
       PRTEXPR(generic_call, e);
       PRTEXPR(array_ref, e);
+      PRTEXPR(instance_ref, e);
       PRTEXPR(field_ref, e);
       PRTEXPR(interface_deref, e);
       PRTEXPR(init_list, e);
@@ -1106,11 +1135,22 @@ void prt_identifier(identifier e, int context_priority)
   data_declaration decl = e->ddecl;
 
   if (decl->kind == decl_function && decl->uncallable)
-    error_with_location(e->location, "%s not connected", e->cstring.data);
+    error_with_location(e->location, "%s not connected (MDW: unparse.c 1)", e->cstring.data);
 
   set_location(e->location);
-  if (decl->container && !decl->Cname)
-    output_stripped_string_dollar(decl->container->name);
+  if (decl->container && !decl->Cname) {
+    if (is_instance_variable(decl)) {
+      /* Instance variable */
+      output_thisptr(decl->container);
+      output("->");
+      output_stripped_string_dollar(decl->container->name);
+    } else if (is_abstract_parameter(decl)) {
+      /* Abstract parameter */
+    } else {
+      /* Static variable */
+      output_stripped_string_dollar(decl->container->name);
+    }
+  }
 
   output_stripped_cstring(e->cstring);
 
@@ -1154,11 +1194,16 @@ void prt_function_call(function_call e, int context_priority)
 	     See prt_generic_call */
 	  if (is_generic_call(e->arg1))
 	    prt_expressions(e->args, FALSE);
-	  else
-	    {
-	      output("(");
-	      prt_expressions(e->args, TRUE);
-	    }
+
+	  else if (is_interface_deref(e->arg1) &&
+	      CAST(interface_deref, e->arg1)->ddecl->container &&
+	      CAST(interface_deref, e->arg1)->ddecl->container->is_abstract) {
+	    /* prt_interface_deref already started the argument list */
+	    prt_expressions(e->args, FALSE);
+	  } else {
+      	    output("(");
+	    prt_expressions(e->args, TRUE);
+	  }
 	  output(")");
 	}
       break;
@@ -1202,18 +1247,35 @@ void prt_field_ref(field_ref e, int context_priority)
   output_stripped_cstring(e->cstring);
 }
 
+void prt_instance_ref(instance_ref e, int context_priority)
+{
+  output("%s$%s[", e->ddecl->container->name, NESC_INSTANCEARR_LITERAL);
+  prt_expression(e->arg1, P_TOP);
+  output("]");
+  output(".");
+  output_stripped_string_dollar(e->ddecl->container->name);
+  output_stripped_cstring(e->cstring);
+}
+
 void prt_interface_deref(interface_deref e, int context_priority)
 {
   data_declaration decl = e->ddecl;
 
   if (decl->kind == decl_function && decl->uncallable)
-    error_with_location(e->location, "%s.%s not connected",
+    error_with_location(e->location, "%s.%s not connected (MDW: unparse.c 2)",
 			CAST(identifier, e->arg1)->cstring.data,
 			e->cstring.data);
 
   prt_expression(e->arg1, P_CALL);
   output(function_separator);
   output_stripped_cstring(e->cstring);
+
+  /* XXX MDW: 'thisptr' will be an instance array deref for instance_deref */
+  if (decl->kind == decl_function && decl->container && decl->container->is_abstract) {
+    output("(");
+    output_thisptr(e->ddecl->container);
+  }
+
 }
 
 void prt_unary(unary e, int context_priority)

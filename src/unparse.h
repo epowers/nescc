@@ -40,6 +40,7 @@ void indent(void);
 void unindent(void);
 void startline(void);
 void startline_noindent(void);
+void output_stripped_string_dollar(const char *s);
 
 const char *binary_op_name(ast_kind kind);
 
@@ -89,7 +90,7 @@ void prt_declarator(declarator d, type_element elements, attribute attributes,
 		    data_declaration ddecl, psd_options options);
 void prt_simple_declarator(declarator d, data_declaration ddecl,
 			   psd_options options);
-void prt_parameters(declaration gparms, declaration parms, psd_options options);
+void prt_parameters(declaration gparms, declaration parms, data_declaration ddecl, psd_options options);
 bool prt_parameter(declaration parm, bool first, bool lastforward, psd_options options);
 void prt_ddecl_full_name(data_declaration ddecl, psd_options options);
 

@@ -70,4 +70,20 @@ bool is_module_variable(data_declaration ddecl);
 /* Returns: TRUE if ddecl is a module variable
  */
 
+bool is_instance_variable(data_declaration ddecl);
+/* Returns: TRUE if ddecl is an instance variable
+ */
+
+bool is_abstract_parameter(data_declaration ddecl);
+/* Returns: TRUE if ddecl is an abstract instance initialization parameter
+ */
+
+int num_abstract_instances(data_declaration ddecl);
+/* Returns: Number of instances for ddecl->container, 0 if 
+ * ddecl does not have a container or is not abstract.
+ */
+
+expression make_instance_ref(location loc, expression object, cstring field);
+/* Create new instance ref */
+
 #endif

@@ -217,7 +217,7 @@ nesc_decl dummy_nesc_decl(source_language sl, const char *name)
       implementation impl = CAST(implementation,
 	new_module(parse_region, dummy_location, NULL, NULL));
       nd = CAST(nesc_decl,
-	new_component(parse_region, dummy_location, wname, NULL, NULL, impl));
+	new_component(parse_region, dummy_location, wname, NULL, NULL, impl, FALSE, NULL));
       break;
     }
     case l_interface:
@@ -262,6 +262,8 @@ nesc_declaration load(source_language sl, location l,
   nesc_declaration decl;
   environment env;
 
+  fprintf(stderr,"MDW: ******** load: %s ********\n", name);
+
   decl = new_nesc_declaration(parse_region, sl, element);
     
   /* We don't get duplicates as we only load on demand */
@@ -290,6 +292,8 @@ nesc_declaration load(source_language sl, location l,
 
   build(decl, env, parsed_nesc_decl);
 
+  fprintf(stderr,"MDW: ******** load done: %s ********\n", name);
+
   return decl;
 }
 
@@ -304,3 +308,56 @@ bool is_module_variable(data_declaration ddecl)
       ddecl->container_function->container)); 
 }
 
+bool is_instance_variable(data_declaration ddecl) 
+{
+  return ddecl->kind == decl_variable &&
+    ddecl->Cname == FALSE &&
+    /* instance-static variable */
+    ddecl->vtype != variable_static &&  
+    ddecl->container &&
+    (ddecl->container->is_abstract);
+}
+
+bool is_abstract_parameter(data_declaration ddecl) 
+{
+  return ddecl->kind == decl_variable &&
+    ddecl->vtype == variable_absparam;
+}
+
+int num_abstract_instances(data_declaration ddecl) {
+  if (ddecl->container && ddecl->container->is_abstract) 
+    return ddecl->container->abstract_instance_count;
+  else 
+    return 0;
+}
+
+expression make_instance_ref(location loc, expression index, cstring field)
+{
+  // XXX For now: Assume that 'field' is an instance variable
+  // For command/event/task, 'field' will be an interface_deref, so
+  // may want to have a separate function for processing those
+  // (Taking interface_deref as argument from c-parse.y)
+
+  instance_ref result;
+  data_declaration fdecl;
+
+  fdecl = lookup_id(field.data, FALSE);
+  if (!fdecl) {
+    error("module has no instance variable named `%s'", field.data);
+    result->type = error_type;
+    return CAST(expression, result);
+  }
+
+  if (!is_instance_variable(fdecl)) {
+    error("cannot reference non-instance variable `%s' using `instance'", field.data);
+    result->type = error_type;
+    return CAST(expression, result);
+  }
+
+  result = new_instance_ref(parse_region, loc, index, field, fdecl);
+  result->lvalue = TRUE;
+  result->type = fdecl->type;
+  note_identifier_use(fdecl);
+  return CAST(expression, result);
+
+}         

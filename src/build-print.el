@@ -39,8 +39,9 @@
     (if tree-fields
 	(progn
 	  (insert (format "{\n  %s x = CAST(%s, n);\n\n" name name))
-	  (insert (format "  puts(\"%s\");\n" name))
+	  (insert (format "  puts(\"%s {\");\n" name))
 	  (mapcar #'write-print-field tree-fields)
+	  (insert "  pindent(indent-4); puts(\"}\");\n")
 	  (insert "  break;\n}\n"))
       (insert (format "puts(\"%s\"); break;\n" name)))))
 
@@ -48,6 +49,6 @@
   (insert (format "case kind_%s: " name)))
 
 (defun write-print-field (field)
-  (insert (format "  pindent(indent); puts(\"%s:\"); AST_print_list(indent + 1, x->%s);\n" field field)))
+  (insert (format "  pindent(indent); puts(\"%s:\"); AST_print_list(indent + 4, x->%s);\n" field field)))
 
 (build-file "print.c")

@@ -138,7 +138,7 @@ typedef struct data_declaration {
   expression (*magic_reduce)(function_call fcall);
 
   /* For variables */
-  enum { variable_register, variable_static, variable_normal } vtype;
+  enum { variable_register, variable_static, variable_normal, variable_absparam } vtype;
   bool islocal;
   bool isparameter; /* implies islocal */
   bool isgeneric; /* nesc: implies isparameter, for the generic parameters of
@@ -159,6 +159,7 @@ typedef struct data_declaration {
 
   /* For component_ref */
   nesc_declaration ctype;
+  int instance_number; // -1 if not an abstract component
 
   /* For documentation comments */
   char *short_docstring;

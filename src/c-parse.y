@@ -101,6 +101,7 @@ void yyerror();
 %token <u.itoken> BREAK CONTINUE RETURN GOTO ASM_KEYWORD TYPEOF ALIGNOF
 %token <u.itoken> ATTRIBUTE EXTENSION LABEL
 %token <u.itoken> REALPART IMAGPART VA_ARG OFFSETOF
+%token <u.itoken> INSTANCE
 
 /* Add precedence rules to solve dangling else s/r conflict */
 %nonassoc IF
@@ -138,6 +139,7 @@ void yyerror();
 %type <u.decl> parmlist parmlist_1 parmlist_2 parms parm
 %type <u.decl> parmlist_or_identifiers identifiers notype_initdcl
 %type <u.decl> parmlist_or_identifiers_1 old_parameter just_datadef
+%type <u.decl> abstract_param_decl
 %type <u.declarator> declarator after_type_declarator notype_declarator
 %type <u.declarator> absdcl absdcl1 absdcl1_noea absdcl1_ea direct_absdcl1
 %type <u.declarator> parm_declarator 
@@ -147,6 +149,7 @@ void yyerror();
 %type <u.expr> initlist1 initelt nonnull_exprlist primary string_component 
 %type <u.expr> STRING string_list nonnull_exprlist_
 %type <u.expr> unary_expr xexpr function_call
+%type <u.expr> abstract_param_list
 %type <u.id_label> id_label maybe_label_decls label_decls label_decl
 %type <u.id_label> identifiers_or_typenames
 %type <idtoken> identifier IDENTIFIER TYPENAME MAGIC_STRING
@@ -199,6 +202,7 @@ void yyerror();
 /* tinyos reserved words */
 %token <u.itoken> USES INTERFACE COMPONENTS PROVIDES MODULE INCLUDES
 %token <u.itoken> CONFIGURATION AS TASTNIOP IMPLEMENTATION CALL SIGNAL POST
+%token <u.itoken> ABSTRACT
 
 %type <u.itoken> callkind
 %type <u.decl> datadef_list parameter_list parameter
@@ -467,19 +471,66 @@ component:
 	| includes_list configuration
 	;
 
+/* Abstract component parameter declaration */
+abstract_param_decl:
+	'(' ')' { $$ = NULL; }
+	| '(' parms ')' 
+	{ 
+	  /* Add magic "_INSTANCENUM" to initialization parameters */
+	  declarator d = make_identifier_declarator($1.location, 
+	    make_cstring(pr, "_INSTANCENUM", sizeof("_INSTANCENUM")));
+	  type_element elt = CAST(type_element, new_rid(pr, $1.location, RID_INT));
+	  declaration dl = declare_parameter(d, elt, NULL, FALSE);
+	  $$ = declaration_chain(dl, $2);
+
+	}
+	;
+
 module: 
+	  abstract_module |
 	  MODULE { $<u.docstring>$ = get_docstring(); } 
-	  idword '{' requires_or_provides_list '}' imodule
+	  idword '{' requires_or_provides_list '}' 
+	  imodule
 		{ 
-		  parsed_nesc_decl = CAST(nesc_decl, new_component(pr, $1.location, $3, $<u.docstring>2, rp_interface_reverse($5), $7));
+		  parsed_nesc_decl = CAST(nesc_decl, new_component(pr, $1.location, $3, $<u.docstring>2, rp_interface_reverse($5), $7, FALSE, NULL));
+	        }
+	;
+
+abstract_module:
+	  ABSTRACT MODULE { $<u.docstring>$ = get_docstring(); } 
+	  idword abstract_param_decl '{' requires_or_provides_list '}' imodule
+		{ 
+                  /* Add magic "_NUMINSTANCES" to static variables */
+//		  declaration dl;
+//		  data_decl dd;
+ //     	          declarator d = make_identifier_declarator($1.location, 
+  //	            make_cstring(pr, "_NUMINSTANCES", sizeof("_NUMINSTANCES")));
+//	          type_element elt = CAST(type_element, new_rid(pr, $1.location, RID_INT));
+//	          elt = type_element_chain(elt, CAST(type_element, new_rid(pr, $1.location, RID_STATIC)));
+	          //pushlevel(FALSE);
+//		  push_declspec_stack();
+//		  dd = make_data_decl(NULL, d);
+//	          dl = start_decl(dd, NULL, elt, 0, NULL);
+//	          dl = finish_decl(dl, NULL);
+	          //poplevel();
+		  parsed_nesc_decl = CAST(nesc_decl, new_component(pr, $1.location, $4, $<u.docstring>3, rp_interface_reverse($7), $9, TRUE, $5));
 	        }
 	;
 
 configuration:
+ 	  abstract_configuration |
 	  CONFIGURATION { $<u.docstring>$ = get_docstring(); } 
 	  idword '{' requires_or_provides_list '}' iconfiguration
 	        { 
-		  parsed_nesc_decl = CAST(nesc_decl, new_component(pr, $1.location, $3, $<u.docstring>2, rp_interface_reverse($5), $7));
+		  parsed_nesc_decl = CAST(nesc_decl, new_component(pr, $1.location, $3, $<u.docstring>2, rp_interface_reverse($5), $7, FALSE, NULL));
+	        }
+        ;
+
+abstract_configuration:
+	  ABSTRACT CONFIGURATION { $<u.docstring>$ = get_docstring(); } 
+	  idword abstract_param_decl '{' requires_or_provides_list '}' iconfiguration
+	        { 
+		  parsed_nesc_decl = CAST(nesc_decl, new_component(pr, $1.location, $4, $<u.docstring>3, rp_interface_reverse($7), $9, TRUE, $5));
 	        }
         ;
 
@@ -558,9 +609,14 @@ component_list:
 	| component_ref
 	;
 
+abstract_param_list:
+	{ $$ = NULL; } /* Empty */
+	| '(' exprlist ')' { $$ = $2; }
+	;
+
 component_ref: 
-	  idword { $$ = new_component_ref(pr, $1->location, $1, NULL); }
-	| idword AS idword { $$ = new_component_ref(pr, $1->location, $1, $3); }
+	  idword abstract_param_list { $$ = new_component_ref(pr, $1->location, $1, NULL, $2); }
+	| idword abstract_param_list AS idword { $$ = new_component_ref(pr, $1->location, $1, $4, $2); }
 	;
 
 connection_list: 
@@ -596,6 +652,19 @@ parameterised_identifier:
 
 imodule:  IMPLEMENTATION { $<u.env>$ = start_implementation(); } '{' extdefs '}' 
 		{ 
+                  /* Add magic "_NUMINSTANCES" to static variables */
+		  declaration dl;
+     	          declarator d = make_identifier_declarator($1.location, 
+	            make_cstring(pr, "_NUMINSTANCES", sizeof("_NUMINSTANCES")));
+	          type_element elt = CAST(type_element, new_rid(pr, $1.location, RID_INT));
+	          elt = type_element_chain(elt, CAST(type_element, new_rid(pr, $1.location, RID_STATIC)));
+	          //pushlevel(FALSE);
+//		  push_declspec_stack();
+//		  dd = make_data_decl(NULL, d);
+	          dl = start_decl(d, NULL, elt, 0, NULL);
+	          dl = finish_decl(dl, NULL);
+	          //poplevel();
+
 		  $$ = CAST(implementation, new_module(pr, $1.location, $<u.env>2, declaration_reverse($4))); 
 		} ;
 
@@ -954,6 +1023,8 @@ primary:
 		{ $$ = make_va_arg($1.location, $3, $5); }
 	| OFFSETOF '(' typename ',' fieldlist ')'
 		{ $$ = make_offsetof($1.location, $3, $5); }
+	| INSTANCE '(' expr_no_commas ')' '.' identifier
+		{ $$ = make_instance_ref($2.location, $3, $6.id); }
 	| primary '[' nonnull_exprlist ']' 
 		{ $$ = make_array_ref($2.location, $1, $3); }
 	| primary '.' identifier

@@ -21,6 +21,7 @@ Boston, MA 02111-1307, USA.  */
 #include "nesc-env.h"
 #include "nesc-cg.h"
 #include "semantics.h"
+#include "nesc-semantics.h"
 #include "constants.h"
 #include "c-parse.h"
 
@@ -41,14 +42,18 @@ static void connect_function(cgraph cg, struct endp from, struct endp to)
 {
   gnode gfrom = endpoint_lookup(cg, &from), gto = endpoint_lookup(cg, &to);
 
+  fprintf(stderr,"\nMDW: connect_function:\n");
+  print_endp("    MDW: from: ", &from);
+  print_endp("    MDW: to:   ", &to);
+
   assert(from.function && to.function);
 
   graph_add_edge(gfrom, gto, NULL);
   /* If an endpoint has args, we must also connect the node w/o args */
   if (from.args)
-    graph_add_edge(fn_lookup(cg, from.function), gfrom, NULL);
+    graph_add_edge(fn_lookup(cg, from.function, from.instance), gfrom, NULL);
   if (to.args)
-    graph_add_edge(gto, fn_lookup(cg, to.function), NULL);
+    graph_add_edge(gto, fn_lookup(cg, to.function, to.instance), NULL);
 }
 
 static type endpoint_type(endp p)
@@ -245,6 +250,46 @@ static void check_generic_arguments(expression args, typelist gparms)
     error_with_location(args->location, "too few arguments");
 }
 
+static void check_abstract_parameters(expression args, typelist aparms)
+{
+  expression arg;
+  typelist_scanner scan_aparms;
+  type aparm_type;
+
+  typelist_scan(aparms, &scan_aparms);
+  aparm_type = typelist_next(&scan_aparms);
+  if (!aparm_type) {
+    error("abstract component does not have _INSTANCENUM variable? This is a bug - contact mdw@cs.berkeley.edu");
+    return;
+  }
+
+  scan_expression (arg, args)
+    {
+      location l = arg->location;
+      aparm_type = typelist_next(&scan_aparms);
+
+      if (!aparm_type)
+	{
+	  error_with_location(l, "too many arguments");
+	  return;
+	}
+      else 
+	{
+	  if (!arg->cst || !constant_integral(arg->cst))
+	    error_with_location(l, "constant expression expected");
+	  else
+	    {
+	      if (!cval_inrange(arg->cst->cval, aparm_type))
+		error_with_location(l, "constant out of range for argument type");
+	    }
+	}
+    }
+  if (typelist_next(&scan_aparms))
+    error_with_location(args->location, "too few initialization paramaters for abstract component");
+}
+
+static int MDW_LEP_COUNT = 0;
+
 static bool lookup_endpoint(environment configuration_env, endpoint ep,
 			    endp lep)
 {
@@ -252,12 +297,16 @@ static bool lookup_endpoint(environment configuration_env, endpoint ep,
   environment lookup_env = configuration_env;
 
   lep->component = lep->interface = lep->function = NULL;
+  lep->instance = -1;
   lep->args = NULL;
+  lep->MDW_hack_count = MDW_LEP_COUNT; MDW_LEP_COUNT++;
 
   scan_parameterised_identifier (pid, ep->ids)
     {
       const char *idname = pid->word1->cstring.data;
       location l = pid->location;
+
+      //fprintf(stderr,"MDW: lookup_endpoint %s\n", idname);
 
       if (!lookup_env)
 	error_with_location(l, "unexpected identifier `%s'", idname);
@@ -272,14 +321,18 @@ static bool lookup_endpoint(environment configuration_env, endpoint ep,
 		 it's the global env. We want to check a configuration's
 		 env, and it's parent component's env, but not the global
 		 env. */
-	      if (lookup_env->parent && lookup_env->parent != global_env)
+	      if (lookup_env->parent && lookup_env->parent != global_env) {
+                //fprintf(stderr,"MDW: lookup_endpoint %s in parent\n", idname);
 		d = env_lookup(lookup_env->parent->id_env, idname, TRUE);
+	      }
 	      if (!d)
 		{
 		  error_with_location(l, "cannot find `%s'", idname);
 		  return FALSE; /* prevent cascading error messages */
 		}
-	    }
+	    } 
+
+	  //fprintf(stderr,"MDW: lookup_endpoint got decl %s\n", d->name);
 
 	  if (args)
 	    {
@@ -295,11 +348,14 @@ static bool lookup_endpoint(environment configuration_env, endpoint ep,
 	      return FALSE; /* prevent cascading error messages */
 
 	    case decl_component_ref:
+	      //fprintf(stderr,"MDW: lookup_endpoint decl is component_ref\n");
 	      assert(!lep->component);
 	      lep->component = d;
+	      lep->instance = lep->component->instance_number;
 	      lookup_env = d->ctype->env;
 	      break;
 	    case decl_interface_ref:
+	      //fprintf(stderr,"MDW: lookup_endpoint decl is interface_ref\n");
 	      assert(!lep->interface);
 	      lep->interface = d;
 
@@ -313,6 +369,7 @@ static bool lookup_endpoint(environment configuration_env, endpoint ep,
 #endif
 	      break;
 	    case decl_function:
+	      //fprintf(stderr,"MDW: lookup_endpoint decl is function\n");
 	      lep->function = d;
 	      lookup_env = NULL;
 	      break;
@@ -394,6 +451,9 @@ static void process_function_connection(cgraph cg, connection conn,
   bool p1def = (p1.interface && !p1.interface->required) ^ p1.function->defined;
   bool p2def = (p2.interface && !p2.interface->required) ^ p2.function->defined;
 
+  //print_endp("MDW: process_function_connection: p1: ", &p1);
+  //print_endp("MDW: process_function_connection: p2: ", &p2);
+
   if (is_eq_connection(conn)) /* p1 = p2 */
     {
       if (!p1.component && !p2.component)
@@ -430,6 +490,9 @@ static void process_actual_connection(cgraph cg, connection conn,
 {
   location l = conn->location;
 
+  //print_endp("MDW: process_actual_connection: p1: ", &p1);
+  //print_endp("MDW: process_actual_connection: p2: ", &p2);
+
   if (is_eq_connection(conn)) /* p1 = p2 */
     {
       if (p1.component && p2.component)
@@ -452,6 +515,9 @@ static void process_connection(cgraph cg, connection conn,
 {
   int matches;
   bool eqconnection = is_eq_connection(conn);
+
+  //print_endp("MDW: process_connection: p1: ", &p1);
+  //print_endp("MDW: process_connection: p2: ", &p2);
 
   if (p1.function) /* f X ... */
     {
@@ -536,6 +602,8 @@ static void process_connections(configuration c)
   struct endp p1, p2;
   cgraph cg = c->cdecl->connections;
 
+  fprintf(stderr, "\nMDW: process_connections for configuration %s\n", c->cdecl->name);
+
   scan_connection (conn, c->connections)
     if (lookup_endpoint(c->ienv, conn->ep1, &p1) &&
 	lookup_endpoint(c->ienv, conn->ep2, &p2))
@@ -548,6 +616,10 @@ static void process_connections(configuration c)
 	   We first resolve the c X c case, which can lead to multiple
 	   connections, then handle all remaining cases in process_connection
 	*/
+	//fprintf(stderr,"MDW: Matching\n");
+       	//print_endp("MDW: process_connections: p1: ", &p1);
+	//print_endp("MDW: process_connections: p2: ", &p2);
+
 	if (!p1.interface && !p2.interface && !p1.function && !p2.function)
 	  process_component_connection(cg, conn, p1, p2);
 	else
@@ -561,21 +633,38 @@ static void require_components(region r, configuration c)
   nesc_declaration cdecl = c->cdecl;
 
   cdecl->connections = new_cgraph(r);
-  
+
   scan_component_ref (comp, c->components)
     {
       struct data_declaration tempdecl;
       data_declaration old_decl;
+      int instance_number;
       const char *cname = comp->word1->cstring.data;
       const char *asname =
 	(comp->word2 ? comp->word2 : comp->word1)->cstring.data;
 
       comp->cdecl = require(l_component, comp->location, cname);
 
+      if (comp->cdecl->is_abstract) {
+	comp->instance_number = instance_number = comp->cdecl->abstract_instance_count;
+	comp->cdecl->abstract_instance_count++;
+
+	/* Check abstract parameters */
+	if (comp->args) {
+	  fprintf(stderr,"MDW: checking abstract parameters for %s\n", comp->cdecl->name);
+	  check_abstract_parameters(comp->args, comp->cdecl->abs_param_list);
+	}                        
+      } else {
+	comp->instance_number = instance_number = -1; // Indicates not an abstract component
+      }
+
       init_data_declaration(&tempdecl, CAST(declaration, comp), asname,
 			    void_type);
       tempdecl.kind = decl_component_ref;
       tempdecl.ctype = comp->cdecl;
+      tempdecl.instance_number = instance_number;
+      fprintf(stderr,"MDW: require_components: %s has instance num %d\n",
+	  tempdecl.ctype->name, tempdecl.instance_number);
 
       current.env = c->ienv;
       old_decl = lookup_id(asname, TRUE);
@@ -607,6 +696,7 @@ static void check_function_connected(data_declaration fndecl, void *data)
   struct cfc_data *d = data;
   gnode epnode;
   data_declaration idecl = fndecl->interface;
+  int num_instances, instance;
 
   assert(fndecl->kind == decl_function);
 
@@ -617,23 +707,28 @@ static void check_function_connected(data_declaration fndecl, void *data)
     return;
 #endif
 
-  epnode = fn_lookup(d->cg, fndecl);
+  num_instances = num_abstract_instances(fndecl);
+  if (!num_instances) num_instances = 1;
 
-  if ((fndecl->defined && !graph_first_edge_out(epnode)) ||
-      (!fndecl->defined && !graph_first_edge_in(epnode)))
+  for (instance = 0; instance < num_instances; instance++) {
+    epnode = fn_lookup(d->cg, fndecl, instance);
+
+    if ((fndecl->defined && !graph_first_edge_out(epnode)) ||
+	(!fndecl->defined && !graph_first_edge_in(epnode)))
     {
       d->intf_last_error = idecl;
 
       if (idecl)
 #ifdef NO_FUNCTION_INTERFACE_MATCHING
-	error_with_location(d->loc, "`%s' not connected", idecl->name);
+	error_with_location(d->loc, "`%s' not connected (MDW:configuration)", idecl->name);
 #else
-	error_with_location(d->loc, "`%s.%s' not connected",
-			    idecl->name, fndecl->name);
+      error_with_location(d->loc, "`%s.%s' not connected (MDW:configuration)",
+	  idecl->name, fndecl->name);
 #endif
       else
-	error_with_location(d->loc, "`%s' not connected", fndecl->name);
+	error_with_location(d->loc, "`%s' not connected (MDW:configuration)", fndecl->name);
     }
+  }
 }
 
 /* Checks that all external interfaces/functions of the configuration
@@ -652,7 +747,12 @@ void process_configuration(configuration c)
 {
   int old_errorcount = errorcount;
 
+  fprintf(stderr,"MDW: require_components for %s\n", c->cdecl->name);
+
   require_components(parse_region, c);
+
+  fprintf(stderr,"MDW: process_connections for %s\n", c->cdecl->name);
+
   process_connections(c);
 
   /* Don't give error messages for missing connections if we found

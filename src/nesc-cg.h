@@ -27,6 +27,8 @@ struct endp
 		      If no errors have been reported, then
 		      constant_integral(e->cst) for all expressions e in args
 		   */
+  int instance;
+  int MDW_hack_count;
 };
 
 typedef struct endp *endp;
@@ -36,8 +38,10 @@ typedef struct cgraph *cgraph;
 cgraph new_cgraph(region r);
 
 gnode endpoint_lookup(cgraph ch, endp ep);
-gnode fn_lookup(cgraph cg, data_declaration fndecl);
+gnode fn_lookup(cgraph cg, data_declaration fndecl, int instance);
 
 ggraph cgraph_graph(cgraph cg);
+
+void print_endp(char *head, endp ep);
 
 #endif

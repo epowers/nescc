@@ -1226,6 +1226,7 @@ static void print_func_args(function_decl fd, data_decl dd, variable_decl vd)
   prt_parameters(fdr->gparms ? fdr->gparms :
                  ddecl ? ddecl_get_gparms(ddecl) : NULL,
                  fdr->parms,
+		 fd->ddecl,
                  psd_skip_container);
   
 }

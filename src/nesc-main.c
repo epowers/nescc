@@ -117,7 +117,13 @@ void nesc_compile(const char *filename, const char *target_name)
     {
       /* We need to assume some language - it will get fixed once we
 	 see the actual file */
-      nesc_declaration program = load(l_component, &toplevel, filename, TRUE);
+      nesc_declaration program;
+
+      fprintf(stderr,"MDW: ***********************************************\n");
+      fprintf(stderr,"MDW: ** Loading program\n");
+      fprintf(stderr,"MDW: ***********************************************\n");
+
+      program = load(l_component, &toplevel, filename, TRUE);
 
       if (errorcount == 0)
 	{
@@ -127,8 +133,20 @@ void nesc_compile(const char *filename, const char *target_name)
 	    {
 	      dd_list modules, components;
 
+	      fprintf(stderr,"MDW: ***********************************************\n");
+	      fprintf(stderr,"MDW: ** connect_graphs\n");
+	      fprintf(stderr,"MDW: ***********************************************\n");
+
 	      connect_graphs(parse_region, program, &cg, &modules, &components);
+
+	      fprintf(stderr,"MDW: ***********************************************\n");
+	      fprintf(stderr,"MDW: ** generate_c_code\n");
+	      fprintf(stderr,"MDW: ***********************************************\n");
 	      generate_c_code(program, target_name, cg, modules);
+
+	      fprintf(stderr,"MDW: ***********************************************\n");
+	      fprintf(stderr,"MDW: ** done with generate_c_code\n");
+	      fprintf(stderr,"MDW: ***********************************************\n");
 	    }
 	  generate_docs(filename, cg);
 	}

@@ -29,6 +29,10 @@ typedef struct nesc_declaration {
   /* for components */
   implementation impl;
   struct cgraph *connections;
+  bool is_abstract;
+  int abstract_instance_count;
+  typelist abs_param_list;
+
 } *nesc_declaration;
 
 #endif

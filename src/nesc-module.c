@@ -55,6 +55,7 @@ expression make_interface_deref(location loc, expression object, cstring field)
   data_declaration iref = type_iref(object->type);
   data_declaration fdecl = interface_lookup(iref, field.data);
 
+
   result = new_interface_deref(parse_region, loc, object, field, fdecl);
   if (!fdecl)
     {
@@ -66,6 +67,9 @@ expression make_interface_deref(location loc, expression object, cstring field)
       result->type = fdecl->type;
       note_identifier_use(fdecl);
     }
+
+  fprintf(stderr,"MDW: make_interface_deref for %s.%s\n", 
+      iref->name, fdecl->name);
 
   return CAST(expression, result);
 }
@@ -101,3 +105,20 @@ void process_module(module m)
 {
   check_complete_implementation(m);
 }
+
+void module_variables_iterate(nesc_declaration c,
+    void (*iterator)(data_declaration fndecl, void *data),
+    void *data)
+{
+  const char *ifname;
+  void *ifentry;
+  env_scanner scanifs;
+
+  env_scan(c->env->id_env, &scanifs);
+  while (env_next(&scanifs, &ifname, &ifentry))
+  {
+    data_declaration idecl = ifentry;
+    fprintf(stderr,"MDW: module_variables_iterate: %s kind %d\n", idecl->name, idecl->kind);
+  }
+}
+

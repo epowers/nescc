@@ -53,6 +53,7 @@ void component_functions_iterate(nesc_declaration c,
   while (env_next(&scanifs, &ifname, &ifentry))
     {
       data_declaration idecl = ifentry;
+      fprintf(stderr,"MDW: component_functions_iterate: %s (kind %d)\n", idecl->name, idecl->kind);
 
       if (idecl->kind == decl_interface_ref)
 	{
@@ -64,9 +65,26 @@ void component_functions_iterate(nesc_declaration c,
 	  while (env_next(&scanfns, &fnname, &fnentry))
 	    iterator(fnentry, data);
 	}
-      else
-	iterator(idecl, data);
+      else if (idecl->kind == decl_function)
+        {
+  	  iterator(idecl, data);
+        }
     }
+}
+
+static void set_aparm_types(declaration aparms)
+{
+  declaration aparm;
+  data_decl ad;
+  variable_decl av;
+
+  scan_declaration (aparm, aparms) {
+    assert(is_data_decl(aparm));
+    ad = CAST(data_decl, aparm);
+    av = CAST(variable_decl, ad->decls);
+    av->ddecl->vtype = variable_absparam;
+  }
+
 }
 
 static typelist make_gparm_typelist(declaration gparms)
@@ -187,8 +205,17 @@ void build_component(region r, nesc_declaration cdecl)
 {
   component the_component = CAST(component, cdecl->ast);
 
+  fprintf(stderr,"\n** MDW: building component %s\n", cdecl->name);
+
+  fprintf(stderr,"\n** MDW: printing AST for component %s\n", cdecl->name);
+  AST_print(cdecl->ast);
+  fprintf(stderr,"** MDW: done printing AST for component %s\n\n", cdecl->name);
+
   the_component->implementation->cdecl = cdecl;
   cdecl->impl = the_component->implementation;
+  cdecl->is_abstract = the_component->is_abstract;
+  set_aparm_types(the_component->abs_param_list);
+  cdecl->abs_param_list = make_gparm_typelist(the_component->abs_param_list);
 
   AST_set_parents(CAST(node, cdecl->ast));
 
@@ -200,6 +227,8 @@ void build_component(region r, nesc_declaration cdecl)
     process_configuration(CAST(configuration, cdecl->impl));
   else
     process_module(CAST(module, cdecl->impl));
+
+  fprintf(stderr,"** MDW: done building %s\n\n", cdecl->name);
 }
 
 environment start_implementation(void)

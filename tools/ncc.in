@@ -217,7 +217,7 @@ if ($gcc eq "avr-gcc" && $cygwin) {
     }
 }
 
-#print STDERR join(' ', @new_args), "\n";
+#print STDERR "EXECUTING: ", join(' ', @new_args), "\n";
 exec @new_args;
 print STDERR "Couldn't execute $gcc\n";
 exit 2;

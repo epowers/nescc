@@ -20,6 +20,13 @@ Boston, MA 02111-1307, USA.  */
 
 #include "nesc-cg.h"
 
+#define NESC_THISPTR_LITERAL "__NESC_THIS"
+#define NESC_INSTANCEARR_LITERAL "__NESC_INSTANCES"
+#define NESC_INSTANCETYPE_LITERAL "__NESC_INSTANCETYPE"
+#define NESC_INSTANCENUM_LITERAL "_INSTANCENUM"
+
+void output_instancetype(nesc_declaration mod);
+
 void generate_c_code(nesc_declaration program, const char *target_name,
 		     cgraph cg, dd_list modules);
 

@@ -186,7 +186,7 @@ static void pindent(int by)
 static void AST_print1(int indent, node n)
 {
   pindent(indent);
-  indent += 1;
+  indent += 4;
 
   /* Special cases */
   switch (n->kind)

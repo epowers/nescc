@@ -23,6 +23,9 @@ expression make_generic_call(location loc, expression iref, expression args);
 declarator make_interface_ref_declarator(location l, cstring w1, cstring w2);
 expression make_interface_deref(location loc, expression object, cstring field);
 
+void module_variables_iterate(nesc_declaration c, 
+    void (*iterator)(data_declaration fndecl, void *data), void *data);
+
 void process_module(module c);
 
 #endif
