@@ -85,7 +85,7 @@ void handle_decl_attribute(attribute attr, data_declaration ddecl)
       ddecl->async = TRUE;
       ddecl->spontaneous = c_call_atomic;
     }
-  else if (!strcmp(name, "signal") || !strcmp(name, "interrupt"))
+  else if (!strcmp(name, "interrupt"))
     {
       ddecl->async = TRUE;
       ddecl->spontaneous = c_call_nonatomic;

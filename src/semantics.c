@@ -1481,9 +1481,9 @@ static int duplicate_decls(data_declaration newdecl, data_declaration olddecl,
 	  /* Warn for mismatched async */
 	  if (newdecl->async != olddecl->async)
 	    {
-	      warning("`%s': async mistmatch with declaration",
-		      decl_printname(olddecl));
-	      previous_message = warning_with_decl;
+	      error("`%s': async mismatch with declaration",
+		    decl_printname(olddecl));
+	      previous_message = error_with_decl;
 	    }
 	}
       else if (newdecl->kind == decl_variable)

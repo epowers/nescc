@@ -403,7 +403,7 @@ DEAD_USE is true for identifiers used as the target of a regular assignment")
 If VA_ARG_CALL is non-null, this is actually a call to the pseudo-function
 __builtin_va_arg(args, va_arg_call) (where va_arg_call is a type). In 
 this case arg1 is a dummy identifier.
-CALL_KIND is one of c_call, post_task, command_call or event_signal.")
+CALL_KIND is one of normal_call, post_task, command_call or event_signal.")
 
 (defnode array_ref binary "ARG1[ARG2]")
 

@@ -212,7 +212,12 @@ static void collect_uses_expr(expression expr, context c)
 	      CAST(identifier, fce->arg1)->ddecl->kind == decl_magic_function)) ||
 	    fce->va_arg_call))
 	{
-	  if (warn_fnptr)
+	  /* XXX: we allow a function pointer call in TOSH_run_next_task,
+	     which is the runtime function for post.
+	     Yuck. */
+	  if (warn_fnptr && 
+	      (!current_function ||
+	       strcmp(current_function->name, "TOSH_run_next_task") != 0))
 	    warning_with_location(fce->location, "call via function pointer");
 	  collect_uses_expr(fce->arg1, exe_c | c_read);
 	}
