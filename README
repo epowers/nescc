@@ -1,4 +1,4 @@
-This is the 1.1.1 (final beta test) release of nesC. 
+This is the 1.1.1 release of nesC. 
 
 Installation instructions are in INSTALL. Note that nesC includes a patched
 GNU assembler for the AVR (to support debugging).  An appopriate version of
