@@ -1,19 +1,23 @@
-/* This file is part of the nesC compiler.
-   Copyright (C) 2002 Intel Corporation
+/* This file is part of the galsC compiler.
 
-The attached "nesC" software is provided to you under the terms and
+This file is derived from the nesC compiler.  It is thus
+   Copyright (C) 2002 Intel Corporation
+Changes for galsC are
+   Copyright (C) 2003-2004 Palo Alto Research Center
+
+The attached "galsC" software is provided to you under the terms and
 conditions of the GNU General Public License Version 2 as published by the
 Free Software Foundation.
 
-nesC is distributed in the hope that it will be useful,
+galsC is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with nesC; see the file COPYING.  If not, write to
+along with galsC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+Boston, MA 02111-1307, USA. */
 
 #include "parser.h"
 #include <sys/stat.h>
@@ -179,6 +183,12 @@ const char *find_nesc_file(region r, source_language l, const char *name)
   strcpy(filename, name);
   switch (l)
     {
+#ifdef GALSC
+        // When looking for "name", if it should be an application or
+        // an actor, use the .gc suffix for the file name.
+    case l_application: strcat(filename, ".gc"); break;
+    case l_actor: strcat(filename, ".gc"); break;
+#endif
     case l_interface: strcat(filename, ".nc"); break;
     case l_component: strcat(filename, ".nc"); break;
     case l_c: strcat(filename, ".h"); break;

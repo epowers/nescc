@@ -1,22 +1,25 @@
-/* This file is part of the nesC compiler.
+/* This file is part of the galsC compiler.
 
-This file is derived from RC and the GNU C Compiler. It is thus
+This file is derived from the nesC compiler and RC and the GNU C Compiler.
+It is thus
    Copyright (C) 1987, 88, 89, 92-7, 1998 Free Software Foundation, Inc.
    Copyright (C) 2000-2001 The Regents of the University of California.
 Changes for nesC are
    Copyright (C) 2002 Intel Corporation
+Changes for galsC are
+   Copyright (C) 2003-2004 Palo Alto Research Center
 
-The attached "nesC" software is provided to you under the terms and
+The attached "galsC" software is provided to you under the terms and
 conditions of the GNU General Public License Version 2 as published by the
 Free Software Foundation.
 
-nesC is distributed in the hope that it will be useful,
+galsC is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with nesC; see the file COPYING.  If not, write to
+along with galsC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
 Boston, MA 02111-1307, USA. */
 
@@ -1043,11 +1046,6 @@ type check_binary(int binop, expression e1, expression e2)
   return rtype;
 }
 
-static bool unsafe_comparison(expression e)
-{
-  return !e->parens && is_comparison(e);
-}
-
 expression make_binary(location loc, int binop, expression e1, expression e2)
 {
   expression result = CAST(expression, newkind_binary(parse_region, binop, loc, e1, e2));
@@ -1058,66 +1056,7 @@ expression make_binary(location loc, int binop, expression e1, expression e2)
       result->cst = fold_binary(result->type, result);
     }
 
-  /* Check for cases such as x+y<<z which users are likely
-     to misinterpret.  If parens are used, C_EXP_ORIGINAL_CODE
-     is cleared to prevent these warnings.  */
-  if (warn_parentheses)
-    {
-      int code1 = e1->parens ? 0 : e1->kind, code2 = e2->parens ? 0 : e2->kind;
-
-      if (binop == kind_lshift || binop == kind_rshift)
-	{
-	  if (code1 == kind_plus || code1 == kind_minus
-	      || code2 == kind_plus || code2 == kind_minus)
-	    warning("suggest parentheses around + or - inside shift");
-	}
-
-      if (binop == kind_oror)
-	{
-	  if (code1 == kind_andand || code2 == kind_andand)
-	    warning("suggest parentheses around && within ||");
-	}
-
-      if (binop == kind_bitor)
-	{
-	  if (code1 == kind_bitand || code1 == kind_bitxor
-	      || code1 == kind_plus || code1 == kind_minus
-	      || code2 == kind_bitand || code2 == kind_bitxor
-	      || code2 == kind_plus || code2 == kind_minus)
-	    warning("suggest parentheses around arithmetic in operand of |");
-	  /* Check cases like x|y==z */
-	  if (unsafe_comparison(e1) || unsafe_comparison(e2))
-	    warning("suggest parentheses around comparison in operand of |");
-	}
-
-      if (binop == kind_bitxor)
-	{
-	  if (code1 == kind_bitand
-	      || code1 == kind_plus || code1 == kind_minus
-	      || code2 == kind_bitand
-	      || code2 == kind_plus || code2 == kind_minus)
-	    warning ("suggest parentheses around arithmetic in operand of ^");
-	  /* Check cases like x^y==z */
-	  if (unsafe_comparison(e1) || unsafe_comparison(e2))
-	    warning("suggest parentheses around comparison in operand of ^");
-	}
-
-      if (binop == kind_bitand)
-	{
-	  if (code1 == kind_plus || code1 == kind_minus
-	      || code2 == kind_plus || code2 == kind_minus)
-	    warning ("suggest parentheses around + or - in operand of &");
-	  /* Check cases like x&y==z */
-	  if (unsafe_comparison(e1) || unsafe_comparison(e2))
-	    warning("suggest parentheses around comparison in operand of &");
-	}
-    }
-
-  /* Similarly, check for cases like 1<=i<=10 that are probably errors.  */
-  if (unsafe_comparison(result) && extra_warnings
-      && (unsafe_comparison(e1) || unsafe_comparison(e2)))
-    warning("comparisons like X<=Y<=Z do not have their mathematical meaning");
-
+  /* XXX: The warn_parentheses stuff (and a <= b <= c) */
 #if 0
   unsigned_conversion_warning (result, arg1);
   unsigned_conversion_warning (result, arg2);
@@ -1630,7 +1569,7 @@ expression make_field_ref(location loc, expression object, cstring field)
   return result;
 }
 
-static expression finish_increment(unary result, char *name)
+static expression increment(unary result, char *name)
 {
   expression e = result->arg1;
   type etype = e->type;
@@ -1656,26 +1595,26 @@ static expression finish_increment(unary result, char *name)
 
 expression make_postincrement(location loc, expression e)
 {
-  return finish_increment(CAST(unary, new_postincrement(parse_region, loc, e)),
-			  "increment");
+  return increment(CAST(unary, new_postincrement(parse_region, loc, e)),
+		   "increment");
 }
 
 expression make_preincrement(location loc, expression e)
 {
-  return finish_increment(CAST(unary, new_preincrement(parse_region, loc, e)),
-			  "increment");
+  return increment(CAST(unary, new_preincrement(parse_region, loc, e)),
+			"increment");
 }
 
 expression make_postdecrement(location loc, expression e)
 {
-  return finish_increment(CAST(unary, new_postdecrement(parse_region, loc, e)),
-			  "decrement");
+  return increment(CAST(unary, new_postdecrement(parse_region, loc, e)),
+		   "decrement");
 }
 
 expression make_predecrement(location loc, expression e)
 {
-  return finish_increment(CAST(unary, new_predecrement(parse_region, loc, e)),
-			  "decrement");
+  return increment(CAST(unary, new_predecrement(parse_region, loc, e)),
+		   "decrement");
 }
 
 static size_t extract_strings(expression string_components,

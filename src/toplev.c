@@ -1,29 +1,30 @@
-/* This file is part of the nesC compiler.
+/* This file is part of the galsC compiler.
 
-This file is derived from RC and the GNU C Compiler. It is thus
+This file is derived from the nesC compiler and RC and the GNU C Compiler.
+It is thus
    Copyright (C) 1987, 88, 89, 92-7, 1998 Free Software Foundation, Inc.
    Copyright (C) 2000-2001 The Regents of the University of California.
 Changes for nesC are
    Copyright (C) 2002 Intel Corporation
+Changes for galsC are
+   Copyright (C) 2003-2004 Palo Alto Research Center
 
-The attached "nesC" software is provided to you under the terms and
+The attached "galsC" software is provided to you under the terms and
 conditions of the GNU General Public License Version 2 as published by the
 Free Software Foundation.
 
-nesC is distributed in the hope that it will be useful,
+galsC is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with nesC; see the file COPYING.  If not, write to
+along with galsC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
 Boston, MA 02111-1307, USA. */
 
 #include <signal.h>
 #include <unistd.h>
-#include <stdlib.h>
-#include <sys/poll.h>
 
 #include "parser.h"
 #include "input.h"
@@ -344,6 +345,7 @@ static void c_decode_option(char *p)
 static void rcc_aborting(int s)
 {
   signal(SIGABRT, 0);
+  // GALSC FIXME: galsc error message?
   fprintf(stderr, "nesC: Internal error. Please send a bug report to the nesC bug mailing list\nat nescc-bugs@lists.sourceforge.net\n");
   if (getenv("RCCDEBUG"))
     abort();
@@ -368,19 +370,6 @@ int region_main(int argc, char **argv) deletes
   char *target = 0;
   int version_flag = 0;
   char *p;
-  char* waitforgdb;
-
-  /*
-   * Check for an environment variable NCCGDB, and if set, block
-   * calling poll(). When gdb attaches, it sends us a signal which
-   * causes poll to return with EINTR, and we continue on our merry
-   * way.
-   */
-  waitforgdb = getenv("NCCGDB");
-  if (waitforgdb) {
-    fprintf(stderr, "ncc pid %d waiting for gdb attach\n", getpid());
-    poll(0, 0, -1); // should return with EINTR
-  }
 
   signal(SIGABRT, rcc_aborting);
   signal(SIGSEGV, rcc_aborting);

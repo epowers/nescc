@@ -1,19 +1,23 @@
-/* This file is part of the nesC compiler.
-   Copyright (C) 2002 Intel Corporation
+/* This file is part of the galsC compiler.
 
-The attached "nesC" software is provided to you under the terms and
+This file is derived from the nesC compiler.  It is thus
+   Copyright (C) 2002 Intel Corporation
+Changes for galsC are
+   Copyright (C) 2003-2004 Palo Alto Research Center
+
+The attached "galsC" software is provided to you under the terms and
 conditions of the GNU General Public License Version 2 as published by the
 Free Software Foundation.
 
-nesC is distributed in the hope that it will be useful,
+galsC is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with nesC; see the file COPYING.  If not, write to
+along with galsC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+Boston, MA 02111-1307, USA. */
 
 #include "parser.h"
 #include "nesc-semantics.h"
@@ -29,6 +33,11 @@ Boston, MA 02111-1307, USA.  */
 #include "nesc-interface.h"
 #include "edit.h"
 #include "c-parse.h"
+
+#ifdef GALSC
+#include "galsc-application.h"
+#include "galsc-actor.h"
+#endif
 
 #include <errno.h>
 
@@ -66,11 +75,8 @@ bool nesc_attribute(attribute a)
 {
   const char *name = a->word1->cstring.data;
 
-  return !strcmp(name, "C") || 
-    !strcmp(name, "spontaneous") ||
-    !strcmp(name, "combine") ||
-    !strcmp(name, "hwevent") ||
-    !strcmp(name, "atomic_hwevent");
+  return !strcmp(name, "C") || !strcmp(name, "spontaneous") ||
+    !strcmp(name, "combine");
 }
 
 type get_actual_function_type(type t)
@@ -130,6 +136,21 @@ bool nesc_filename(const char *name)
   return FALSE; /* C by default */
 }
 
+#ifdef GALSC
+// Retrns true if "name" is a galsC file (.gc).
+bool galsc_filename(const char *name)
+{
+  char *dot = strrchr(basename((char *)name), '.');
+
+  if (dot)
+    {
+      if (!strcmp(dot, ".gc"))
+	return TRUE;
+    }
+  return FALSE; /* .nc or C by default */
+}
+#endif
+
 const char *element_name(region r, const char *path)
 /* Returns: Return the "identifier part"
      of path, i.e., remove any directory and extension
@@ -159,6 +180,11 @@ const char *language_name(source_language l)
 {
   switch (l)
     {
+#ifdef GALSC
+        // Return a string based on the source_language type
+    case l_application: return "application";
+    case l_actor: return "actor";
+#endif
     case l_interface: return "interface";
     case l_component: case l_implementation: return "component";
     case l_c: return "C file";
@@ -166,16 +192,15 @@ const char *language_name(source_language l)
     }
 }
 
-nesc_decl compile(location loc, source_language l,
-		  const char *name, bool name_is_path,
-		  nesc_declaration container, environment parent_env)
+environment compile(location loc, source_language l,
+		    const char *name, bool name_is_path,
+		    nesc_declaration container, environment parent_env)
 {
   const char *path =
     name_is_path ? name : find_nesc_file(parse_region, l, name);
   FILE *f = NULL;
   struct semantic_state old_semantic_state;
   environment env;
-  nesc_decl nd = NULL;
 
   old_semantic_state = current;
 
@@ -207,38 +232,57 @@ nesc_decl compile(location loc, source_language l,
       env = current.env;
       if (container)
 	container->env = env;
-      nd = parse();
+      parse();
+#ifdef GALSC
+      //fprintf(stderr, "Finished parsing %s.\n", name);
+#endif
+      
       deleteregion_ptr(&current.fileregion);
       end_input();
 
       preprocess_file_end();
     }
-  if (!nd && l != l_c)
-    nd = dummy_nesc_decl(l, new_location(path ? path : name, 0),
-			 container->name);
 
   current = old_semantic_state;
 
-  return nd;
+  return env;
 }
 
-nesc_decl dummy_nesc_decl(source_language sl, location loc, const char *name)
+nesc_decl dummy_nesc_decl(source_language sl, const char *name)
 {
   word wname = build_word(parse_region, name);
   nesc_decl nd;
 
   switch (sl)
     {
+#ifdef GALSC
+        // If the file for name did not contain the expected results
+        // after reading, build a dummy nesc_decl for either the
+        // application or actor so that the compiler can continue
+        // without a segfault.
+    case l_application: {
+        // FIXME
+        //        implementation impl = CAST(implementation, new_application_implementation(parse_region, dummy_location, NULL, NULL, NULL, NULL, NULL));
+        implementation impl = CAST(implementation, new_application_implementation(parse_region, dummy_location, NULL, NULL, NULL, NULL));
+        nd = CAST(nesc_decl, new_application(parse_region, dummy_location, wname, NULL, NULL, impl));
+        break;
+    }
+    case l_actor: {
+        implementation impl = CAST(implementation, new_actor_implementation(parse_region, dummy_location, NULL, NULL, NULL, NULL));
+        nd = CAST(nesc_decl, new_actor(parse_region, dummy_location, wname, NULL, NULL, impl));
+        break;
+    }
+#endif
     case l_component: {
       implementation impl = CAST(implementation,
-	new_module(parse_region, loc, NULL, NULL));
+	new_module(parse_region, dummy_location, NULL, NULL));
       nd = CAST(nesc_decl,
-	new_component(parse_region, loc, wname, NULL, NULL, impl));
+	new_component(parse_region, dummy_location, wname, NULL, NULL, impl));
       break;
     }
     case l_interface:
       nd = CAST(nesc_decl,
-	new_interface(parse_region, loc, wname, NULL, NULL));
+	new_interface(parse_region, dummy_location, wname, NULL, NULL));
       break;
     default:
       assert(0);
@@ -258,6 +302,15 @@ void build(nesc_declaration decl, nesc_decl ast)
 
   switch (decl->kind)
     {
+#ifdef GALSC
+        // After parsing, build either an application or an actor.
+    case l_application:
+        build_application(parse_region, decl);
+        break;
+    case l_actor:
+        build_actor(parse_region, decl);
+        break;
+#endif
     case l_interface:
       build_interface(parse_region, decl);
       break;
@@ -275,25 +328,27 @@ nesc_declaration load(source_language sl, location l,
   const char *element = name_is_path ? element_name(parse_region, name) : name;
   const char *actual_name;
   nesc_declaration decl;
-  nesc_decl ast;
 
   decl = new_nesc_declaration(parse_region, sl, element);
     
   /* We don't get duplicates as we only load on demand */
   nesc_declare(decl);
 
-  ast = compile(l, sl, name, name_is_path, decl, global_env);
+  parsed_nesc_decl = NULL;
+  compile(l, sl, name, name_is_path, decl, global_env);
+  if (!parsed_nesc_decl)
+    parsed_nesc_decl = dummy_nesc_decl(sl, element);
 
-  actual_name = ast->word1->cstring.data;
+  actual_name = parsed_nesc_decl->word1->cstring.data;
   if (strcmp(element, actual_name))
-    error_with_location(ast->location,
+    error_with_location(parsed_nesc_decl->location,
 			"expected %s `%s', but got %s '%s'",
 			language_name(decl->kind),
 			element,
 			language_name(decl->kind),
 			actual_name);
 
-  build(decl, ast);
+  build(decl, parsed_nesc_decl);
 
   return decl;
 }

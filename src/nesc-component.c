@@ -1,19 +1,23 @@
-/* This file is part of the nesC compiler.
-   Copyright (C) 2002 Intel Corporation
+/* This file is part of the galsC compiler.
 
-The attached "nesC" software is provided to you under the terms and
+This file is derived from the nesC compiler.  It is thus
+   Copyright (C) 2002 Intel Corporation
+Changes for galsC are
+   Copyright (C) 2003-2004 Palo Alto Research Center
+
+The attached "galsC" software is provided to you under the terms and
 conditions of the GNU General Public License Version 2 as published by the
 Free Software Foundation.
 
-nesC is distributed in the hope that it will be useful,
+galsC is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with nesC; see the file COPYING.  If not, write to
+along with galsC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+Boston, MA 02111-1307, USA. */
 
 #include "parser.h"
 #include "nesc-component.h"
@@ -69,7 +73,11 @@ void component_functions_iterate(nesc_declaration c,
     }
 }
 
+#ifdef GALSC
+typelist make_gparm_typelist(declaration gparms)
+#else
 static typelist make_gparm_typelist(declaration gparms)
+#endif
 {
   declaration gparm;
   typelist gtypes = new_typelist(parse_region);
@@ -154,10 +162,13 @@ void check_generic_parameter_type(location l, data_declaration gparm)
     }
 }
 
+#ifdef GALSC
+#else
 struct beg_data
 {
   cgraph cg;
 };
+#endif
 
 void beg_iterator(data_declaration fndecl, void *data)
 {
@@ -166,12 +177,38 @@ void beg_iterator(data_declaration fndecl, void *data)
 
   node.component = NULL;
   node.interface = fndecl->interface;
+#ifdef GALSC
+  node.parameter = NULL;
+  node.actor = fndecl->actor;
+  node.port = NULL;
+  node.function = NULL;
+  node.args = NULL;
+
+  switch (fndecl->kind) {
+  case decl_variable:
+      node.parameter = fndecl;
+      break;
+  case decl_port_ref:
+      node.port = fndecl;
+      break;
+  case decl_function:
+      node.function = fndecl;
+      break;
+  default:
+      assert(0);
+  }
+#else
   node.function = fndecl;
+#endif
   node.args = NULL;
   endpoint_lookup(d->cg, &node);
 }
 
+#ifdef GALSC
+cgraph build_external_graph(region r, nesc_declaration cdecl)
+#else
 static cgraph build_external_graph(region r, nesc_declaration cdecl)
+#endif
 {
   cgraph cg = new_cgraph(r);
   struct beg_data d;

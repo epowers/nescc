@@ -1,19 +1,23 @@
-/* This file is part of the nesC compiler.
-   Copyright (C) 2002 Intel Corporation
+/* This file is part of the galsC compiler.
 
-The attached "nesC" software is provided to you under the terms and
+This file is derived from the nesC compiler.  It is thus
+   Copyright (C) 2002 Intel Corporation
+Changes for galsC are
+   Copyright (C) 2003-2004 Palo Alto Research Center
+
+The attached "galsC" software is provided to you under the terms and
 conditions of the GNU General Public License Version 2 as published by the
 Free Software Foundation.
 
-nesC is distributed in the hope that it will be useful,
+galsC is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with nesC; see the file COPYING.  If not, write to
+along with galsC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+Boston, MA 02111-1307, USA. */
 
 #include "parser.h"
 #include "nesc-inline.h"
@@ -290,19 +294,47 @@ static ggraph make_ig(region r, cgraph callgraph)
 
   graph_scan_nodes (n, cg)
     {
+#ifdef GALSC
+        // FIXME is this inline stuff right for ports and parameters?
+        endp ep = NODE_GET(endp, n);
+        data_declaration fn = (ep->function) ? ep->function : (ep->port ? ep->port : ep->parameter);
+        if (ep->parameter)
+            continue;
+        assert(fn);
+#else
       data_declaration fn = NODE_GET(endp, n)->function;
-
+#endif
       ig_add_fn(r, ig, fn,
 		fn->definition ?
 		  function_size(CAST(function_decl, fn->definition)) : 1);
     }
   graph_scan_nodes (n, cg)
     {
+#ifdef GALSC
+        // FIXME is this inline stuff right for ports and parameters?
+        endp ep = NODE_GET(endp, n);
+        data_declaration fn = (ep->function) ? ep->function : (ep->port ? ep->port : ep->parameter);
+        if (ep->parameter)
+            continue;
+        assert(fn);
+
+        gedge e;
+        
+        graph_scan_out (e, n) {
+            endp ep_to = NODE_GET(endp, graph_edge_to(e));
+            data_declaration fn_to = (ep_to->function) ? ep_to->function : (ep_to->port ? ep_to->port : ep_to->parameter);
+            if (ep_to->parameter)
+                continue;
+            
+            ig_add_edge(fn, fn_to);
+        }
+#else
       data_declaration fn = NODE_GET(endp, n)->function;
       gedge e;
 
       graph_scan_out (e, n)
 	ig_add_edge(fn, NODE_GET(endp, graph_edge_to(e))->function);
+#endif
     }
   return ig;
 }

@@ -1,21 +1,24 @@
-/* This file is part of the nesC compiler.
+/* This file is part of the galsC compiler.
 
-This file is derived from the RC Compiler. It is thus
+This file is derived from the nesC compiler, which is derived from the
+RC Compiler. It is thus
    Copyright (C) 2000-2001 The Regents of the University of California.
 Changes for nesC are
    Copyright (C) 2002 Intel Corporation
+Changes for galsC are
+   Copyright (C) 2003-2004 Palo Alto Research Center
 
-The attached "nesC" software is provided to you under the terms and
+The attached "galsC" software is provided to you under the terms and
 conditions of the GNU General Public License Version 2 as published by the
 Free Software Foundation.
 
-nesC is distributed in the hope that it will be useful,
+galsC is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with nesC; see the file COPYING.  If not, write to
+along with galsC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
 Boston, MA 02111-1307, USA. */
 
@@ -107,6 +110,28 @@ function_decl parent_function(node n)
     n = n->parent;
 
   return CAST(function_decl, n);
+}
+
+bool is_assignment(void *e)
+{
+  int kind = ((node)e)->kind;
+
+  /* XXX: Yuck */
+  return kind == kind_assign || kind == kind_plus_assign ||
+    kind == kind_minus_assign || kind == kind_times_assign ||
+    kind == kind_divide_assign || kind == kind_modulo_assign ||
+    kind == kind_lshift_assign || kind == kind_rshift_assign ||
+    kind == kind_bitand_assign || kind == kind_bitor_assign ||
+    kind == kind_bitxor_assign;
+}
+
+bool is_increment(void *e)
+{
+  int kind = ((node)e)->kind;
+
+  /* XXX: Yuck */
+  return kind == kind_preincrement || kind == kind_predecrement ||
+    kind == kind_postincrement || kind == kind_postdecrement;
 }
 
 expression ignore_fields(expression e)

@@ -1,19 +1,23 @@
-/* This file is part of the nesC compiler.
-   Copyright (C) 2002 Intel Corporation
+/* This file is part of the galsC compiler.
 
-The attached "nesC" software is provided to you under the terms and
+This file is derived from the nesC compiler.  It is thus
+   Copyright (C) 2002 Intel Corporation
+Changes for galsC are
+   Copyright (C) 2003-2004 Palo Alto Research Center
+
+The attached "galsC" software is provided to you under the terms and
 conditions of the GNU General Public License Version 2 as published by the
 Free Software Foundation.
 
-nesC is distributed in the hope that it will be useful,
+galsC is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with nesC; see the file COPYING.  If not, write to
+along with galsC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+Boston, MA 02111-1307, USA. */
 
 #include <fcntl.h>
 #include <errno.h>
@@ -37,6 +41,13 @@ Boston, MA 02111-1307, USA.  */
 #include "nesc-uses.h"
 #include "edit.h"
 #include "machine.h"
+
+#ifdef GALSC
+#include "galsc-main.h"
+#include "galsc-generate.h"
+#include "galsc-env.h"
+#include "galsc-application.h"
+#endif
 
 /* The set of C files to require before loading the main component */
 struct ilist
@@ -84,8 +95,13 @@ static void connect_graph(cgraph master, cgraph component)
     }
 }
 
+#ifdef GALSC
+void connect(nesc_declaration cdecl,
+		    cgraph cg, dd_list modules, dd_list components)
+#else
 static void connect(nesc_declaration cdecl,
 		    cgraph cg, dd_list modules, dd_list components)
+#endif
 {
   if (!dd_find(components, cdecl))
     {
@@ -190,6 +206,12 @@ bool nesc_option(char *p)
     {
       doc_use_graphviz(TRUE);
     }
+#ifdef GALSC
+  else if (!strncmp (p, "fgalsc-main=", strlen("fgalsc-main=")))
+    {
+        set_galsc_main(p + strlen("fgalsc-main="));
+    }
+#endif
   else if (!strcmp (p, "Wnesc-docstring"))
     warn_unexpected_docstring = 1;
   else if (!strcmp (p, "Wno-nesc-docstring"))
@@ -257,6 +279,9 @@ void nesc_compile(const char *filename, const char *target_name)
   init_lex();
   init_semantics();
   init_nesc_env(parse_region);
+#ifdef GALSC
+  init_galsc_env(parse_region);
+#endif
   init_nesc_paths_end();
   init_magic_functions();
   init_uses();
@@ -268,6 +293,41 @@ void nesc_compile(const char *filename, const char *target_name)
   for (includes = includelist; includes; includes = includes->next)
     require_c(&toplevel, includes->name);
 
+#ifdef GALSC
+  // Do galsC processing!
+  // See section below for original nesC processing
+  
+  // Check for a .gc file
+  if (galsc_filename(filename)) {
+      /* We need to assume some language - it will get fixed once we
+	 see the actual file */
+      nesc_declaration program = load(l_application, &toplevel, filename, TRUE);
+
+      if (errorcount == 0)
+	{
+	  /* Destroy target in all circumstances (prevents surprises
+	     when "compiling" interfaces) */
+	  destroy_target(target_name);
+
+	  if (dump_msg_layout())
+	    ;
+	  else if (program->kind == l_application)
+	    {
+	      cgraph cg;
+	      dd_list modules, components;
+              dd_list ports;
+              dd_list parameters;
+              dd_list appstart;
+              
+	      galsc_connect_graphs(parse_region, program, &cg, &modules, &components, &ports, &parameters, &appstart);
+	      if (!generate_docs(filename, cg))
+		galsc_generate_c_code(program, target_name, cg, modules, ports, parameters, appstart);
+	    }
+	  else /* generate docs for interfaces if requested */
+	    generate_docs(filename, NULL);
+	}
+  } else
+#endif
   if (nesc_filename(filename))
     {
       /* We need to assume some language - it will get fixed once we

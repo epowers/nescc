@@ -1,29 +1,33 @@
-/* XXX: figure out when an init_list is constant (so that we can allow
-   a cast_list inside an init_list that requires constants) 
-*/
+/* This file is part of the galsC compiler.
 
-/* Initialiser handling.
-   This file is part of the nesC compiler.
-
-This file is derived from the GNU C Compiler. It is thus
+This file is derived from nesC and the GNU C Compiler. It is thus
    Copyright (C) 1987, 1988, 1991, 1992, 1993, 1994, 1995, 1996, 1997,
    1998, 1999, 2000, 2001, 2002 Free Software Foundation, Inc.
 Changes for nesC are
    Copyright (C) 2002, 2003 Intel Corporation
+Changes for galsC are
+   Copyright (C) 2003-2004 Palo Alto Research Center
 
-The attached "nesC" software is provided to you under the terms and
+The attached "galsC" software is provided to you under the terms and
 conditions of the GNU General Public License Version 2 as published by the
 Free Software Foundation.
 
-nesC is distributed in the hope that it will be useful,
+galsC is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with nesC; see the file COPYING.  If not, write to
+along with galsC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
 Boston, MA 02111-1307, USA. */
+
+/* XXX: figure out when an init_list is constant (so that we can allow
+   a cast_list inside an init_list that requires constants) 
+*/
+
+/* Initialiser handling. */
+
 
 #include "parser.h"
 #include "c-parse.h"
@@ -1077,7 +1081,6 @@ void process_init_element(expression value)
 	  else if (constructor_count == 1) /* Only warn once */
 	    pedwarn_init("excess elements in scalar initializer");
 	  break;
-	default: assert(0); break;
 	}
 
       /* Accept a string constant to initialize a subarray.  */
@@ -1138,7 +1141,6 @@ void process_init_element(expression value)
       if (constructor_index > constructor_array_size)
 	constructor_array_size = constructor_index;
       break;
-    default: assert(0); break;
     }
 
   /* Pop back to the level before the designator */

@@ -1,22 +1,25 @@
-/* This file is part of the nesC compiler.
+/* This file is part of the galsC compiler.
 
-This file is derived from RC and the GNU C Compiler. It is thus
+This file is derived from the nesC compiler and RC and the GNU C Compiler.
+It is thus
    Copyright (C) 1987, 88, 89, 92-7, 1998 Free Software Foundation, Inc.
    Copyright (C) 2000-2001 The Regents of the University of California.
 Changes for nesC are
    Copyright (C) 2002 Intel Corporation
+Changes for galsC are
+   Copyright (C) 2003-2004 Palo Alto Research Center
 
-The attached "nesC" software is provided to you under the terms and
+The attached "galsC" software is provided to you under the terms and
 conditions of the GNU General Public License Version 2 as published by the
 Free Software Foundation.
 
-nesC is distributed in the hope that it will be useful,
+galsC is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with nesC; see the file COPYING.  If not, write to
+along with galsC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
 Boston, MA 02111-1307, USA. */
 
@@ -853,7 +856,11 @@ static type weird_common_parameter(type t1, type t2)
 /* Check two lists of types for compatibility,
    returning 0 for incompatible, 1 for compatible,
    or 2 for compatible with warning.  */
+#ifdef GALSC
+int type_lists_compatible(typelist al1, typelist al2)
+#else
 static int type_lists_compatible(typelist al1, typelist al2)
+#endif
 {
   /* 1 if no need for warning yet, 2 if warning cause has been seen.  */
   int val = 1;
@@ -993,6 +1000,7 @@ bool type_compatible_unqualified(type t1, type t2)
     case tk_iref:
       return t1->u.iref->itype == t2->u.iref->itype;
     }
+
     default: assert(0); return 0;
     }
 }
@@ -1462,9 +1470,11 @@ void type2ast(region r, location loc, type t, declarator inside,
       break;
     case tk_function: {
       declaration parms;
-
+#ifdef GALSC
+#else
       assert(t->u.fn.fkind == tkf_c); /* XXX: not done for nesC stuff yet
 					 (not needed yet) */
+#endif
       /* XXX: doesn't rebuild fn qualifiers. Are we generating C here
 	 or not ? */
       /* XXX: Should build environment for parameters */

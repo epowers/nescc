@@ -1,22 +1,25 @@
-/* This file is part of the nesC compiler.
+/* This file is part of the galsC compiler.
 
-This file is derived from RC and the GNU C Compiler. It is thus
+This file is derived from the nesC compiler and RC and the GNU C Compiler.
+It is thus
    Copyright (C) 1987, 88, 89, 92-7, 1998 Free Software Foundation, Inc.
    Copyright (C) 2000-2001 The Regents of the University of California.
 Changes for nesC are
    Copyright (C) 2002 Intel Corporation
+Changes for galsC are
+   Copyright (C) 2003-2004 Palo Alto Research Center
 
-The attached "nesC" software is provided to you under the terms and
+The attached "galsC" software is provided to you under the terms and
 conditions of the GNU General Public License Version 2 as published by the
 Free Software Foundation.
 
-nesC is distributed in the hope that it will be useful,
+galsC is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with nesC; see the file COPYING.  If not, write to
+along with galsC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
 Boston, MA 02111-1307, USA. */
 
@@ -73,17 +76,6 @@ static location make_location(struct location l)
   return last_allocated_location;
 }
 
-location new_location(const char *filename, int lineno)
-{
-  location l = ralloc(parse_region, struct location);
-
-  l->filename = filename;
-  l->lineno = lineno;
-  l->in_system_header = FALSE;
-
-  return l;
-}
-
 static size_t int_type_size;
 
 /* Cause the `yydebug' variable to be defined.  */
@@ -136,6 +128,16 @@ int check_newline(void);
    need to add or modify the reserved keyword lists.  */
 #include "c-gperf.h"
 
+
+#ifdef GALSC
+static char *galsc_keywords[] = {
+    // Add the keywords for galsC
+#define GK(name, token, rid) #name,
+#include "galsc-keywords.h"
+NULL
+};
+#endif
+
 void
 init_lex (void)
 {
@@ -188,6 +190,46 @@ init_lex (void)
 
 }
 
+#ifdef GALSC
+// Returns true if the current file being parsed is a galsC file.
+bool is_galsc_language() {
+    switch (current.language) {
+    case l_c:
+        return FALSE;
+    case l_interface:
+        return FALSE;
+    case l_component:
+        return FALSE;
+    case l_implementation:
+        switch((current.container)->kind) {
+        case l_actor:
+            return TRUE;
+        case l_application:
+            return TRUE;
+        default:
+            return FALSE;
+        }
+    case l_actor:
+        return TRUE;
+    case l_application:
+        return TRUE;
+    default:
+        return FALSE;
+    }
+}
+
+// Returns true if the reserved word "resword" is a galsC keyword.
+bool is_galsc_reserved_word(struct resword *resword) {
+    int i;
+    for (i = 0; galsc_keywords[i]; i++) {
+        if(!strcmp(galsc_keywords[i], resword->name)) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+#endif
+
 void
 start_lex (source_language l)
 {
@@ -200,6 +242,10 @@ start_lex (source_language l)
 
   switch (l)
     {
+#ifdef GALSC
+        // Create the initial dispatch token for the parser (c-parse.y)
+    case l_actor: case l_application: language_token = DISPATCH_GALSC; break;
+#endif        
     case l_interface: case l_component: language_token = DISPATCH_NESC; break;
     case l_c: language_token = DISPATCH_C; break;
     default: assert(0); break;
@@ -1321,8 +1367,17 @@ yylex(struct yystype *lvalp)
 	struct resword *ptr;
 
 	*token_ptr = '\0';
+
 	if ((ptr = is_reserved_word (token_buffer, token_ptr - token_buffer)))
 	  {
+
+#ifdef GALSC
+              // If we are not lexing a galsC file, ignore galsC-only
+              // keywords.
+              if (!is_galsc_language() && is_galsc_reserved_word(ptr)) {
+                  ptr = 0;
+              } else {
+#endif
 	    value = (int) ptr->token;
 	    lvalp->u.itoken.i = (int) ptr->rid;
 
@@ -1333,6 +1388,9 @@ yylex(struct yystype *lvalp)
 		&& token_buffer[0] != '_')
 	      pedwarn ("ANSI does not permit the keyword `%s'",
 		       token_buffer);
+#ifdef GALSC
+              }
+#endif
 	  }
       }
 
@@ -1818,6 +1876,14 @@ yylex(struct yystype *lvalp)
 	      if (c1 == '>')
 		{ value = POINTSAT; goto done; }
 	      break;
+#ifdef GALSC
+              // Create a token for the connection between ports (=>),
+              // which appears in the application declaration.
+	    case '=':
+	      if (c1 == '>')
+		{ value = POINTSAT_GALSC; goto done; }
+	      break;
+#endif
 	    case ':':
 	      if (c1 == '>')
 		{ value = ']'; goto done; }
@@ -1841,6 +1907,12 @@ yylex(struct yystype *lvalp)
 
 	    if (c1 == '-')
 	      value = TASTNIOP;
+#ifdef GALSC
+            // Create a token for the connection between ports (<=),
+            // which appears in the application declaration.
+	    else if (c1 == '=')
+	      value = TASTNIOP_GALSC;
+#endif
 	    else
 	      {
 		token_ungetc (c1);

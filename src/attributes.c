@@ -1,8 +1,28 @@
+/* This file is part of the galsC compiler.
+
+This file is derived from the nesC compiler.  It is thus
+   Copyright (C) 2002 Intel Corporation
+Changes for galsC are
+   Copyright (C) 2003-2004 Palo Alto Research Center
+
+The attached "galsC" software is provided to you under the terms and
+conditions of the GNU General Public License Version 2 as published by the
+Free Software Foundation.
+
+galsC is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with galsC; see the file COPYING.  If not, write to
+the Free Software Foundation, 59 Temple Place - Suite 330,
+Boston, MA 02111-1307, USA. */
+
 #include "parser.h"
 #include "attributes.h"
 #include "semantics.h"
 #include "nesc-semantics.h"
-#include "machine.h"
 
 /* Provide warnings about ignored attributes and attribute lists */
 
@@ -44,15 +64,6 @@ static void transparent_union_argument(data_declaration ddecl)
     (ddecl->type, type_qualifiers(ddecl->type) | transparent_qualifier);
 }
 
-static bool require_function(attribute attr, data_declaration ddecl)
-{
-  if (ddecl->kind == decl_function && ddecl->ftype == function_normal)
-    return TRUE;
-
-  error_with_location(attr->location, "`%s' attribute is for external functions only", attr->word1->cstring.data);
-  return FALSE;
-}
-
 void handle_decl_attribute(attribute attr, data_declaration ddecl)
 {
   const char *name = attr->word1->cstring.data;
@@ -80,33 +91,30 @@ void handle_decl_attribute(attribute attr, data_declaration ddecl)
     }
   else if (!strcmp(name, "spontaneous"))
     {
-      if (require_function(attr, ddecl))
+      if (ddecl->kind == decl_function && ddecl->ftype == function_normal)
 	{
-	  /* The test avoids overriding the effect of atomic_hwevent */
+	  /* The test avoids overriding the effect of signal */
 	  if (!ddecl->spontaneous)
 	    ddecl->spontaneous = c_call_nonatomic;
 	}
+      else
+	error_with_location(attr->location, "`spontaneous' attribute is for external functions only");
     }
-  else if (!strcmp(name, "atomic_hwevent"))
+  /* XXX: signal, interrupt are avr-specific, should be elsewhere */
+  else if (!strcmp(name, "signal"))
     {
-      if (require_function(attr, ddecl))
-	{
-	  ddecl->async = TRUE;
-	  ddecl->spontaneous = c_call_atomic;
-	}
+      ddecl->async = TRUE;
+      ddecl->spontaneous = c_call_atomic;
     }
-  else if (!strcmp(name, "hwevent"))
+  else if (!strcmp(name, "interrupt"))
     {
-      if (require_function(attr, ddecl))
-	{
-	  ddecl->async = TRUE;
-	  ddecl->spontaneous = c_call_nonatomic;
-	}
+      ddecl->async = TRUE;
+      ddecl->spontaneous = c_call_nonatomic;
     }
-  else if (!(target->decl_attribute &&
-	     target->decl_attribute(attr, ddecl)) &&
-	   !handle_type_attribute(attr, &ddecl->type))
-    /*ignored_attribute(attr)*/;
+  else
+    handle_type_attribute(attr, &ddecl->type);
+  /*else
+    ignored_attribute(attr);*/
 }
 
 /* Note: fdecl->bitwidth is not yet set when this is called */
@@ -116,9 +124,8 @@ void handle_field_attribute(attribute attr, field_declaration fdecl)
 
   if (!strcmp(name, "packed") || !strcmp(name, "__packed__"))
     fdecl->packed = TRUE;
-  else if (!(target->field_attribute &&
-	     target->field_attribute(attr, fdecl)))
-    /*ignored_attribute(attr)*/;
+  /*else
+    ignored_attribute(attr);*/
 }
 
 void handle_tag_attribute(attribute attr, tag_declaration tdecl)
@@ -141,9 +148,8 @@ void handle_tag_attribute(attribute attr, tag_declaration tdecl)
     }
   else if (!strcmp(name, "packed") || !strcmp(name, "__packed__"))
     tdecl->packed = TRUE;
-  else if (!(target->tag_attribute &&
-	     target->tag_attribute(attr, tdecl)))
-    /*ignored_attribute(attr)*/;
+  /*else
+    ignored_attribute(attr);*/
 }
 
 bool handle_type_attribute(attribute attr, type *t)
@@ -158,8 +164,7 @@ bool handle_type_attribute(attribute attr, type *t)
 	handle_combine_attribute(attr->location, attr->word2->cstring.data, t);
       return TRUE;
     }
-  else 
-    return target->type_attribute && target->type_attribute(attr, t);
+  return FALSE;
 }
 
 /* Functions to handle regular and dd list of attributes */

@@ -1,21 +1,24 @@
-/* This file is part of the nesC compiler.
+/* This file is part of the galsC compiler.
 
-This file is derived from the RC Compiler. It is thus
+This file is derived from the nesC compiler, which is derived from the
+RC Compiler. It is thus
    Copyright (C) 2000-2001 The Regents of the University of California.
 Changes for nesC are
    Copyright (C) 2002 Intel Corporation
+Changes for galsC are
+   Copyright (C) 2003-2004 Palo Alto Research Center
 
-The attached "nesC" software is provided to you under the terms and
+The attached "galsC" software is provided to you under the terms and
 conditions of the GNU General Public License Version 2 as published by the
 Free Software Foundation.
 
-nesC is distributed in the hope that it will be useful,
+galsC is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with nesC; see the file COPYING.  If not, write to
+along with galsC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
 Boston, MA 02111-1307, USA. */
 
@@ -30,6 +33,10 @@ Boston, MA 02111-1307, USA. */
 #include "errors.h"
 #include "nesc-semantics.h"
 #include "nesc-magic.h"
+
+#ifdef GALSC
+#include "galsc-generate.h"
+#endif
 
 /* Set this to 1 to avoid warnings from gcc about paren use with
    -Wparentheses */
@@ -608,6 +615,11 @@ void prt_declarator(declarator d, type_element elements, attribute attributes,
 
 void prt_plain_ddecl(data_declaration ddecl, psd_options options)
 {
+#ifdef GALSC
+  if (options & psd_galsc_print_port_put_call) {
+      output("GALSC__");
+  }
+#endif
   if (!ddecl->Cname)
     {
       if (ddecl->container && !(options & psd_skip_container))
@@ -635,6 +647,12 @@ void prt_plain_ddecl(data_declaration ddecl, psd_options options)
     }
 
   output_stripped_string(ddecl->name);
+#ifdef GALSC
+  if (options & psd_galsc_print_port_put_call) {
+      output_string(function_separator);
+      output("put");
+  }
+#endif
 }
 
 void prt_ddecl_full_name(data_declaration ddecl, psd_options options)
@@ -655,10 +673,39 @@ bool prt_simple_declarator(declarator d, data_declaration ddecl,
       case kind_function_declarator:
 	{
 	  function_declarator fd = CAST(function_declarator, d);
+#ifdef GALSC
+          // FIXME this is a hack on ddecl
+          data_declaration ddecl_orig = ddecl;
 
+          if (options &
+                      (psd_galsc_print_port_struct
+                      | psd_galsc_print_port_get_function
+                      | psd_galsc_print_port_get_call
+                      | psd_galsc_print_port_put_function_header
+                      | psd_galsc_print_port_put_function_body
+                      | psd_galsc_print_sched_init)) {
+              ddecl = NULL;
+          }
+#endif
+          
 	  prt_simple_declarator(fd->declarator, ddecl,
 				options | psd_need_paren_for_star |
 				psd_need_paren_for_qual);
+#ifdef GALSC
+          if (options &
+                      (psd_galsc_print_port_struct
+                      | psd_galsc_print_port_get_function
+                      | psd_galsc_print_port_get_call
+                      | psd_galsc_print_port_put_function_header
+                      | psd_galsc_print_port_put_function_body
+                      | psd_galsc_print_sched_init)) {
+              galsc_prt_parameters(fd->gparms ? fd->gparms :
+			 ddecl ? ddecl_get_gparms(ddecl) : NULL,
+			 fd->parms,
+			 options | psd_rename_parameters, ddecl_orig);
+          }
+          else
+#endif
 	  prt_parameters(fd->gparms ? fd->gparms :
 			 ddecl ? ddecl_get_gparms(ddecl) : NULL,
 			 fd->parms,
@@ -860,6 +907,22 @@ void prt_tag_ref(tag_ref tr, pte_options options)
   /* We must not name anonymous struct/unions (those which are collapsed
      into a containing struct/union) as that would make them non-anonymous
      (in gcc 3.3 and following) */
+
+#ifdef GALSC
+    // Don't print out the enum with this name.  This is a hack to get
+    // sched.c to compile correctly, even though GALSC_EVENTQUEUE_SIZE
+    // has not been defined.
+  if (tr->kind == kind_enum_ref && tr->word1 &&
+      !strcmp(tr->word1->cstring.data, "_GALSC_eventqueue_size_t"))
+    return;
+    // Don't print out the struct with this name.  This is a hack to
+    // get sched.c to compile correctly, even though the body of
+    // _GALSC_params_t has not been defined.
+  if (tr->kind == kind_struct_ref && tr->word1 && tr->fields &&
+      !strcmp(tr->word1->cstring.data, "_GALSC_params_t"))
+    return;
+#endif
+    
   if (!tr->tdecl->collapsed)
     name_tag(tr->tdecl);
 

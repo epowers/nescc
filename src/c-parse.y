@@ -1,22 +1,25 @@
-/* This file is part of the nesC compiler.
+/* This file is part of the galsC compiler.
 
-This file is derived from the RC and the GNU C Compiler. It is thus
+This file is derived from the nesC compiler and RC and the GNU C Compiler.
+It is thus
    Copyright (C) 1987, 88, 89, 92-7, 1998 Free Software Foundation, Inc.
    Copyright (C) 2000-2001 The Regents of the University of California.
 Changes for nesC are
    Copyright (C) 2002 Intel Corporation
+Changes for galsC are
+   Copyright (C) 2003-2004 Palo Alto Research Center
 
-The attached "nesC" software is provided to you under the terms and
+The attached "galsC" software is provided to you under the terms and
 conditions of the GNU General Public License Version 2 as published by the
 Free Software Foundation.
 
-nesC is distributed in the hope that it will be useful,
+galsC is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with nesC; see the file COPYING.  If not, write to
+along with galsC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
 Boston, MA 02111-1307, USA. */
 
@@ -29,7 +32,12 @@ Boston, MA 02111-1307, USA. */
 
 %pure_parser
 
+/* Comment out the following line if you want to be able to read error
+ * messages in c-parse.output.  The original grammar contained 4
+ * errors.
+ */
 %expect 4
+
 
 %{
 #include <stdio.h>
@@ -50,6 +58,8 @@ Boston, MA 02111-1307, USA. */
 #include "nesc-module.h"
 #include "nesc-env.h"
 
+#include "galsc-actor.h"
+
 int yyparse(void) deletes;
 
 void yyerror();
@@ -61,6 +71,7 @@ void yyerror();
 #define YYDEBUG 1
 %}
 
+/* Start the parser at the rule named "dispatch". */
 %start dispatch
 
 /* All identifiers that are not reserved words
@@ -126,6 +137,7 @@ void yyerror();
 %right <u.itoken> PLUSPLUS MINUSMINUS
 %left <u.itoken> POINTSAT '.' '(' '['
 
+/* Define the types of non-terminals in the grammar */
 %type <u.asm_operand> asm_operand asm_operands nonnull_asm_operands
 %type <u.asm_stmt> maybeasm
 %type <u.attribute> maybe_attribute attributes attribute attribute_list attrib
@@ -196,15 +208,43 @@ void yyerror();
 %type <u.fields> fieldlist
 
 /* the dispatching (fake) tokens */
-%token <u.itoken> DISPATCH_C DISPATCH_NESC
+%token <u.itoken> DISPATCH_C DISPATCH_GALSC DISPATCH_NESC
+
+/* begin galsC-specific code */
+
+/* galsC reserved words */
+%token <u.itoken> APPLICATION ACTOR
+%token <u.itoken> POINTSAT_GALSC TASTNIOP_GALSC
+%token <u.itoken> APPSTART
+%token <u.itoken> PORT IN OUT
+%token <u.itoken> ACTORCONTROL
+%token <u.itoken> PARAMETER
+
+/* galsC non-terminal types */
+%type <u.impl> iapplication iactor        
+%type <u.start> start_function_call start_function_call_list start
+%type <u.conn> application_connection application_connection_list       
+// FIXME
+//%type <u.gconn> global_connection global_connection_list
+%type <u.aref> actor_ref actor_list application_actor application_actors
+%type <u.portlist> in out in_or_out in_or_out_list actor_port
+%type <u.decl> parameterised_port parameterised_ports parameterised_port_list
+%type <u.pref> port_ref
+%type <u.conn> local_connection local_connection_list
+%type <u.ep> actorControl_decl actorControl_decl_list actorControl
+
+// TinyGUYS
+%type <u.decl> app_guys actor_guys
+%type <u.ep> endpoint_list
+                        
+/* end galsC-specific code */
 
 /* nesC reserved words */
 %token <u.itoken> ATOMIC USES INTERFACE COMPONENTS PROVIDES MODULE 
 %token <u.itoken> INCLUDES CONFIGURATION AS TASTNIOP IMPLEMENTATION CALL 
 %token <u.itoken> SIGNAL POST
-/* words reserved for nesC's future. Some may never be used... */
-%token <u.itoken> ABSTRACT COMPONENT DELETE EXTENDS GENERIC NEW
 
+/* nesC non-terminal types */
 %type <u.itoken> callkind
 %type <u.decl> datadef_list parameter_list parameter
 %type <u.decl> parameters parameters1
@@ -308,9 +348,7 @@ static void push_declspec_stack(void)
   pstate.declspec_stack = news;
 }
 
-static nesc_decl parsed_nesc_decl;
-
-nesc_decl parse(void) deletes
+void parse(void) deletes
 {
   int result, old_errorcount = errorcount;
   struct parse_state old_pstate = pstate;
@@ -321,6 +359,7 @@ nesc_decl parse(void) deletes
   pstate.declspec_stack = NULL;
   pstate.ds_region = newsubregion(parse_region);
   parsed_nesc_decl = NULL;
+
   result = yyparse();
   if (result)
     parsed_nesc_decl = NULL;
@@ -330,8 +369,6 @@ nesc_decl parse(void) deletes
     fprintf(stderr, "Errors detected in input file (your bison.simple is out of date)");
 
   pstate = old_pstate;
-
-  return parsed_nesc_decl;
 }
 
 void refuse_asm(asm_stmt s)
@@ -400,7 +437,7 @@ statement make_error_stmt(void)
 {
   return new_error_stmt(pr, last_location);
 }
-
+                        
 /* Tell yyparse how to print a token's value, if yydebug is set.  */
 
 #define YYPRINT(FILE,YYCHAR,YYLVAL) yyprint(FILE,YYCHAR,YYLVAL)
@@ -409,8 +446,13 @@ void yyprint();
 
 %%
 
+/* This is the beginning of the parser */
 dispatch:
-	  DISPATCH_NESC interface { }
+              /* begin galsC-specific code */
+          DISPATCH_GALSC application { } 
+        | DISPATCH_GALSC actor { }
+              /* end galsC-specific code */
+	| DISPATCH_NESC interface { }
 	| DISPATCH_NESC component { }
 	| DISPATCH_C extdefs { cdecls = declaration_reverse($2); }
 	| DISPATCH_C { cdecls = NULL; }
@@ -431,6 +473,315 @@ include_list:
 	| include_list ',' identifier 
 		{ require_c($3.location, $3.id.data); }
 	;
+
+/* begin galsC-specific code */
+/*************************** begin application ***************************/
+
+/* See configuration: */
+application:
+        includes_list
+	APPLICATION { $<u.docstring>$ = get_docstring(); 
+	  	      /* force matching kind in current galsc declaration */
+		      current.container->kind = l_application; }
+	idword
+        '{'
+        app_guys
+        iapplication
+        '}'
+              {
+                  parsed_nesc_decl = CAST(nesc_decl, new_application(pr, $2.location, $4, $<u.docstring>3, $6, $7));
+              }
+	;
+
+/* TinyGUYS */
+app_guys:
+          PARAMETER
+          '{'
+          decls
+          '}'
+                { $$ = $3; }
+        | /* empty */ { $$ = NULL; }
+        ;
+
+/* See iconfiguration */
+iapplication:
+        IMPLEMENTATION { $<u.env>$ = start_implementation(); }
+        '{'
+	application_actors
+        application_connection_list
+        start
+        '}'
+                {
+                    $$ = CAST(implementation, new_application_implementation(pr, $1.location, $<u.env>2, actor_ref_reverse($4), connection_reverse($5), $6));
+                }
+        ;
+                
+/* See uses: */
+application_actors:
+          /* empty */
+                { $$ = NULL; }
+	| application_actors application_actor
+                { $$ = actor_ref_chain($2, $1); }
+	;
+	
+/* See cuses: */
+application_actor:
+        ACTOR actor_list ';' { $$ = $2; }
+	;
+
+/* See component_list: */
+actor_list: 
+          actor_list ',' actor_ref { $$ = actor_ref_chain($3, $1); }
+	| actor_ref
+	;
+
+/* See component_ref: */
+actor_ref: 
+          idword { $$ = new_actor_ref(pr, $1->location, $1, NULL); }
+        | idword AS idword { $$ = new_actor_ref(pr, $1->location, $1, $3); }
+	;
+
+/* See connection_list: */
+application_connection_list:
+	  application_connection_list application_connection
+                { $$ = connection_chain($2, $1); }
+	| application_connection
+	;
+
+/* See connection: */
+/* TASTNIOP is backwards of POINTSAT "<-" */
+// NOTE: reusing endpoint
+application_connection:
+	  endpoint POINTSAT_GALSC endpoint ';'
+                { $$ = CAST(connection, new_global_connection(pr, $2.location, $3, $1, NULL)); }
+	| endpoint TASTNIOP_GALSC endpoint ';'
+                { $$ = CAST(connection, new_global_connection(pr, $2.location, $1, $3, NULL)); }
+	| endpoint '=' '[' expr ']' POINTSAT_GALSC endpoint ';' 
+                { $$ = CAST(connection, new_global_connection(pr, $2.location, $7, $1, $4)); }
+	| endpoint TASTNIOP_GALSC '[' expr ']' '=' endpoint ';'
+                { $$ = CAST(connection, new_global_connection(pr, $2.location, $1, $7, $4)); }
+// TinyGUYS global to local mappings.
+        | endpoint '=' endpoint ';'
+                { $$ = CAST(connection, new_eq_connection(pr, $2.location, $1, $3)); }
+	;
+
+/* FIMXE: add action */
+start:
+          APPSTART '{' start_function_call_list '}' { $$ = $3; }
+        | /* empty */ { $$ = NULL; }
+        ;
+
+/* See requires_or_provides_list: */
+start_function_call_list:
+          start_function_call_list start_function_call
+                { $$ = start_function_call_chain($2, $1); }
+        | /* empty */ { $$ = NULL; }
+        ;
+
+start_function_call:
+        endpoint '(' exprlist ')' ';'
+                { $$ = new_start_function_call(pr, $1->location, $1, $3) }
+        ;
+
+/*************************** end application *****************************/
+/*************************** begin actor     *****************************/
+/* See configuration: */
+actor:
+        includes_list
+        ACTOR   { $<u.docstring>$ = get_docstring(); 
+	  	/* force matching kind in current galsc declaration */
+		//current.container->kind = l_actor;
+                }
+	idword
+        '{'
+	actor_port
+        actor_guys
+        iactor
+        '}'
+                {
+                    parsed_nesc_decl = CAST(nesc_decl, new_actor(pr, $2.location, $4, $<u.docstring>3, $6, $8));
+                }
+	;
+
+/* EC: (see configuration:) */ 
+actor_port:
+        PORT '{' in_or_out_list '}'
+                { $$ = port_interface_reverse($3); }
+	;
+
+/* See requires_or_provides_list: */
+in_or_out_list: 
+          in_or_out_list in_or_out
+                { $$ = port_interface_chain($2, $1); }
+        | /*    empty */ { $$ = NULL; }
+	;
+
+/* See requires_or_provides: */
+in_or_out:
+	  in
+	| out
+	;
+
+/* See requires: */
+in:
+       IN { current.actor_in = TRUE; }
+	parameterised_port_list
+            { $$ = new_port_interface(pr, $1.location, TRUE, declaration_reverse($3)); }
+	;
+
+/* See provides: */
+out:
+	OUT { current.actor_in = FALSE; }
+	parameterised_port_list
+            { $$ = new_port_interface(pr, $1.location, FALSE, declaration_reverse($3)); }
+	;
+
+/* See parameterised_interface_list: */
+parameterised_port_list:
+	  parameterised_port { }
+          | '{' parameterised_ports '}' { $$ = $2; }
+	;
+
+/* See parameterised_interfaces: */
+parameterised_ports: 
+	  parameterised_ports parameterised_port 
+              { $$ = declaration_chain($2, $1); }
+	| parameterised_port { }
+	;
+
+/* See parameterised_interface: */
+parameterised_port:
+       	port_ref ';' 
+		{
+                    declare_port_ref($1, NULL, NULL);
+                    $$ = CAST(declaration, $1);
+                }
+	| port_ref parameters ';'
+		{
+                    $1->gparms = $2;
+		    declare_port_ref($1, $2, poplevel());
+                    $$ = CAST(declaration, $1);
+                }
+	;
+
+/* See interface_ref: */
+port_ref: 
+	  idword 
+                { $$ = new_port_ref(pr, $1->location, $1, NULL, NULL); }
+	| idword AS idword
+                { $$ = new_port_ref(pr, $1->location, $1, $3, NULL); }
+	;
+
+/* TinyGUYS */
+// FIXME: same as app_guys???
+actor_guys:
+          PARAMETER
+          '{'
+          decls
+          '}'
+                { $$ = $3; }
+        | /* empty */ { $$ = NULL; }
+        ;    
+
+/* See iconfiguration: */
+/* NOTE: We cannot reuse connection_list because we are disallowing
+ * endpoint '=' endpoint ';' */
+iactor:
+          IMPLEMENTATION { $<u.env>$ = start_implementation(); } 
+	  '{'
+	  uses
+	  local_connection_list
+          actorControl
+	  '}'
+                { $$ = CAST(implementation, new_actor_implementation(pr, $1.location, $<u.env>2, component_ref_reverse($4), connection_reverse($5), endpoint_reverse($6)))
+                }
+	;
+
+/* See connection_list: */
+local_connection_list: 
+          local_connection_list local_connection
+                { $$ = connection_chain($2, $1); }
+	| local_connection
+	;
+
+/* See connection: */
+/* NOTE: reusing endpoint */
+local_connection:
+	  endpoint POINTSAT endpoint ';' 
+                { $$ = CAST(connection, new_rp_connection(pr, $2.location, $3, $1)); }
+	| endpoint TASTNIOP endpoint ';'
+                { $$ = CAST(connection, new_rp_connection(pr, $2.location, $1, $3)); }
+// TinyGUYS
+        | '(' endpoint_list ')' POINTSAT endpoint ';'
+                { $$ = CAST(connection, new_tg_get_connection(pr, $4.location, $5, endpoint_reverse($2))); }
+        | endpoint TASTNIOP '(' endpoint_list ')' ';'
+                { $$ = CAST(connection, new_tg_get_connection(pr, $2.location, $1, endpoint_reverse($4))); }
+
+/*
+Example:
+                
+  - PUT: 
+    - [f x l] 
+      Component.Interface.function -> localname;
+
+  - GET: 
+    - [(f, l) x f]
+      (Component.Interface.function, localname) -> Component.Interface.function;
+    - [(l, p) x f]
+      (inport, localname) -> Component.Interface.function;
+
+
+  * source = (p | f) (l)*
+  * target = l | p | f
+  * "source -> target" is valid if number of arguments and type of arguments
+match on both sides of the arrow when each side is concatenated
+separately.
+
+With this model you get the following cases:
+(l on the right hand side (the source side) means any number of l's,
+provided number of arguments match up correctly when concatenated):
+
+GET
+A.  (p, l) x p
+B.  (f, l) x p
+C.  (p, l) x f
+D.  (f, l) x f
+
+PUT
+E.  p x l
+F.  f x l
+
+GET and PUT
+G.  (p, l) x l
+H.  (f, l) x l
+*/
+	;
+
+endpoint_list:
+          endpoint_list ',' endpoint { $$ = endpoint_chain($3, $1); }
+        | endpoint
+        ;
+
+
+/* See configuration: */
+actorControl:
+            /* empty */ { $$ = NULL; }
+          | ACTORCONTROL '{' actorControl_decl_list '}' { $$ = $3; }
+	;
+
+/* See component_list:, requires_or_provides_list: */
+actorControl_decl_list: 
+          actorControl_decl_list actorControl_decl
+                { $$ = endpoint_chain($2, $1); }
+        | /*    empty */ { $$ = NULL; }
+	;
+
+actorControl_decl:
+        endpoint ';' { $$ = $1; }
+	;
+
+/*************************** end actor ***********************************/
+/* end galsC-specific code */
 
 interface: 
           includes_list
@@ -903,7 +1254,7 @@ primary:
 	| CONSTANT { $$ = CAST(expression, $1); }
 	| string { $$ = CAST(expression, $1); }
 	| '(' expr ')'
-		{ $$ = $2; $$->parens = TRUE; }
+		{ $$ = $2; }
 	| '(' error ')'
 		{ $$ = make_error_expr(last_location); }
 	| '('

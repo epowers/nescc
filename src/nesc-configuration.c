@@ -1,19 +1,23 @@
-/* This file is part of the nesC compiler.
-   Copyright (C) 2002 Intel Corporation
+/* This file is part of the galsC compiler.
 
-The attached "nesC" software is provided to you under the terms and
+This file is derived from the nesC compiler.  It is thus
+   Copyright (C) 2002 Intel Corporation
+Changes for galsC are
+   Copyright (C) 2003-2004 Palo Alto Research Center
+
+The attached "galsC" software is provided to you under the terms and
 conditions of the GNU General Public License Version 2 as published by the
 Free Software Foundation.
 
-nesC is distributed in the hope that it will be useful,
+galsC is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with nesC; see the file COPYING.  If not, write to
+along with galsC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+Boston, MA 02111-1307, USA. */
 
 #include "parser.h"
 #include "nesc-configuration.h"
@@ -213,8 +217,11 @@ int match_function_component(bool eqconnection,
   return matched;
 }
 
-
+#ifdef GALSC
+void check_generic_arguments(expression args, typelist gparms)
+#else
 static void check_generic_arguments(expression args, typelist gparms)
+#endif
 {
   expression arg;
   typelist_scanner scan_gparms;
@@ -251,9 +258,12 @@ static bool lookup_endpoint(environment configuration_env, endpoint ep,
   parameterised_identifier pid;
   environment lookup_env = configuration_env;
 
+#ifdef GALSC
+  init_endp(lep);
+#else
   lep->component = lep->interface = lep->function = NULL;
   lep->args = NULL;
-
+#endif
   scan_parameterised_identifier (pid, ep->ids)
     {
       const char *idname = pid->word1->cstring.data;
@@ -447,8 +457,13 @@ static void process_actual_connection(cgraph cg, connection conn,
     process_interface_connection(cg, conn, p1, p2);
 }
 
+#ifdef GALSC
+void process_connection(cgraph cg, connection conn,
+			       struct endp p1, struct endp p2)
+#else
 static void process_connection(cgraph cg, connection conn,
 			       struct endp p1, struct endp p2)
+#endif
 {
   int matches;
   bool eqconnection = is_eq_connection(conn);
@@ -487,8 +502,13 @@ static void process_connection(cgraph cg, connection conn,
     process_actual_connection(cg, conn, p1, p2);
 }
 
+#ifdef GALSC
+void process_component_connection(cgraph cg, connection conn,
+					 struct endp p1, struct endp p2)
+#else
 static void process_component_connection(cgraph cg, connection conn,
 					 struct endp p1, struct endp p2)
+#endif
 {
 #ifndef NO_COMPONENT_MATCHING
   /* c X c, the only list case */
@@ -504,7 +524,12 @@ static void process_component_connection(cgraph cg, connection conn,
       data_declaration idecl = ifentry;
       int matches;
 
+#ifdef GALSC
+      p1.parameter = p2.parameter = NULL;
+      p1.actor = p1.port = p2.actor = p2.port = NULL;
+#endif
       p1.interface = p1.function = p2.interface = p2.function = NULL;
+
       if (idecl->kind == decl_interface_ref)
 	{
 	  p1.interface = idecl;

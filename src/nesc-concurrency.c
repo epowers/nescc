@@ -1,19 +1,23 @@
-/* This file is part of the nesC compiler.
-   Copyright (C) 2002 Intel Corporation
+/* This file is part of the galsC compiler.
 
-The attached "nesC" software is provided to you under the terms and
+This file is derived from the nesC compiler.  It is thus
+   Copyright (C) 2002 Intel Corporation
+Changes for galsC are
+   Copyright (C) 2003-2004 Palo Alto Research Center
+
+The attached "galsC" software is provided to you under the terms and
 conditions of the GNU General Public License Version 2 as published by the
 Free Software Foundation.
 
-nesC is distributed in the hope that it will be useful,
+galsC is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with nesC; see the file COPYING.  If not, write to
+along with galsC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+Boston, MA 02111-1307, USA. */
 
 #include "parser.h"
 #include "nesc-cg.h"
@@ -28,7 +32,16 @@ static inline bool is_call_edge(gedge e)
 static void rec_async(gnode n, bool async_caller)
 {
   gedge edge;
+
+#ifdef GALSC
+  // FIXME is this async stuff right for ports and parameters?
+  endp ep = NODE_GET(endp, n);
+  data_declaration fn = (ep->function) ? ep->function : (ep->port ? ep->port : ep->parameter);
+  assert(fn);
+#else
+  
   data_declaration fn = NODE_GET(endp, n)->function;
+#endif
   bool async = fn->async || fn->actual_async || async_caller;
 
 
@@ -79,7 +92,14 @@ void check_async(cgraph callgraph)
   if (warn_async || warn_data_race)
     graph_scan_nodes (n, cg)
       {
+#ifdef GALSC
+          // FIXME is this async stuff right for ports and parameters?
+          endp ep = NODE_GET(endp, n);
+          data_declaration fn = (ep->function) ? ep->function : (ep->port ? ep->port : ep->parameter);
+          assert(fn);
+#else
 	data_declaration fn = NODE_GET(endp, n)->function;
+#endif
 
 	if (ddecl_is_command_or_event(fn) && fn->actual_async && !fn->async)
 	  async_violation(n);
@@ -99,7 +119,14 @@ static dd_list find_async_variables(region r, cgraph callgraph)
 
   graph_scan_nodes (n, cg)
     {
+#ifdef GALSC
+        // FIXME is this async stuff right for ports and parameters?
+        endp ep = NODE_GET(endp, n);
+        data_declaration fn = (ep->function) ? ep->function : (ep->port ? ep->port : ep->parameter);
+        assert(fn);
+#else
       data_declaration fn = NODE_GET(endp, n)->function;
+#endif
       dd_list_pos use;
       
       if (fn->actual_async && fn->fn_uses)
@@ -128,7 +155,14 @@ static dd_list find_async_variables(region r, cgraph callgraph)
 static void rec_contexts(gnode n, int call_contexts)
 {
   gedge edge;
+#ifdef GALSC
+  // FIXME is this async stuff right for ports and parameters?
+  endp ep = NODE_GET(endp, n);
+  data_declaration fn = (ep->function) ? ep->function : (ep->port ? ep->port : ep->parameter);
+  assert(fn);
+#else
   data_declaration fn = NODE_GET(endp, n)->function;
+#endif
   int new_context = fn->call_contexts | call_contexts | fn->spontaneous;
 
   if (new_context == fn->call_contexts)

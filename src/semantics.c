@@ -1,22 +1,25 @@
-/* This file is part of the nesC compiler.
+/* This file is part of the galsC compiler.
 
-This file is derived from RC and the GNU C Compiler. It is thus
+This file is derived from the nesC compiler and RC and the GNU C Compiler.
+It is thus
    Copyright (C) 1987, 88, 89, 92-7, 1998 Free Software Foundation, Inc.
    Copyright (C) 2000-2001 The Regents of the University of California.
 Changes for nesC are
    Copyright (C) 2002 Intel Corporation
+Changes for galsC are
+   Copyright (C) 2003-2004 Palo Alto Research Center
 
-The attached "nesC" software is provided to you under the terms and
+The attached "galsC" software is provided to you under the terms and
 conditions of the GNU General Public License Version 2 as published by the
 Free Software Foundation.
 
-nesC is distributed in the hope that it will be useful,
+galsC is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with nesC; see the file COPYING.  If not, write to
+along with galsC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
 Boston, MA 02111-1307, USA. */
 
@@ -150,6 +153,19 @@ void init_data_declaration(data_declaration dd, declaration ast,
   dd->async_access = dd->async_write = FALSE;
   dd->norace = FALSE;
   dd->call_contexts = 0;
+
+#ifdef GALSC
+  // See decls.h
+
+  dd->actor = NULL;
+  dd->in = FALSE;
+  dd->portsize_definition = NULL;
+  dd->parameters = NULL;
+  //dd->param_target = NULL;
+  // FIXME not used
+
+  dd->parameter_put_type = NULL;
+#endif
 }
 
 data_declaration lookup_id(const char *s, bool this_level_only)
@@ -2334,26 +2350,6 @@ dd_list check_parameter(data_declaration dd,
   return extra_attr;
 }
 
-static bool error_signature(type fntype)
-/* Returns: TRUE if fntype is the "error in function declaration"
-     type signature (varargs with one argument of type error_type)
-*/
-{
-  typelist tl;
-  typelist_scanner stl;
-
-  if (!type_function_varargs(fntype))
-    return FALSE;
-
-  tl = type_function_arguments(fntype);
-
-  if (!tl || empty_typelist(tl))
-    return FALSE;
-
-  typelist_scan(tl, &stl);
-  return typelist_next(&stl) == error_type && !typelist_next(&stl);
-}
-
 /* Start definition of variable 'elements d' with attributes attributes, 
    asm specification astmt.
    If initialised is true, the variable has an initialiser.
@@ -2541,7 +2537,7 @@ declaration start_decl(declarator d, asm_stmt astmt, type_element elements,
 	    }
 
 	  if ((type_command(var_type) || type_event(var_type)) &&
-	      type_function_varargs(var_type) && !error_signature(var_type))
+	      type_function_varargs(var_type))
 	    error("varargs commands and events are not supported");
 
 	  check_function(&tempdecl, CAST(declaration, vd), class, scf,

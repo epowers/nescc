@@ -1,21 +1,26 @@
-/* This file is part of the nesC compiler.
-   Copyright (C) 2002 Intel Corporation
+/* This file is part of the galsC compiler.
 
-The attached "nesC" software is provided to you under the terms and
+This file is derived from the nesC compiler.  It is thus
+   Copyright (C) 2002 Intel Corporation
+Changes for galsC are
+   Copyright (C) 2003-2004 Palo Alto Research Center
+
+The attached "galsC" software is provided to you under the terms and
 conditions of the GNU General Public License Version 2 as published by the
 Free Software Foundation.
 
-nesC is distributed in the hope that it will be useful,
+galsC is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with nesC; see the file COPYING.  If not, write to
+along with galsC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+Boston, MA 02111-1307, USA. */
 
 #ifndef NESC_COMPONENT_H
+#define NESC_COMPONENT_H
 
 void build_component(region r, nesc_declaration cdecl);
 
@@ -36,5 +41,18 @@ void component_functions_iterate(nesc_declaration c,
 				 void (*iterator)(data_declaration fndecl,
 						  void *data),
 				 void *data);
+
+#ifdef GALSC
+typelist make_gparm_typelist(declaration gparms);
+
+#include "nesc-cg.h"
+
+struct beg_data
+{
+  cgraph cg;
+};
+void beg_iterator(data_declaration fndecl, void *data);
+cgraph build_external_graph(region r, nesc_declaration cdecl);
+#endif
 
 #endif
