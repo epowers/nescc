@@ -240,6 +240,7 @@ bool generate_momllib(dd_list nesccomponents, const char *inputpathname) {
 
             if (output) {
                 fclose(output);
+                printf("Created %s\n", targetname);
             }
         }
     }
@@ -282,6 +283,7 @@ bool generate_momllib(dd_list nesccomponents, const char *inputpathname) {
         
         if (output) {
             fclose(output);
+            printf("Created %s\n", targetname);
         }
     }
     

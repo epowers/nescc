@@ -314,8 +314,6 @@ void nesc_compile(const char *filename, const char *target_name)
 
       // Examine each file (regular file, not subdirectory) in the directory.
       while ((currentfile = get_next_nesc_file_in_dir(nescdir))) {
-          printf("Parsed %s\n", currentfile);
-
           // Only look at .nc files.
           if (is_nesc_file(currentfile)) {
               nesc_declaration program = load(l_component, &toplevel, currentfile, TRUE);
