@@ -899,7 +899,7 @@ primary:
 	| CONSTANT { $$ = CAST(expression, $1); }
 	| string { $$ = CAST(expression, $1); }
 	| '(' expr ')'
-		{ $$ = $2; }
+		{ $$ = $2; $$->parens = TRUE; }
 	| '(' error ')'
 		{ $$ = make_error_expr(last_location); }
 	| '('
