@@ -408,9 +408,11 @@ static void note_pointer_assignment(identifier id, expression e)
 // functions for trapsing through the AST
 //////////////////////////////////////////////////////////////////////
 
-static void find_statement_vars(statement stmt, bool is_read, expression in_pointer_assignment);
+static void find_statement_vars(statement stmt, bool is_read,
+				expression addressof_expr);
 
-static void find_expression_vars(expression expr, bool is_read, bool is_write, expression pa_expr)
+static void find_expression_vars(expression expr, bool is_read, bool is_write,
+				 expression addressof_expr)
 {
   if (!expr)
     return;
@@ -440,8 +442,10 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write, e
   switch (expr->kind)
     {
     case kind_identifier:
-      if( pa_expr  &&  (type_array(expr->type) || type_tagged(expr->type)) )
-        note_pointer_assignment(CAST(identifier,expr), pa_expr);
+      if (addressof_expr)
+	note_pointer_assignment(CAST(identifier, expr), addressof_expr);
+      else if (is_read && type_array(expr->type))
+        note_pointer_assignment(CAST(identifier,expr), expr);
       else 
         note_var_use(expr, is_read, is_write);
       break;
@@ -457,7 +461,7 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write, e
         if( e->next )
           find_expression_vars(e, FALSE, FALSE, NULL);
         else 
-          find_expression_vars(e, is_read, is_write, pa_expr);
+          find_expression_vars(e, is_read, is_write, addressof_expr);
       }
       break;
     }
@@ -465,7 +469,7 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write, e
     // FIXME: none of these are really handled properly
     case kind_cast_list: {
       assert( 0 ); 
-      find_expression_vars(CAST(cast_list, expr)->init_expr, is_read, FALSE, pa_expr);
+      find_expression_vars(CAST(cast_list, expr)->init_expr, is_read, FALSE, addressof_expr);
       break;
     }
     case kind_init_index: {
@@ -486,7 +490,7 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write, e
       break;
     }
     case kind_extension_expr: {
-      find_expression_vars(CAST(unary, expr)->arg1, is_read, is_write, pa_expr);
+      find_expression_vars(CAST(unary, expr)->arg1, is_read, is_write, addressof_expr);
       break;
     }
 
@@ -496,20 +500,20 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write, e
       if (ce->condition->cst)
 	{
 	  if (definite_zero(ce->condition))
-	    find_expression_vars(ce->arg2, is_read, is_write, pa_expr);
+	    find_expression_vars(ce->arg2, is_read, is_write, addressof_expr);
 	  else
-	    find_expression_vars(ce->arg1, is_read, is_write, pa_expr);
+	    find_expression_vars(ce->arg1, is_read, is_write, addressof_expr);
 	}
       else
 	{
 	  find_expression_vars(ce->condition, TRUE, FALSE, NULL);
-	  find_expression_vars(ce->arg1, is_read, is_write, pa_expr);
-	  find_expression_vars(ce->arg2, is_read, is_write, pa_expr);
+	  find_expression_vars(ce->arg1, is_read, is_write, addressof_expr);
+	  find_expression_vars(ce->arg2, is_read, is_write, addressof_expr);
 	}
       break;
     }
     case kind_compound_expr:
-      find_statement_vars(CAST(compound_expr, expr)->stmt, is_read, pa_expr);
+      find_statement_vars(CAST(compound_expr, expr)->stmt, is_read, addressof_expr);
       break;
 
     case kind_function_call: {
@@ -531,10 +535,7 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write, e
 	}
 
       scan_expression (e, fce->args) {
-        if( type_pointer(e->type) || type_array(e->type) )
-          find_expression_vars(e, TRUE, FALSE, e);
-        else 
-          find_expression_vars(e, TRUE, FALSE, NULL);
+	find_expression_vars(e, TRUE, FALSE, NULL);
       }
       break;
     }
@@ -542,48 +543,46 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write, e
       generic_call fce = CAST(generic_call, expr);
       expression e;
 
-      // special case for dbg() calls
-      if( is_identifier(fce->arg1) && strcmp(CAST(identifier,fce->arg1)->cstring.data,"dbg")==0 )
-        break;
-
-      // don't follow identifiers
-      if( !is_identifier(fce->arg1) )
-        find_expression_vars(fce->arg1, TRUE, FALSE, NULL);
-
       scan_expression (e, fce->args) {
-        if( type_pointer(e->type) || type_array(e->type) )
-          find_expression_vars(e, TRUE, FALSE, e);
-        else 
-          find_expression_vars(e, TRUE, FALSE, NULL);
+	find_expression_vars(e, TRUE, FALSE, NULL);
       }
       break;
     }
 
     case kind_array_ref: {
       array_ref are = CAST(array_ref, expr);
-      find_expression_vars(are->arg1, is_read, is_write, pa_expr);
+
+      /* Check for direct array uses. I'll ignore 1[a] for now */
+      if (is_identifier(are->arg1) && type_array(are->type) && !addressof_expr)
+	{
+	  note_var_use(are->arg1, is_read, is_write);
+	  find_expression_vars(are->arg2, TRUE, FALSE, NULL);
+	  break;
+	}
+
+      find_expression_vars(are->arg1, is_read, is_write, addressof_expr);
       find_expression_vars(are->arg2, TRUE, FALSE, NULL);
       break;
     }
     case kind_field_ref: {
       field_ref fre = CAST(field_ref, expr);
-      find_expression_vars(fre->arg1, is_read, is_write, pa_expr);
+      find_expression_vars(fre->arg1, is_read, is_write, addressof_expr);
       // FIXME: possibly track specific fields seperately?
       break;
     }
     case kind_dereference: {
       expression arg = CAST(dereference, expr)->arg1;
-      note_pointer_use(arg, is_read, is_write);
+
+      if (!addressof_expr) /* &*x is just x, not a pointer deref */
+	note_pointer_use(arg, is_read, is_write);
       find_expression_vars(arg, TRUE, FALSE, NULL);
       break;
     }
     case kind_address_of: {
       expression arg = CAST(unary, expr)->arg1;
 
-      // FIXME: not sure if this is right.  Do this in addition?
-      //if(pa_expr) note_pointer_assignment(arg);
-      if( !is_identifier(arg) )
-        find_expression_vars(arg, FALSE, FALSE, pa_expr);
+      /* We don't handle *&x at this point */
+      find_expression_vars(arg, FALSE, FALSE, expr);
       break;
     }
 
@@ -592,12 +591,12 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write, e
     // updates
     case kind_preincrement: case kind_postincrement: case kind_predecrement: case kind_postdecrement: {
       unary ue = CAST(unary, expr);
-      find_expression_vars(ue->arg1, is_read, TRUE, pa_expr);
+      find_expression_vars(ue->arg1, is_read, TRUE, NULL);
       break;
     }
     // pass r/w/a flags
     case kind_cast: case kind_realpart: case kind_imagpart: case kind_conjugate: {
-      find_expression_vars(CAST(unary,expr)->arg1, is_read, is_write, pa_expr);
+      find_expression_vars(CAST(unary,expr)->arg1, is_read, is_write, addressof_expr);
       break;
     }
     // don't pass r/w/a flags
@@ -613,43 +612,23 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write, e
     case kind_assign:  {
       binary be = CAST(binary, expr);
       find_expression_vars(be->arg1, FALSE, TRUE, NULL);
-      if( type_pointer(be->arg1->type) || type_array(be->arg1->type) )
-        find_expression_vars(be->arg2, TRUE, FALSE, be->arg2);
-      else 
-        find_expression_vars(be->arg2, TRUE, FALSE, NULL);
+      find_expression_vars(be->arg2, TRUE, FALSE, NULL);
       break;
     }
-    // simple assignment allowed for pointers
-    case kind_plus_assign:  case kind_minus_assign: {
-      binary be = CAST(binary, expr);
-      find_expression_vars(be->arg1, TRUE, TRUE, pa_expr);
-      find_expression_vars(be->arg2, TRUE, FALSE, NULL);  // FIXME: is this right?
-      break;
-    }
-    // other assignments not allowed for pointers
+    case kind_plus_assign:  case kind_minus_assign: 
     case kind_times_assign:  case kind_divide_assign:  case kind_modulo_assign:  
     case kind_bitand_assign:  case kind_bitor_assign:  case kind_bitxor_assign: 
     case kind_lshift_assign:  case kind_rshift_assign: {
       binary be = CAST(binary, expr);
-      if( type_pointer(be->arg1->type) || type_array(be->arg1->type) )
-        error_with_location(expr->location,"strange pointer arithmatic is not allowed");
       find_expression_vars(be->arg1, TRUE, TRUE, NULL);
-      find_expression_vars(be->arg2, TRUE, FALSE, NULL);  // FIXME: is this right?
+      find_expression_vars(be->arg2, TRUE, FALSE, NULL);
       break;
     }
     
-    // simple arithmatic - OK for poiners
-    case kind_plus:  case kind_minus: {
-      binary be = CAST(binary, expr);
-      find_expression_vars(be->arg1, TRUE, FALSE, pa_expr);
-      find_expression_vars(be->arg2, TRUE, FALSE, pa_expr);
-      break;
-    }
-    // other arithmatic not allowed for pointers
+    case kind_plus: case kind_minus:
     case kind_times:  case kind_divide:  case kind_modulo:  case kind_lshift:  case kind_rshift: {
       binary be = CAST(binary, expr);
-      if( type_pointer(be->arg1->type) || type_array(be->arg1->type) )
-        error_with_location(expr->location,"strange pointer arithmatic is not allowed");
+
       find_expression_vars(be->arg1, TRUE, FALSE, NULL);
       find_expression_vars(be->arg2, TRUE, FALSE, NULL);
       break;
@@ -659,8 +638,6 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write, e
     case kind_leq:  case kind_geq:  case kind_lt:  case kind_gt:  case kind_eq:  case kind_ne:
     case kind_bitand:  case kind_bitor:  case kind_bitxor:  case kind_andand:  case kind_oror: {
       binary be = CAST(binary, expr);
-      if( pa_expr ) 
-        error_with_location(expr->location, "bad rvalue for pointer assignment");
       find_expression_vars(be->arg1, TRUE, FALSE, NULL);
       find_expression_vars(be->arg2, TRUE, FALSE, NULL);
       break;
@@ -678,7 +655,7 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write, e
 // kind_compound_expr.  This is because the last statement in a
 // compound expression is the lvalue for the entire compound
 // expression.
-static void find_statement_vars(statement stmt, bool is_read, expression pa_expr)
+static void find_statement_vars(statement stmt, bool is_read, expression addressof_expr)
 {
   if (!stmt)
     return;
@@ -709,12 +686,12 @@ static void find_statement_vars(statement stmt, bool is_read, expression pa_expr
             }
 	  }
 
-      // pass the is_read and pa_expr flags on to the last statement
+      // pass the is_read and addressof_expr flags on to the last statement
       scan_statement (s, cs->stmts) {
         if( s->next ) 
           find_statement_vars(s, FALSE, NULL);
         else 
-          find_statement_vars(s, is_read, pa_expr);
+          find_statement_vars(s, is_read, addressof_expr);
       }
 
       break;
@@ -740,13 +717,13 @@ static void find_statement_vars(statement stmt, bool is_read, expression pa_expr
     case kind_labeled_stmt: {
       labeled_stmt ls = CAST(labeled_stmt, stmt);
 
-      find_statement_vars(ls->stmt, is_read, pa_expr);
+      find_statement_vars(ls->stmt, is_read, addressof_expr);
       break;
     }
     case kind_expression_stmt: {
       expression_stmt es = CAST(expression_stmt, stmt);
 
-      find_expression_vars(es->arg1, is_read, FALSE, pa_expr);
+      find_expression_vars(es->arg1, is_read, FALSE, addressof_expr);
       break;
     }
     case kind_while_stmt: case kind_dowhile_stmt: case kind_switch_stmt: {
@@ -1091,7 +1068,7 @@ void find_function_vars(data_declaration fn)
   // 1 if always atomic, 0 otherwise 
   in_atomic =
     (fn->contexts & (c_task | c_int | c_reentrant_int)) == 0;
-  find_statement_vars( fdecl->stmt, FALSE, FALSE );
+  find_statement_vars( fdecl->stmt, FALSE, NULL );
 
 
   current_function = NULL;
@@ -1150,5 +1127,6 @@ void check_for_conflicts(void)
 #endif
 
 }
+
 
 
