@@ -56,7 +56,6 @@ static int ep_compare(void *e1, void *e2)
 {
   ep_table_entry ep1 = e1, ep2 = e2;
 
-  // XXX MDW: Clean this up
   // Tricky: And endpoint matches if the function and args match,
   // and (either one component is NULL or the components are the same).
   // This is necessary to match endpoints in different instances of 
@@ -64,10 +63,6 @@ static int ep_compare(void *e1, void *e2)
   if (ep1->ep.function == ep2->ep.function &&
       ep1->ep.args == ep2->ep.args &&
       ep1->ep.instance == ep2->ep.instance) {
-//      (ep1->ep.component == ep2->ep.component ||
-//      ((ep1->ep.component == NULL) ^ (ep2->ep.component == NULL)))) {
-    //print_endp("MDW: ep_compare MATCH ep1 ", &ep1->ep);
-    //print_endp("MDW: ep_compare MATCH ep2 ", &ep2->ep);
     return TRUE;
   } else {
     return FALSE;
@@ -101,14 +96,10 @@ gnode endpoint_lookup(cgraph cg, endp ep)
 {
   ep_table_entry gep;
 
-  print_endp("MDW: endpoint_lookup for ", ep);
-
   gep = dhlookup(cg->ep_table, ep);
 
   if (gep)
     return gep->n;
-
-  fprintf(stderr,"  MDW: creating new endpoint!\n");
 
   gep = ralloc(regionof(cg), struct ep_table_entry);
   gep->ep = *ep;

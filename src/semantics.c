@@ -2574,15 +2574,6 @@ declaration start_decl(declarator d, asm_stmt astmt, type_element elements,
 	    class == RID_STATIC ? variable_static :
 	    variable_normal;
 
-	  fprintf(stderr,"MDW: start_decl: variable '%s' vtype %d current.env 0x%lx\n",
-	      printname, tempdecl.vtype, (unsigned long)current.env);
-
-	  // XXX MDW
-	  if (class == RID_STATIC) {
-	    fprintf(stderr,"MDW: Declaring variable '%s' as variable_static\n",
-		printname);
-	  }
-
 	  tempdecl.isfilescoperef = extern_ref;
 	  if (!extern_ref)
 	    tempdecl.definition = tempdecl.ast;
@@ -3328,8 +3319,6 @@ declaration make_enumerator(location loc, cstring id, expression value)
     ddecl = declare(current.env, &tempdecl, FALSE);
 
   CAST(enumerator, ast)->ddecl = ddecl;
-
-  fprintf(stderr,"MDW: make_enumerator: '%s'\n", id.data);
 
   return ast;
 }

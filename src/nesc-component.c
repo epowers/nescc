@@ -80,7 +80,6 @@ static void set_aparm_types(declaration aparms)
     assert(is_data_decl(aparm));
     ad = CAST(data_decl, aparm);
     av = CAST(variable_decl, ad->decls);
-    fprintf(stderr,"MDW: set_aparm_types: '%s' (kind %d) in aparm list\n", av->ddecl->name, av->ddecl->vtype);
     if (av->ddecl->vtype != variable_static) {
       // For _NUMINSTANCES
       av->ddecl->vtype = variable_absparam;
@@ -157,7 +156,6 @@ void declare_interface_ref(interface_ref iref, declaration gparms,
 	error("only allowed modifier for interface is `static'");
       }
     }
-    fprintf(stderr,"MDW: interface %s declared static\n", iname);
     tempdecl.static_interface = TRUE;
   }
 
@@ -165,9 +163,6 @@ void declare_interface_ref(interface_ref iref, declaration gparms,
   if (old_decl)
     error("redefinition of `%s'", iname);
   ddecl = declare(current.env, &tempdecl, FALSE);
-
-  fprintf(stderr,"MDW: declared interface %s (static %d) 0x%lx\n",
-      iname, ddecl->static_interface, (unsigned long)ddecl);
 
   /* We don't make the interface type generic. Instead, we push the generic
      type into each function in copy_interface_functions.  This is because
@@ -221,18 +216,13 @@ void build_component(region r, nesc_declaration cdecl)
 {
   component the_component = CAST(component, cdecl->ast);
 
-  fprintf(stderr,"\n** MDW: building component %s\n", cdecl->name);
-
-  fprintf(stderr,"\n** MDW: printing AST for component %s\n", cdecl->name);
-  AST_print(cdecl->ast);
-  fprintf(stderr,"** MDW: done printing AST for component %s\n\n", cdecl->name);
+  //fprintf(stderr,"\n** MDW: printing AST for component %s\n", cdecl->name);
+  //AST_print(cdecl->ast);
+  //fprintf(stderr,"** MDW: done printing AST for component %s\n\n", cdecl->name);
 
   the_component->implementation->cdecl = cdecl;
   cdecl->impl = the_component->implementation;
   cdecl->is_abstract = the_component->is_abstract;
-  if (cdecl->is_abstract) {
-    fprintf(stderr,"** MDW: component %s is abstract\n\n", cdecl->name);
-  }
   set_aparm_types(the_component->abs_param_list);
   cdecl->abs_parms = dd_new_list(parse_region);
 
@@ -252,7 +242,6 @@ void build_component(region r, nesc_declaration cdecl)
     process_module(CAST(module, cdecl->impl));
   }
 
-  fprintf(stderr,"** MDW: done building %s\n\n", cdecl->name);
 }
 
 environment start_implementation(void)

@@ -209,7 +209,6 @@ expression build_int_constant(region r, location loc, type t, largest_int c)
   lexical_cst cst;
 
   snprintf(cstbuf, sizeof cstbuf, "%lld", c);
-  fprintf(stderr,"MDW: build_int_constant: string is '%s'\n", cstbuf);
   csts.data = rstrdup(r, cstbuf);
   csts.length = strlen(cstbuf);
   cst = new_lexical_cst(r, loc, csts);
@@ -242,7 +241,6 @@ expression build_float_constant(region r, location loc, type t, long double c) {
   lexical_cst cst;
 
   snprintf(cstbuf, sizeof cstbuf, "%Lf", c);
-  fprintf(stderr,"MDW: build_float_constant: string is '%s'\n", cstbuf);
   csts.data = rstrdup(r, cstbuf);
   csts.length = strlen(cstbuf);
   cst = new_lexical_cst(r, loc, csts);

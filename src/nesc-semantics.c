@@ -262,8 +262,6 @@ nesc_declaration load(source_language sl, location l,
   nesc_declaration decl;
   environment env;
 
-  fprintf(stderr,"MDW: ******** load: %s ********\n", name);
-
   decl = new_nesc_declaration(parse_region, sl, element);
     
   /* We don't get duplicates as we only load on demand */
@@ -292,8 +290,6 @@ nesc_declaration load(source_language sl, location l,
 
   build(decl, env, parsed_nesc_decl);
 
-  fprintf(stderr,"MDW: ******** load done: %s ********\n", name);
-
   return decl;
 }
 
@@ -310,9 +306,6 @@ bool is_module_variable(data_declaration ddecl)
 
 bool is_instance_variable(data_declaration ddecl) 
 {
-
-  fprintf(stderr,"MDW: is_instance_variable: '%s' vtype %d\n",
-      ddecl->name, ddecl->vtype);
 
   return ddecl->kind == decl_variable &&
     ddecl->Cname == FALSE &&

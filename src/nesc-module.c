@@ -67,9 +67,6 @@ expression make_interface_deref(location loc, expression object, cstring field)
       note_identifier_use(fdecl);
     }
 
-  fprintf(stderr,"MDW: make_interface_deref for %s.%s\n", 
-      iref->name, fdecl->name);
-
   return CAST(expression, result);
 }
 
@@ -117,7 +114,6 @@ void module_variables_iterate(nesc_declaration c,
   while (env_next(&scanifs, &ifname, &ifentry))
   {
     data_declaration idecl = ifentry;
-    fprintf(stderr,"MDW: module_variables_iterate: %s kind %d\n", idecl->name, idecl->kind);
   }
 }
 

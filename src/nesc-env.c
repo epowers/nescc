@@ -74,7 +74,6 @@ nesc_declaration require(source_language sl, location l, const char *name)
   if (d) {
     // If this is a configuration that has already been loaded,
     // process it again to instantiate embedded abstract components
-    fprintf(stderr,"MDW: require(%s): already loaded\n", name);
     if (d->kind == l_component && is_configuration(d->impl)) {
       nesc_configuration_instance cinst = ralloc(parse_region, struct nesc_configuration_instance);
       configuration conf = CAST(configuration, d->impl);

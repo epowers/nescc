@@ -55,9 +55,9 @@ static void connect_function(cgraph cg, struct endp from, struct endp to)
 {
   gnode gfrom = endpoint_lookup(cg, &from), gto = endpoint_lookup(cg, &to);
 
-  fprintf(stderr,"\nMDW: connect_function:\n");
-  print_endp("    MDW: from: ", &from);
-  print_endp("    MDW: to:   ", &to);
+  //fprintf(stderr,"\nMDW: connect_function:\n");
+  //print_endp("    MDW: from: ", &from);
+  //print_endp("    MDW: to:   ", &to);
 
   assert(from.function && to.function);
 
@@ -268,9 +268,6 @@ static void check_generic_arguments(expression args, typelist gparms)
  * appropriate constant value.
  */
 static void eval_const_expr(declaration parent_aparms, expression expr) {
-  fprintf(stderr, "MDW: eval_const_expr expr 0x%lx kind %d %s\n",
-      (unsigned long)expr, expr->kind, expr->cst?"CONST":"");
-
   // Note that 'expr' is shared across all instances of is associated
   // component_ref. Rather than copy 'component_ref->args' for each
   // instance, we just clear out any initializers and overwrite for
@@ -303,7 +300,6 @@ static void eval_const_expr(declaration parent_aparms, expression expr) {
     }
 
     if (found_vd) {
-      fprintf(stderr,"MDW: eval_const_expr: identifier assigned from vd 0x%lx ('%s')\n", (unsigned long)found_vd, found_vd->ddecl->name);
       expr->cst = found_vd->arg1->cst; 
 
     } else {
@@ -321,7 +317,7 @@ static void eval_const_expr(declaration parent_aparms, expression expr) {
     }
 
   } else {
-    error_with_location(expr->location, "XXX MDW XXX: eval_const_expr: Cannot handle expr kind %d\n", expr->kind);
+    error_with_location(expr->location, "MDW: eval_const_expr: Cannot handle expr kind %d -- this is a bug, please contact mdw@cs.berkeley.edu\n", expr->kind);
     return;
   }
 
@@ -335,15 +331,11 @@ static declaration copy_declaration_list(region r, declaration dl) {
   data_decl dd, newdd;
   variable_decl vd, newvd;
 
-  fprintf(stderr,"MDW: copy_declaration_list start\n");
-
   scan_declaration(d, dl) {
     assert(d->kind == kind_data_decl);
     dd = CAST(data_decl, d);
     assert(dd->decls->kind == kind_variable_decl);
     vd = CAST(variable_decl, dd->decls);
-
-    fprintf(stderr,"MDW: copy_declaration_list: Copying vdecl %s\n", vd->ddecl->name);
 
     newvd = new_variable_decl(r, vd->location, vd->declarator, vd->attributes, vd->arg1, vd->asm_stmt, vd->ddecl);
     newdd = new_data_decl(r, dd->location, dd->modifiers, CAST(declaration, newvd));
@@ -358,7 +350,6 @@ static declaration copy_declaration_list(region r, declaration dl) {
     }
   }
 
-  fprintf(stderr,"MDW: copy_declaration_list done\n");
   return newl;
 }
 
@@ -372,10 +363,6 @@ static bool resolve_abstract_parameters(declaration parent_aparms, nesc_configur
   type aparm_type;
   region r = parse_region;
 
-  fprintf(stderr,"MDW: resolve_abstract_parameters: abs_parms length %ld\n", dd_length(cref->comp->cdecl->abs_parms));
-  fprintf(stderr,"\nMDW: resolve_abstract_parameters: comp %s instance %d\n", cref->comp->cdecl->name, cref->instance_number);
-  fprintf(stderr,"\nMDW: aparms ptr is 0x%lx\n", (unsigned long)aparms);
-
   // Start head of aparms list, skipping _INSTANCENUM 
   assert(aparms != NULL);
   aparm = CAST(declaration, aparms->next);
@@ -388,18 +375,15 @@ static bool resolve_abstract_parameters(declaration parent_aparms, nesc_configur
   dd = CAST(data_decl, aparm);
   vd = CAST(variable_decl, dd->decls);
   aparm_type = vd->ddecl->type;
-  fprintf(stderr,"MDW: resolve_abstract_parameters: aparm '%s'\n", vd->ddecl->name);
   if (!aparm_type) {
     error("abstract component does not have _INSTANCENUM variable? This is a bug - contact mdw@cs.berkeley.edu");
     return FALSE;
   }
 
   scan_expression(arg, args) {
-    fprintf(stderr, "MDW: resolve_abstract_parameters: vd '%s'\n", vd->ddecl->name);
-
     eval_const_expr(parent_aparms, arg);
     if (!arg->cst) {
-      error_with_location(arg->location, "constant expression expected (MDW: resolve_abstract_parameters)");
+      error_with_location(arg->location, "constant expression expected");
       return FALSE;
     } 
 
@@ -407,8 +391,6 @@ static bool resolve_abstract_parameters(declaration parent_aparms, nesc_configur
       error_with_location(arg->location, "constant out of range for argument type");
       return FALSE;
     }
-
-    fprintf(stderr,"MDW: Setting cst for vd 0x%lx ('%s')\n", (unsigned long)vd, vd->ddecl->name);
 
     if (arg->cst->type == int_type) {
       vd->arg1 = build_int_constant(r, arg->location, 
@@ -421,7 +403,7 @@ static bool resolve_abstract_parameters(declaration parent_aparms, nesc_configur
       vd->arg1 = build_float_constant(r, arg->location, arg->cst->type, 
 	  cval_float_value(arg->cst->cval));
     } else {
-      error("MDW: Unable to handle constant type %d\n", arg->cst->type);
+      error("MDW: unable to handle constant type %d -- this is a bug, please contact mdw@cs.berkeley.edu\n", arg->cst->type);
     }
 
     // Next aparms entry
@@ -436,7 +418,6 @@ static bool resolve_abstract_parameters(declaration parent_aparms, nesc_configur
       dd = CAST(data_decl, aparm);
       vd = CAST(variable_decl, dd->decls);
       aparm_type = vd->ddecl->type;
-      fprintf(stderr,"MDW: resolve_abstract_parameters: aparm '%s'\n", vd->ddecl->name);
       if (!aparm_type) {
 	error_with_location(arg->location, "too many arguments");
 	return FALSE;
@@ -449,7 +430,6 @@ static bool resolve_abstract_parameters(declaration parent_aparms, nesc_configur
     return FALSE;
   }
 
-  fprintf(stderr,"MDW: done with resolve_abstract_parameters: comp %s instance %d\n", cref->comp->cdecl->name, cref->instance_number);
   return TRUE;
 
 
@@ -470,8 +450,6 @@ static bool lookup_endpoint(nesc_configuration_instance cinst, endpoint ep, endp
       const char *idname = pid->word1->cstring.data;
       location l = pid->location;
 
-      fprintf(stderr,"MDW: lookup_endpoint %s\n", idname);
-
       if (!lookup_env)
 	error_with_location(l, "unexpected identifier `%s'", idname);
       else
@@ -486,18 +464,14 @@ static bool lookup_endpoint(nesc_configuration_instance cinst, endpoint ep, endp
 		 env, and it's parent component's env, but not the global
 		 env. */
 	      if (lookup_env->parent && lookup_env->parent != global_env) {
-                //fprintf(stderr,"MDW: lookup_endpoint %s in parent\n", idname);
 		d = env_lookup(lookup_env->parent->id_env, idname, TRUE);
 	      }
 	      if (!d)
 		{
-		  error_with_location(l, "cannot find `%s' (MDW:lookup_endpoint 1)", idname);
+		  error_with_location(l, "cannot find `%s'", idname);
 		  return FALSE; /* prevent cascading error messages */
 		}
 	    } 
-
-	  fprintf(stderr,"MDW: lookup_endpoint got decl %s kind %d\n", 
-	      d->name, d->kind);
 
 	  if (args)
 	    {
@@ -509,24 +483,21 @@ static bool lookup_endpoint(nesc_configuration_instance cinst, endpoint ep, endp
 	  switch (d->kind)
 	    {
 	    default:
-	      error_with_location(l, "cannot find `%s' (MDW:lookup_endpoint 2)", idname);
+	      error_with_location(l, "cannot find `%s'", idname);
 	      return FALSE; /* prevent cascading error messages */
 
 	    case decl_component_ref:
-	      //fprintf(stderr,"MDW: lookup_endpoint decl is component_ref\n");
 	      assert(!lep->component);
 	      lep->component = d;
 	      lep->instance = lep->component->instance_number;
 	      lookup_env = d->ctype->env;
 	      break;
 	    case decl_interface_ref:
-	      //fprintf(stderr,"MDW: lookup_endpoint decl is interface_ref\n");
 	      assert(!lep->interface);
 	      lep->interface = d;
 
 	      // If wiring to a static interface, instance is -1
 	      if (d->static_interface) {
-		fprintf(stderr,"MDW: lookup_endpoint: interface is static (0x%lx)\n", (unsigned long)d->interface);
 		lep->instance = -1;
 	      }
 
@@ -540,7 +511,6 @@ static bool lookup_endpoint(nesc_configuration_instance cinst, endpoint ep, endp
 #endif
 	      break;
 	    case decl_function:
-	      //fprintf(stderr,"MDW: lookup_endpoint decl is function\n");
 	      lep->function = d;
 	      lookup_env = NULL;
 	      break;
@@ -773,7 +743,7 @@ static void process_connections(configuration c, nesc_configuration_instance cin
   struct endp p1, p2;
   cgraph cg = c->cdecl->connections;
 
-  fprintf(stderr, "\nMDW: process_connections for configuration %s\n", c->cdecl->name);
+  //fprintf(stderr, "\nMDW: process_connections for configuration %s\n", c->cdecl->name);
 
   scan_connection (conn, c->connections)
     if (lookup_endpoint(cinst, conn->ep1, &p1) &&
@@ -787,9 +757,8 @@ static void process_connections(configuration c, nesc_configuration_instance cin
 	   We first resolve the c X c case, which can lead to multiple
 	   connections, then handle all remaining cases in process_connection
 	*/
-	//fprintf(stderr,"MDW: Matching\n");
-       	print_endp("MDW: process_connections: p1: ", &p1);
-	print_endp("MDW: process_connections: p2: ", &p2);
+       	//print_endp("MDW: process_connections: p1: ", &p1);
+	//print_endp("MDW: process_connections: p2: ", &p2);
 
 	if (!p1.interface && !p2.interface && !p1.function && !p2.function)
 	  process_component_connection(cg, conn, p1, p2);
@@ -816,8 +785,6 @@ static void require_components(region r, configuration c, nesc_configuration_ins
 	(comp->word2 ? comp->word2 : comp->word1)->cstring.data;
       nesc_configuration_cref cref;
 
-      fprintf(stderr,"MDW: Component %s requires %s\n",
-	  cdecl->name, cname);
       comp->cdecl = require(l_component, comp->location, cname);
 
       if (comp->cdecl->is_abstract) {
@@ -826,8 +793,6 @@ static void require_components(region r, configuration c, nesc_configuration_ins
 	  // this is done before process_configuration
 	  instance_number = comp->cdecl->abstract_instance_count;
 	  comp->cdecl->abstract_instance_count++;
-	  fprintf(stderr,"MDW: AIC for %s incremented to %d\n",
-	      comp->cdecl->name, comp->cdecl->abstract_instance_count);
 	} else {
 	  // For configurations, the instance number has already been incremented
 	  instance_number = comp->cdecl->abstract_instance_count - 1;
@@ -846,8 +811,6 @@ static void require_components(region r, configuration c, nesc_configuration_ins
       tempdecl.kind = decl_component_ref;
       tempdecl.ctype = comp->cdecl;
       tempdecl.instance_number = instance_number;
-      fprintf(stderr,"MDW: require_components: %s has instance num %d\n",
-	  tempdecl.ctype->name, tempdecl.instance_number);
 
       current.env = cinst->ienv;
       old_decl = lookup_id(asname, TRUE);
@@ -888,9 +851,6 @@ static void check_function_connected(data_declaration fndecl, void *data)
 
   assert(fndecl->kind == decl_function);
 
-  fprintf(stderr,"MDW: check_function_connected: %s interface %s\n",
-      fndecl->name, (idecl?idecl->name:"null"));
-
 #ifdef NO_FUNCTION_INTERFACE_MATCHING
   /* Avoid duplicate error messages: if one function not connected in
      an interface, then none are */
@@ -911,8 +871,6 @@ static void check_function_connected(data_declaration fndecl, void *data)
 
   epnode = fn_lookup(d->cg, fndecl, instance);
 
-  print_endp("MDW: check_function_connected: ep ", NODE_GET(endp, epnode));
-
   if ((fndecl->defined && !graph_first_edge_out(epnode)) ||
       (!fndecl->defined && !graph_first_edge_in(epnode)))
   {
@@ -920,13 +878,13 @@ static void check_function_connected(data_declaration fndecl, void *data)
 
     if (idecl)
 #ifdef NO_FUNCTION_INTERFACE_MATCHING
-      error_with_location(d->loc, "`%s' not connected (MDW:configuration 1)", idecl->name);
+      error_with_location(d->loc, "`%s' not connected", idecl->name);
 #else
-    error_with_location(d->loc, "`%s.%s' not connected (MDW:configuration 2)",
+    error_with_location(d->loc, "`%s.%s' not connected",
 	idecl->name, fndecl->name);
 #endif
     else
-      error_with_location(d->loc, "`%s' not connected (MDW:configuration 3)", fndecl->name);
+      error_with_location(d->loc, "`%s' not connected", fndecl->name);
   }
 }
 
@@ -946,17 +904,9 @@ void process_configuration(configuration c, nesc_configuration_instance cinst)
 {
   int old_errorcount = errorcount;
 
-  fprintf(stderr,"MDW: process_configuration for %s instance %d\n", c->cdecl->name, cinst->instance_number);
-
-  fprintf(stderr,"MDW: require_components for %s instance %d\n", c->cdecl->name, cinst->instance_number);
-
   require_components(parse_region, c, cinst);
 
-  fprintf(stderr,"MDW: process_connections for %s instance %d\n", c->cdecl->name, cinst->instance_number);
-
   process_connections(c, cinst);
-
-  fprintf(stderr,"MDW: check_complete_connection for %s instance %d\n", c->cdecl->name, cinst->instance_number);
 
   /* Don't give error messages for missing connections if we found
      errors in the connections (to avoid duplicate errors) */
@@ -969,8 +919,6 @@ void process_configuration(configuration c, nesc_configuration_instance cinst)
  */
 bool process_abstract_params(nesc_configuration_instance cinst) {
   dd_list_pos cr;
-
-  fprintf(stderr,"\nMDW: process_abstract_params for configuration: %s parent_instance %d\n", cinst->configuration->cdecl->name, cinst->instance_number);
 
   assert(cinst->crefs != NULL);
   dd_scan(cr, cinst->crefs) {
@@ -995,9 +943,7 @@ bool process_abstract_params(nesc_configuration_instance cinst) {
 	  dd = CAST(data_decl, d);
 	  vd = CAST(variable_decl, dd->decls);
 	  if (vd == NULL) continue;
-	  fprintf(stderr,"MDW: process_abstract_params: scanning '%s'\n", vd->ddecl->name);
 	  if (!strcmp(vd->ddecl->name, NESC_NUMINSTANCES_LITERAL)) {
-	    fprintf(stderr,"MDW: process_abstract_params: Setting _NUMINSTANCES to %d\n", mod->cdecl->abstract_instance_count);
 	    vd->arg1 = build_int_constant(parse_region, dd->location,
 		int_type, mod->cdecl->abstract_instance_count);
 	    break;
@@ -1021,7 +967,6 @@ bool process_abstract_params(nesc_configuration_instance cinst) {
     }
   }
 
-  fprintf(stderr,"MDW: process_abstract_params DONE for configuration: %s parent_instance %d\n", cinst->configuration->cdecl->name, cinst->instance_number);
   return TRUE;
 }
 

@@ -435,13 +435,6 @@ int region_main(int argc, char **argv) deletes
   int version_flag = 0;
   char *p;
 
-  /* XXX MDW for debugging */
-  if (getenv("MDWDEBUG")) {
-    fprintf(stderr,"MDW: Sleeping for 10 sec for gdb to wakeup\n");
-    fprintf(stderr,"MDW: My PID is %d\n", getpid());
-    sleep(10);
-  }
-
   signal(SIGABRT, rcc_aborting);
   signal(SIGSEGV, rcc_aborting);
   signal(SIGBUS, rcc_aborting);
