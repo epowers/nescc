@@ -986,7 +986,7 @@ static void prt_nido_resolver(variable_decl vd)
   outputln("\"))");
   outputln("{");
   indent();
-  output("*addr = (uint32_t)&");
+  output("*addr = (uintptr_t)&");
   prt_ddecl_for_init(ddecl);
   outputln(";");
   output("*size = sizeof(");
@@ -1027,7 +1027,7 @@ static void prt_nido_resolver_function(dd_list modules)
   outputln("/* Nido variable resolver function */\n");
   outputln("static int __nesc_nido_resolve(int __nesc_mote,");
   outputln("                               char* varname,");
-  outputln("                               uint32_t* addr, uint8_t* size)");
+  outputln("                               uintptr_t* addr, size_t* size)");
   outputln("{");
   indent();
   
