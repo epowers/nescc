@@ -1,6 +1,72 @@
 
 
 
+/***************************************************
+ * Routines to find variables in an AST 
+ ***************************************************/
+
+static void fv_add_var(dhash_table list, node n)
+{
+  // FIXME:
+  if(1) return;
+
+  if( !is_identifier(n) )
+    return;
+  if( is_function_call(n->parent) )
+    return;
+
+  if( dhlookup(list, n) ) 
+    return;
+  dhadd(list, n);
+}
+ 
+
+static void fv_find_in_list(dhash_table list, void *vn);
+
+static void fv_find(dhash_table list, node n)
+{
+  switch (n->kind)
+    {
+#include "AST_findvars.c"
+    default:
+      assert(0);
+    }
+}
+
+static void fv_find_in_list(dhash_table list, void *vn)
+{
+  node n = CAST(node, vn);
+
+  while (n) {
+    fv_find(list,n);
+    n = n->next;
+  }
+}
+
+
+static int fv_compare(void *entry1, void *entry2)
+{
+  return entry1 == entry2;
+}
+
+static unsigned long fv_hash(void *entry)
+{
+  return (unsigned long)entry >> 3;
+}
+
+
+dhash_table AST_find_vars(region r, node n)
+{
+  dhash_table t = new_dhash_table(r, 64, fv_compare, fv_hash);
+  assert(t);
+
+  fv_find(t,n);
+
+  return t;
+}
+
+
+
 static void find_statement_vars(statement stmt, dhash_table list);
 static void find_expression_vars(expression expr, dhash_table list);
 

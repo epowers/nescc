@@ -143,7 +143,6 @@ BUILT_SOURCES =					\
 	AST_defs.h				\
 	AST_parent.c				\
 	AST_print.c				\
-	AST_findvars.c				\
 	AST_types.h				\
 	c-gperf.h				\
 	c-parse.tab.c				\
@@ -162,7 +161,6 @@ EXTRA_DIST = 					\
 	AST_defs.c				\
 	AST_parent.c				\
 	AST_print.c				\
-	AST_findvars.c				\
 	machine/self.c				\
 	machine/avr.c				\
 	tdspecs					\
@@ -187,9 +185,6 @@ $(srcdir)/AST_parent.c: build-parent.el nodetypes.def build-basics.el
 
 $(srcdir)/AST_print.c: build-print.el nodetypes.def build-basics.el
 	cd $(srcdir) && $(EMACS) $(EMACSFLAGS) -batch -load build-print.el AST nodetypes.def
-
-$(srcdir)/AST_findvars.c: build-findvars.el nodetypes.def build-basics.el
-	cd $(srcdir) && $(EMACS) $(EMACSFLAGS) -batch -load build-findvars.el AST nodetypes.def
 
 $(srcdir)/c-gperf.h: c-parse.gperf qualifiers.h nesc-keywords.h
 	cd $(srcdir) && $(M4) $(M4FLAGS) c-parse.gperf | grep -v '^$$' | \
