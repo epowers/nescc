@@ -476,7 +476,10 @@ int region_main(int argc, char **argv) deletes
 		}
 	    }
 	  else if (!strcmp (str, "v"))
-	    flag_verbose = 1;
+	    {
+	      if (!flag_verbose) /* avoid overriding -fnesc-verbose */
+		flag_verbose = 1;
+	    }
 	  else if (!strcmp (str, "pedantic"))
 	    pedantic = 1;
 	  else if (!strcmp (str, "pedantic-errors"))
