@@ -120,7 +120,7 @@ static void check_variable_refs(data_declaration fn, entry_point_type type)
     return;
 
   
-  vars = AST_find_vars(conc_region, CAST(node, CAST(function_decl,fn->ast)->stmt));
+  //vars = AST_find_vars(conc_region, CAST(node, CAST(function_decl,fn->ast)->stmt));
   scanner = dhscan(vars);
   for(n=(node)dhnext(&scanner); n; n=(node)dhnext(&scanner)) {
     AST_print( n );
