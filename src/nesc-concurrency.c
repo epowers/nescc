@@ -435,11 +435,11 @@ static void mark_entry_points(cgraph callgraph)
       context = c_task;
       nonreentrant = FALSE;
 
-      if( !is_function_decl(fn->ast) ) {
-        AST_print(fn->ast);
-        printf("\n\n");
-        exit(0);
-      }
+      //if( !is_function_decl(fn->ast) ) {
+      //  AST_print(fn->ast);
+      //  printf("\n\n");
+      //  exit(0);
+      //}
 
       fd = CAST(function_decl, fn->ast);
       scan_attribute (a, fd->attributes)
