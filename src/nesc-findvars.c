@@ -231,6 +231,9 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write)
       binary be = CAST(binary, expr);
       find_expression_vars(be->arg1, is_read, TRUE);
       find_expression_vars(be->arg2, TRUE, FALSE);
+
+      // special case for assignment to a pointer
+      // FIXME: need this when the rvalue is an array.  Are there other times?
       break;
     }
     default:
@@ -503,7 +506,7 @@ static void note_pointer_use(expression e, bool is_read, bool is_write)
   var_use u;
 
   // find an entry for this type of pointer
-  a = get_alias_list_entry(e->type);
+  a = get_alias_list_entry( type_points_to(e->type) );
 
   // find or add the entry for this function
   u = get_var_use(a->funcs);
@@ -632,12 +635,12 @@ static void note_var_use(expression e, bool is_read, bool is_write)
 }
  
 
-bool accesses_only_in_tasks(var_list_entry v)
+bool accesses_only_in_tasks(dhash_table tab)
 {
   dhash_scan scanner;
   var_use u;
 
-  scanner = dhscan(v->funcs);
+  scanner = dhscan(tab);
   
   while( (u=dhnext(&scanner)) ) {
     //printf("    %s\n", u->function->name);
@@ -651,7 +654,7 @@ bool accesses_only_in_tasks(var_list_entry v)
 }
 
 
-void print_conflict_error_message(var_list_entry v)
+void print_var_conflict_error_message(var_list_entry v)
 {
   dhash_scan scanner;
   var_use u;
@@ -704,7 +707,7 @@ void print_conflict_error_message(var_list_entry v)
 }
 
 
-void print_debug_summary(var_list_entry v, bool conflict) 
+void print_var_debug_summary(var_list_entry v, bool conflict) 
 {
   dhash_scan s;
   var_use u;
@@ -748,6 +751,64 @@ void print_debug_summary(var_list_entry v, bool conflict)
            u->flags.read_in_atomic ? "r" : "",
            u->flags.write_in_atomic ? "w" : "");
   }
+}
+
+
+void print_alias_debug_summary(alias_list_entry a, bool conflict) 
+{
+  dhash_scan s;
+  var_use u;
+  char *ftype;
+  data_declaration d,f;
+
+  printf("  %c  %c  %c  %c  %c   : alias for type %p\n",
+         conflict ? 'X' : ' ',
+         a->flags.read ? 'r' : ' ',
+         a->flags.write ? 'w' : ' ',
+         a->flags.read_in_atomic ? 'r' : ' ',
+         a->flags.write_in_atomic ? 'w' : ' ',
+         a->pointer_type);
+
+  
+  s = dhscan(a->funcs);
+  while( (u=dhnext(&s)) ) {
+    f = u->function;
+
+    ftype = NULL;
+    if( !f->task_context ) 
+      ftype = "interrupt";
+    else if(f->reentrant_interrupt_context || f->atomic_interrupt_context)
+      ftype = "task/interrupt";
+    else 
+      ftype = "task";
+    
+    printf("                    ");
+    
+    printf("- %s%s%s (%s, %s%s%s%s%s%s)\n", 
+           f->container ? f->container->name : "",
+           f->container ? "." : "",
+           f->name, 
+           
+           ftype,
+           
+           u->flags.read ? "r" : "",
+           u->flags.write ? "w" : "",
+           (u->flags.read | u->flags.write) && (u->flags.read_in_atomic | u->flags.write_in_atomic) ? ", " : "",
+           (u->flags.read_in_atomic | u->flags.write_in_atomic) ? "atomic " : "",
+           u->flags.read_in_atomic ? "r" : "",
+           u->flags.write_in_atomic ? "w" : "");
+  }
+
+
+  s = dhscan(a->vars);
+  while( (d=dhnext(&s)) ) {
+    printf("                    ");
+    printf("+ %s%s%s\n", 
+           d->container ? d->container->name : "",
+           d->container ? "." : "",
+           d->name);
+  }
+  
 }
 
 
@@ -818,14 +879,16 @@ void check_for_conflicts(void)
 {
   dhash_scan scanner;
   var_list_entry v;
+  alias_list_entry a;
   bool conflict;
 
-  scanner = dhscan(fv_var_list);
   
+  // check regular variable conflicts
+  scanner = dhscan(fv_var_list);
   while( (v=dhnext(&scanner)) ) {
     conflict = TRUE;
     
-    // no conflict if all writes
+    // no conflict if all reads
     if( !v->flags.write && !v->flags.write_in_atomic )
       conflict = FALSE;
     
@@ -834,18 +897,44 @@ void check_for_conflicts(void)
       conflict = FALSE;
 
     // no conflict if all accesses are in tasks
-    else if( accesses_only_in_tasks(v) ) 
+    else if( accesses_only_in_tasks(v->funcs) ) 
       conflict = FALSE;
 
     // otherwise, there is a conflict!
     
     // print summary info
-    print_debug_summary(v, conflict);
+    print_var_debug_summary(v, conflict);
 
     if( conflict ) 
-      print_conflict_error_message( v );
+      print_var_conflict_error_message( v );
   } 
-  
+
+  printf("\n--------------------------------------------------\n\n");
+
+  // check pointer alias conflicts
+  scanner = dhscan(fv_alias_list);
+  while( (a=dhnext(&scanner)) ) {
+    conflict = TRUE;
+
+    // no conflict if all reads
+    if( !a->flags.write && !a->flags.write_in_atomic )
+      conflict = FALSE;
+    
+    // no conflict if all accesses are in atomic
+    else if( !a->flags.read && !a->flags.write )
+      conflict = FALSE;
+
+    // no conflict if all accesses are in tasks
+    else if( accesses_only_in_tasks(a->funcs) ) 
+      conflict = FALSE;
+
+    // otherwise, there is a conflict!
+    
+    // print summary info
+    print_alias_debug_summary(a, conflict);
+
+    if( conflict ) 
+      ; //FIXME print_alias_conflict_error_message( a );
+  }
+
 }
-
-
