@@ -571,8 +571,10 @@ void prt_variable_decl(variable_decl d)
 
   if (d->arg1)
     {
-      output(" = ");
-      prt_expression(d->arg1, P_ASSIGN);
+      if (!(use_nido && is_module_variable(d->ddecl))) {
+	output(" = ");
+	prt_expression(d->arg1, P_ASSIGN);
+      }
     }
 }
 
@@ -1289,10 +1291,17 @@ void prt_interface_deref(interface_deref e, int context_priority)
   data_declaration decl = e->ddecl;
   instance_ref iref = NULL;
 
-  if (decl->kind == decl_function && decl->uncallable)
-    error_with_location(e->location, "%s.%s not connected (MDW: unparse.c 2)",
-			CAST(identifier, e->arg1)->cstring.data,
-			e->cstring.data);
+  if (decl->kind == decl_function && decl->uncallable) {
+    if (is_instance_ref(e->arg1)) {
+      iref = CAST(instance_ref, e->arg1);
+      error_with_location(e->location, "%s.%s not connected (MDW: unparse.c 2)",
+	  iref->ddecl->name, e->cstring.data);
+    } else {
+      error_with_location(e->location, "%s.%s not connected (MDW: unparse.c 3)",
+	  CAST(identifier, e->arg1)->cstring.data,
+	  e->cstring.data);
+    }
+  } 
 
   if (is_instance_ref(e->arg1)) {
     // OK, we have an instance ref inside, so need to use the 

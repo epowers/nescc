@@ -76,10 +76,7 @@ static void prt_vdecl_variable_ref(declaration d) {
   }
 }
 
-
-
-/* Print the initializer part of the vdecl in 'd'.
- */
+/* Print the initializer part of the vdecl in 'd'. */
 static void prt_vdecl_initializer_part(declaration d) {
 
   if (d->kind == kind_data_decl) {
@@ -109,6 +106,20 @@ static bool vdecl_is_instancevar(declaration d) {
     }
   }
   return is_instance;
+}
+
+/* Returns whether the variable decl in 'd' is used. */
+static bool vdecl_is_used(declaration d) {
+  if (d->kind == kind_data_decl) {
+    data_decl dd = CAST(data_decl, d);
+    declaration vd;
+    scan_declaration (vd, dd->decls) {
+      variable_decl vdd = CAST(variable_decl, vd);
+      data_declaration vdecl = vdd->ddecl;
+      return (vdecl->isused);
+    }
+  }
+  return FALSE;
 }
 
 /* Returns whether the vdecl in 'd' has an initializer. */
@@ -618,6 +629,7 @@ static void prt_nesc_connection_function(data_declaration fn, endp ep)
     output("->");
     output_stripped_string_dollar(fn->container->name);
     output(NESC_INSTANCENUM_LITERAL);
+    if (use_nido) output("[tos_state.current_node]");
     outputln(") {");
     indent();
 
@@ -1064,11 +1076,6 @@ static void suppress_function(const char *name)
     d->suppress_definition = TRUE;
 }
 
-static void prt_nido_initialize_decl() {
-  outputln("static void nido_initialize(int mote_number);");
-}
-
-
 static void prt_nido_initializations(nesc_declaration mod) {
   declaration dlist = CAST(module, mod->impl)->decls;
   declaration aplist = CAST(component, mod->ast)->abs_param_list;
@@ -1076,30 +1083,52 @@ static void prt_nido_initializations(nesc_declaration mod) {
   int instance;
 
   if (mod->is_abstract) {
+    outputln("/* Module %s */", mod->name);
 
-    output("/* MDW: prt_nido_initializations: dlist 0x%lx aplist 0x%lx */\n",
-     	(unsigned long)dlist, (unsigned long)aplist);
+    /* Static variables */
+    scan_declaration (d, dlist) {
+      if (d->kind != kind_data_decl) continue;
+      if (vdecl_is_instancevar(d)) continue; // These done below
+      if (!vdecl_is_used(d)) continue; // Don't print if not referenced
+      prt_vdecl_variable_ref(d);
+      output("[mote_number] = ");
+      if (vdecl_has_initializer(d)) {
+	prt_vdecl_initializer_part(d);
+	outputln(";");
+      } else {
+	output("0;"); // Let's ensure everything is zeroed out
+      }
+    }
 
     for (instance = 0; instance < mod->abstract_instance_count; instance++) {
-      outputln("/* Module %s instance %d */\n", mod->name, instance);
+      outputln("/* Module %s instance %d */", mod->name, instance);
 
-      outputln("/* Instance parameters */\n");
-      /* Instance parameters */
+      outputln("/* Abstract parameters */");
+      /* Abstract parameters */
       scan_declaration(d, aplist) {
-        output_instanceref(mod, instance);
-	output(".");
-        prt_vdecl_variable_ref(d);
-	output("[mote_number] =");
+	if (d->kind == kind_data_decl) {
+	  data_decl dd = CAST(data_decl, d);
+	  declaration vd;
+	  scan_declaration (vd, dd->decls) {
+	    variable_decl vdd = CAST(variable_decl, vd);
+	    data_declaration vdecl = vdd->ddecl;
 
-	if (vdecl_has_initializer(d)) {
-	  prt_vdecl_initializer_part(d);
-	  outputln(";");
-	} else {
-	  outputln("0;");
+	    output_instanceref(mod, instance);
+	    output(".");
+	    prt_vdecl_variable_ref(d);
+	    output("[mote_number] = ");
+
+	    if (!strcmp(vdecl->name, NESC_INSTANCENUM_LITERAL)) {
+	      outputln("%d;", instance);
+	    } else {
+	      /* XXX Need to determine constant initializers */
+	      outputln("0 /* XXX PLACEHOLDER */;");
+	    }
+	  }
 	}
       }
 
-      outputln("/* Instance variables */\n");
+      outputln("/* Instance variables */");
       /* Now add instance variables */
       scan_declaration (d, dlist) {
 	if (vdecl_is_instancevar(d)) {
@@ -1126,7 +1155,7 @@ static void prt_nido_initializations(nesc_declaration mod) {
 static void prt_nido_initialize(dd_list modules) {
   dd_list_pos mod;
   outputln("/* Invoke static initializers for mote 'mote-number' */\n");
-  outputln("static void nido_initialize(int mote_number) {");
+  outputln("static void Nido$nido_initialize(int mote_number) {");
   indent();
 
   dd_scan (mod, modules) 
@@ -1188,7 +1217,6 @@ void generate_c_code(nesc_declaration program, const char *target_name,
   /* Then we print the code. */
   /* The C declarations first */
   enable_line_directives();
-  if (use_nido) prt_nido_initialize_decl();
   prt_toplevel_declarations(all_cdecls);
   disable_line_directives();
 

@@ -311,12 +311,6 @@ bool is_module_variable(data_declaration ddecl)
 bool is_instance_variable(data_declaration ddecl) 
 {
 
-  fprintf(stderr,"is_instance_variable: %s\n", ddecl->name);
-  fprintf(stderr,"vtype: %d\n", ddecl->vtype);
-  fprintf(stderr,"Cname: %d\n", ddecl->Cname);
-  fprintf(stderr,"container: %s\n", ddecl->container->name);
-  fprintf(stderr,"container abstract: %d\n", ddecl->container->is_abstract);
-
   return ddecl->kind == decl_variable &&
     ddecl->Cname == FALSE &&
     /* instance-static variable */
