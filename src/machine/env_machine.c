@@ -15,7 +15,7 @@ along with nesC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
 Boston, MA 02111-1307, USA.  */
 
-//$Id: env_machine.c,v 1.2 2004/07/27 22:45:42 idgay Exp $
+//$Id: env_machine.c,v 1.3 2005/03/01 18:40:44 idgay Exp $
 //@author Cory Sharp <cssharp@eecs.berkeley.edu>
 
 /* Basic pointer sizes and alignments for a machine set in the environment
@@ -44,7 +44,6 @@ static machine_spec env_machine = {
   1, 1, 1, 1,		/* int1248_align */
   2, 2,			/* wchar_size_size */
   TRUE, TRUE,		/* char_wchar_signed */
-  "gcc",		/* gcc */
 
   NULL, NULL, NULL, NULL	/* Attributes: need some way to specify this */
 };
@@ -197,24 +196,6 @@ static bool scan_env_machine(machine_spec * machine, const char *envname)
 	    {
 	      error("%s.%s, expected 2 bools, char and wchar signed",
 		     envname, name);
-	      n_errors++;
-	    }
-	}
-      else if (is_literali(name = "gcc", begin, equal))
-	{
-	  /* Blatant memory leak below on the gcc_compiler buffer.
-	     Let me know when it actually becomes a problem. */
-	  int n = space - value;
-	  char *buffer =(char *) malloc(n + 1);
-	  if (buffer != NULL)
-	    {
-	      strncpy(buffer, value, n);
-	      buffer[n] = 0;
-	      machine->gcc_compiler = buffer;
-	    }
-	  else
-	    {
-	      error("failed to allocate memory for gcc program name");
 	      n_errors++;
 	    }
 	}
