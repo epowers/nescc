@@ -877,7 +877,7 @@ static void output_docstring(char *docstring, location loc)
     
     // output the rest, if there are no more @ directives
     if(at == NULL) {
-      output(pos);
+      output_string(pos);
       if(context == in_param) output("</menu></menu>\n");
       if(context != in_main) 
         output("</td></tr></table>\n");
@@ -889,7 +889,7 @@ static void output_docstring(char *docstring, location loc)
     if(space >= docstring && (*space==' ' || *space=='\t' || *space=='\n' || *space=='\r' || *space=='(') )
     {
       // output up to the @
-      *at='\0'; output(pos); *at='@';
+      *at='\0'; output_string(pos); *at='@';
       pos = at+1;
       
       // do some formatting, based on the command
@@ -1038,7 +1038,7 @@ static void output_docstring(char *docstring, location loc)
       // do a quick check to see if it might be an email address, and format it nicely if so.
       if( check_email_address(docstring, at, &begin, &end) ) {
         // output to the beginning of the address
-        save=*begin; *begin='\0'; output(pos); *begin=save;
+        save=*begin; *begin='\0'; output_string(pos); *begin=save;
 
         // print the mailto: URL and the address
         end++;
@@ -1052,7 +1052,7 @@ static void output_docstring(char *docstring, location loc)
 
       // not an email address, just output normally
       else {
-        *at='\0'; output(pos); *at='@';
+        *at='\0'; output_string(pos); *at='@';
         pos = at+1;
         output("@");
       }
