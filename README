@@ -8,13 +8,13 @@ avr-gcc up to 3.1.1, 2.13.2.1 for later avr-gcc's).
 
 Changes in nesC 1.1.2
 =====================
+- Misc bug fixes (in particular, work around latest-cygwin weirdness which
+  causes file corruption)
 - Recognise the gcc noinline attribute and don't automatically inline such
   functions (patch contributed by Klaus Madsen, nesc@hjernemadsen.org)
 - Mac OS X support; avr-gcc not needed when compiling nesC
 - Support gcc's -I- idiom to prevent searching current dir for components,
   interfaces, etc.
-- Misc bug fixes (in particular, work around latest-cygwin weirdness which
-  causes file corruption)
 - 64-bit platform support: compile with -DLARGE_ADDRESSES, and 
   edit the MEMSLICE1 constant in src/libcompat.regions.c to be the number
   of unused high-order bits on your platform
