@@ -27,6 +27,7 @@ Boston, MA 02111-1307, USA.  */
 #include "edit.h"
 #include "semantics.h"
 #include "constants.h"
+#include "dd_list.h"
 
 /* Print the variable part of the vdecl in 'd'.
  * Returns whether there is an initializer.
@@ -88,7 +89,8 @@ static void prt_vdecl_initializer_part(declaration d) {
       expression initializer = vdd->arg1;
       if (initializer) {
 	prt_expression(initializer, P_ASSIGN);
-	output(" /* %s */ ", vdecl->name);
+	output(" /* %s (initializer kind %d) */ ", vdecl->name, 
+	    initializer->kind);
       } else {
 	// XXX FIX THIS - should be error
 	output(" 0 /* XXX XXX YO! MDW! No initializer for %s! */", vdecl->name);
@@ -177,7 +179,8 @@ void prt_nesc_function_declarations(nesc_declaration mod)
 void prt_nesc_abstract_declarations(nesc_declaration mod)
 {
   declaration dlist = CAST(module, mod->impl)->decls;
-  declaration aplist = CAST(component, mod->ast)->abs_param_list;
+  dd_list_pos ap_instance_list = dd_first(mod->abs_parms);
+  declaration aplist = DD_GET(declaration, ap_instance_list);
   declaration d;
   int i;
 
@@ -188,7 +191,7 @@ void prt_nesc_abstract_declarations(nesc_declaration mod)
     output(" {\n");
 
     /* Instance parameters and magic variables need to go first, so 
-     * we can initialize them */
+     * we can initialize them. Only need this for first instance */
     scan_declaration(d, aplist) {
       prt_vdecl_variable_part(d);
     }
@@ -226,16 +229,21 @@ void prt_nesc_abstract_declarations(nesc_declaration mod)
 	      output("  %d /* %s */, ", i, NESC_INSTANCENUM_LITERAL);
 	    } else {
 	      prt_vdecl_initializer_part(d);
+	      output(", ");
 	    }
 	  }
 	}
       }
+      ap_instance_list = dd_next(ap_instance_list);
+      assert(ap_instance_list != NULL);
+      aplist = DD_GET(declaration, ap_instance_list);
 
       /* Instance variables */
       scan_declaration(d, dlist) {
 	if (vdecl_is_instancevar(d)) {
 	  if (vdecl_has_initializer(d)) {
 	    prt_vdecl_initializer_part(d);
+	    output(", ");
 	  } else {
 	    output(" 0, ");
 	  }
@@ -1142,7 +1150,8 @@ static void prt_nido_initializations(nesc_declaration mod) {
     }
 
   if (mod->is_abstract) {
-    declaration aplist = CAST(component, mod->ast)->abs_param_list;
+    dd_list_pos ap_instance_list = dd_first(mod->abs_parms);
+    declaration aplist = DD_GET(declaration, ap_instance_list);
     for (instance = 0; instance < mod->abstract_instance_count; instance++) {
       outputln("/* Module %s instance %d */", mod->name, instance);
 
@@ -1165,10 +1174,14 @@ static void prt_nido_initializations(nesc_declaration mod) {
 	      outputln("%d;", instance);
 	    } else {
 	      prt_vdecl_initializer_part(d);
+	      outputln(";");
 	    }
 	  }
 	}
       }
+      ap_instance_list = dd_next(ap_instance_list);
+      assert(ap_instance_list != NULL);
+      aplist = DD_GET(declaration, ap_instance_list);
 
       outputln("/* Instance variables */");
       /* Now add instance variables */
@@ -1239,8 +1252,10 @@ void generate_c_code(nesc_declaration program, const char *target_name,
 
   fprintf(stderr,"\n\nMDW: generate_c_code starting\n\n\n");
 
-  /* We start by finding each module's connections and marking uncallable
-     functions */
+  /* Process abstract component parameters */
+  process_abstract_params(CAST(configuration, program->impl));
+
+  /* Find each module's connections and mark uncallable functions */
   dd_scan (mod, modules)
     find_connections(cg, DD_GET(nesc_declaration, mod));
 

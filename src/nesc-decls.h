@@ -31,7 +31,7 @@ typedef struct nesc_declaration {
   struct cgraph *connections;
   bool is_abstract;
   int abstract_instance_count;
-  typelist abs_param_typelist;
+  dd_list abs_parms; 
 
 } *nesc_declaration;
 

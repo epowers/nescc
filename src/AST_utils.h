@@ -44,6 +44,7 @@ bool zero_expression(expression e);
 
 expression build_int_constant(region r, location loc, type t, largest_int c);
 expression build_uint_constant(region r, location loc, type t, largest_uint c);
+expression build_float_constant(region r, location loc, type t, long double c);
 #define build_zero(r, loc) build_int_constant(r, loc, int_type, 0)
 
 expression build_identifier(region r, location loc, data_declaration id);

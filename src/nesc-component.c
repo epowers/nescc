@@ -230,7 +230,7 @@ void build_component(region r, nesc_declaration cdecl)
     fprintf(stderr,"** MDW: component %s is abstract\n\n", cdecl->name);
   }
   set_aparm_types(the_component->abs_param_list);
-  cdecl->abs_param_typelist = make_gparm_typelist(the_component->abs_param_list);
+  cdecl->abs_parms = dd_new_list(parse_region);
 
   AST_set_parents(CAST(node, cdecl->ast));
 

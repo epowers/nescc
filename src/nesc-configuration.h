@@ -27,5 +27,6 @@ typedef struct nesc_configuration_instance {
 void init_configuration_instance(nesc_configuration_instance cinst, configuration conf);
 void process_configuration(configuration c, nesc_configuration_instance cinst);
 void component_scan(data_declaration cref, env_scanner *scan);
+void process_abstract_params(configuration c);
 
 #endif

@@ -24,6 +24,7 @@ Boston, MA 02111-1307, USA.  */
 #include "nesc-semantics.h"
 #include "constants.h"
 #include "c-parse.h"
+#include "AST_utils.h"
 
 /* define this to forbid linking a single function from an interface
    independently of the whole interface */
@@ -112,20 +113,6 @@ static void connect_interface(cgraph cg, struct endp from, struct endp to,
       assert(fndecl->kind == decl_function);
       to.function = fndecl;
       from.function = env_lookup(from.interface->functions->id_env, fndecl->name, TRUE);
-
-      // XXX MDW: This isn't needed: lookup_endpoint() correctly
-      // initializes the instance number of the interface reference
-//      if (match_instances) {
-//	if (!reverse) {
- // 	  fprintf(stderr,"MDW: setting from.instance (%d) = to.instance (%d)\n",
-  //	      from.instance, to.instance);
-  //	  from.instance = to.instance;
-   //	} else {
-  //	  fprintf(stderr,"MDW: setting to.instance (%d) = from.instance (%d)\n",
-  //	      to.instance, from.instance);
-  //	  to.instance = from.instance;
-   //	}
-    //  }
 
       if (fndecl->defined ^ reverse)
 	connect_function(cg, from, to);
@@ -274,17 +261,91 @@ static void check_generic_arguments(expression args, typelist gparms)
     error_with_location(args->location, "too few arguments");
 }
 
-static void check_abstract_parameters(expression args, declaration aparms) {
+/* Recursively evaluate the given expression, setting expr->cst to the
+ * appropriate constant value.
+ */
+static void eval_const_expr(declaration parent_aparms, expression expr) {
+  fprintf(stderr, "MDW: eval_const_expr kind %d %s\n",
+      expr->kind, expr->cst?"CONST":"");
+  if (expr->cst) return;
+
+  if (is_binary(expr)) {
+    binary bin = CAST(binary, expr);
+    eval_const_expr(parent_aparms, bin->arg1);
+    eval_const_expr(parent_aparms, bin->arg2);
+    bin->cst = fold_binary(bin->type, CAST(expression, bin));
+
+  } else if (is_identifier(expr)) {
+    /* Only allowed identifiers are in parent_aparms */
+
+
+  } else {
+    error("MDW: Don't know how to handle non-binary expressions in abstract parameter initialization");
+    return;
+  }
+
+  if (!expr->cst) {
+    error("cannot resolve abstract parameter initialization to constant value");
+  }
+}
+
+static declaration copy_declaration_list(region r, declaration dl) {
+  declaration newl = NULL, tail, d;
+  data_decl dd, newdd;
+  variable_decl vd, newvd;
+
+  scan_declaration(d, dl) {
+    assert(d->kind == kind_data_decl);
+    dd = CAST(data_decl, d);
+    assert(dd->decls->kind == kind_variable_decl);
+    vd = CAST(variable_decl, dd->decls);
+
+    newvd = new_variable_decl(r, vd->location, vd->declarator, vd->attributes, vd->arg1, vd->asm_stmt, vd->ddecl);
+    newdd = new_data_decl(r, dd->location, dd->modifiers, CAST(declaration, newvd));
+    newdd->next = NULL;
+
+    //newdd = ralloc(r, data_decl);
+    //memcpy(newdd, dd, sizeof(struct data_decl));
+    //newvd = ralloc(r, struct variable_decl);
+    //memcpy(newvd, vd, sizeof(struct variable_decl));
+    //newdd->decls = newvd;
+    //newdd->next = NULL;
+
+    if (newl == NULL) {
+      newl = CAST(declaration, newdd);
+      tail = newl;
+    } else {
+      tail->next = CAST(node, newdd);
+      tail = CAST(declaration, tail->next);
+    }
+  }
+  return newl;
+}
+
+static void resolve_abstract_parameters(declaration parent_aparms, component_ref comp) {
+  expression args = comp->args;
   expression arg;
+  declaration aparms = CAST(component, comp->cdecl->ast)->abs_param_list;
   declaration aparm;
   data_decl dd;
   variable_decl vd;
   type aparm_type;
+  declaration new_aparm_head;
+  region r = parse_region;
+
+  fprintf(stderr,"MDW: resolve_abstract_parameters: comp %s\n", comp->cdecl->name);
+
+  new_aparm_head = copy_declaration_list(r, aparms);
+  dd_add_last(r, comp->cdecl->abs_parms, new_aparm_head);
+  aparms = new_aparm_head;
+
+  fprintf(stderr,"MDW: resolve_abstract_parameters: abs_parms length %ld\n", dd_length(comp->cdecl->abs_parms));
 
   // Start head of aparms list, skipping _INSTANCENUM
   assert(aparms != NULL);
   if (aparms->next == NULL && args != NULL) {
     error_with_location(args->location, "too few initialization parameters for abstract component");
+    return;
   }
   aparm = CAST(declaration, aparms->next);
   assert(is_data_decl(aparm));
@@ -297,32 +358,39 @@ static void check_abstract_parameters(expression args, declaration aparms) {
   }
 
   scan_expression(arg, args) {
-    fprintf(stderr, "MDW: check_abstract_parameters: aparm %s\n", vd->ddecl->name);
+    fprintf(stderr, "MDW: resolve_abstract_parameters: aparm %s\n", vd->ddecl->name);
 
-    // XXX: Should fold constants here
-    if (!arg->cst || !constant_integral(arg->cst)) {
+    eval_const_expr(parent_aparms, arg);
+    if (!arg->cst) {
       error_with_location(arg->location, "constant expression expected");
-    } else {
-      if (!cval_inrange(arg->cst->cval, aparm_type))
-	error_with_location(arg->location, "constant out of range for argument type");
+      return;
+    } 
+
+    if (constant_integral(arg->cst) && !cval_inrange(arg->cst->cval, aparm_type)) {
+      error_with_location(arg->location, "constant out of range for argument type");
+      return;
     }
 
-    // Now, propagate value into vd's initializer
-    vd->arg1 = arg;
-    //vd->arg1 = new_expression(parse_region, arg->location);
-    //vd->arg1->type = aparm_type;
-    //vd->arg1->lvalue = FALSE;
-    //vd->arg1->side_effects = FALSE;
-    //vd->arg1->cst = arg->cst;
-    //vd->arg1->bitfield = FALSE;
-    //vd->arg1->isregister = FALSE;
-    //vd->arg1->static_address = FALSE;
+    if (arg->cst->type == int_type) {
+      vd->arg1 = build_int_constant(r, arg->location, 
+	  arg->cst->type, cval_sint_value(arg->cst->cval));
+    } else if (arg->cst->type == unsigned_int_type) {
+      vd->arg1 = build_int_constant(r, arg->location, arg->cst->type, 
+	  cval_uint_value(arg->cst->cval));
+    } else if (arg->cst->type == float_type ||
+	arg->cst->type == double_type) {
+      vd->arg1 = build_float_constant(r, arg->location, arg->cst->type, 
+	  cval_float_value(arg->cst->cval));
+    } else {
+      error("MDW: Unable to handle constant type %d\n", arg->cst->type);
+    }
 
     // Next aparms entry
     aparm = CAST(declaration, aparm->next);
     if (aparm == NULL) {
       if (arg->next != NULL) {
 	error_with_location(args->location, "too few initialization parameters for abstract component");
+	return;
       }
     } else {
       assert(is_data_decl(aparm));
@@ -338,6 +406,7 @@ static void check_abstract_parameters(expression args, declaration aparms) {
 
   if (aparm) {
     error_with_location(args->location, "too few initialization parameters for abstract component");
+    return;
   }
 
 
@@ -720,11 +789,6 @@ static void require_components(region r, configuration c, nesc_configuration_ins
 	  comp->instance_number = instance_number = comp->cdecl->abstract_instance_count - 1;
 	}
 
-	/* Check abstract parameters */
-	if (comp->args) {
-	  fprintf(stderr,"MDW: checking abstract parameters for %s\n", comp->cdecl->name);
-	  check_abstract_parameters(comp->args, CAST(component, comp->cdecl->ast)->abs_param_list);
-	}                        
       } else {
 	comp->instance_number = instance_number = -1; // Indicates not an abstract component
       }
@@ -846,3 +910,22 @@ void process_configuration(configuration c, nesc_configuration_instance cinst)
   if (old_errorcount == errorcount)
     check_complete_connection(c);
 }
+
+/* Recurse through component graph and resolve abstract parameters to 
+ * constants.
+ */
+void process_abstract_params(configuration c) {
+  component_ref comp;
+  fprintf(stderr,"MDW: process_abstract_params: %s\n", c->cdecl->name);
+
+  scan_component_ref (comp, c->components) {
+    if (comp->cdecl->is_abstract && comp->args) {
+      fprintf(stderr,"MDW: Processing abstract parameters for %s\n", comp->cdecl->name);
+      resolve_abstract_parameters(c, comp);
+    }                        
+    if (is_configuration(comp->cdecl->impl)) {
+      process_abstract_params(CAST(configuration, comp->cdecl->impl));
+    }
+  }
+}
+
