@@ -125,7 +125,7 @@ void doc_use_graphviz(const bool use)
 
 
 /**
- * Set the graphviz flag
+ * Set the app flag
  **/
 void doc_is_app(const bool val)
 {
@@ -153,7 +153,8 @@ void doc_add_topdir(const char *dir)
   init_doc_region();
 
   assert(dir);
-  assert(num_topdirs < MAX_TOPDIRS);
+  if (num_topdirs >= MAX_TOPDIRS)
+    fatal("ERROR: Too many `topdirs' (-fnesc-topdir) directories specified.\n");
 
   // canonicalize the path
   if(realpath(dir, realdir) == NULL) {
@@ -1453,28 +1454,27 @@ static bool connection_already_printed(dhash_table table,
 
 
   // sort out which is the "requires" side, and which is the "provides" side
-  {
-    // use interface->required to determine the direction of
-    // the arrow.
-    // 
-    // FIXME: is this correct?
-    //
-    // FIXME: we don't currently have any good way to keep information
-    // on the _labels_ of multiply used interfaces.  This could be
-    // done by generating the interface connection graph ourselves.
-
-    // keep the direction, if there is no interface or if ep1 is the requires side
-    if( !ep1->interface || ep1->interface->required ) {
+  // For interfaces: ep1 is req, ep2 is prov if connecting a command,
+  // 		     the other way round if connecting an event
+  // For functions: the direction in the graph is always the one we want
+  if (ep1->interface)
+    {
+      if (ep1->function->ftype == function_command)
+	{
+	  *req = ep1;
+	  *prov = ep2;
+	}
+      else
+	{
+	  *req = ep2;
+	  *prov = ep1;
+	}
+    }
+  else
+    {
       *req = ep1;
       *prov = ep2;
     }
-
-    // ep1 must have been the provides side, so reverse the direction
-    else {
-      *req = ep2;
-      *prov = ep1;
-    }
-  }
 
   // special case: if the interface is empty, we always show the connection
   if((*prov)->interface == NULL) {
@@ -1486,82 +1486,6 @@ static bool connection_already_printed(dhash_table table,
   if( !strcmp(iface_node_name(ep1),iface_node_name(ep2)) ) {
     return TRUE;
   }
-
-  // special case: connection is a pass-through, via the '=' operator
-  if( ep1->interface->required == ep2->interface->required ) {
-    endp left, right;
-
-    // figure out which is on the left, and which is on the right
-    if( ep1->component && ep2->component ) {
-      left=ep1; right=ep2;
-    } else{
-      // the side that isn't in a component (ie, it has no def) is on
-      // the left hand side of the equals sign.
-      if( ep1->component == NULL ) 
-        left=ep1, right=ep2;
-      else
-        left=ep2, right=ep1;
-    }
-
-    // set the arrow direction.  If the right-hand component requires
-    // the interface, have the arrow go from right to left.  If it
-    // provides it, have the arrow go from left to right.
-    if( right->interface->required ) {
-      *req = right;
-      *prov = left;
-    } else {
-      *req = left;
-      *prov = right;
-    }
-
-    // FIXME: just use the order things are already in.
-    if( ep1->function->defined ) {
-      left = ep1;
-      right = ep2;
-    } else {
-      left = ep2;
-      right = ep1;
-    }
-    if(ep1->interface->required) {
-      endp temp = left;
-      left = right;
-      right = temp;
-    }
-
-    *req = left;
-    *prov = right;
-
-    /*
-    fprintf(stderr,"%d.  ",fixme_graph_num);
-    fprintf(stderr,"%-15s ", left->interface->name);
-    {
-      const char *a = iface_node_name(left);
-      const char *b = iface_node_name(right);
-      const char *temp;
-      if(left->component) a = left->component->name;
-      if(right->component) b = right->component->name;
-      if(b[0] < a[0]) {
-        temp = a;
-        a = b; 
-        b = temp;
-      }
-      fprintf(stderr,"%s / %s %*s ", a, b, 25-strlen(a)-strlen(b), "");
-    }
-    fprintf(stderr,"   %-10s = %10s    ", 
-            iface_node_name(left),
-            iface_node_name(right));
-    //        left->component ? left->component->name : "null",
-    //        right->component ? right->component->name : "null");
-
-    fprintf(stderr,"%-15s ", left->function->name);
-    fprintf(stderr," r/d  %d %d    ",left->interface->required, left->function->defined);
-    fprintf(stderr,"\n");
-    assert(left->function->defined == right->function->defined); 
-    assert(left->interface->required == right->interface->required);
-    */
-  }
-
-
 
   // see if this one has already been printed.  This is done by checking a hashtable for the tripple of req,prov,iface
   {
