@@ -643,8 +643,7 @@ bool accesses_only_in_tasks(dhash_table tab)
   
   while( (u=dhnext(&scanner)) ) {
     //printf("    %s\n", u->function->name);
-    if( u->function->reentrant_interrupt_context || 
-        u->function->atomic_interrupt_context )
+    if (u->function->contexts & ~(c_atomic_task | c_task))
       return FALSE;
   }
 
@@ -652,12 +651,26 @@ bool accesses_only_in_tasks(dhash_table tab)
   return TRUE;
 }
 
+static const char *context_name(data_declaration fn)
+{
+  bool intask, inintr;
+
+  intask = (fn->contexts & (c_task | c_atomic_task)) != 0;
+  inintr = (fn->contexts & ~(c_task | c_atomic_task)) != 0;
+  if (intask && inintr)
+    return "task/intr";
+  else if (inintr)
+    return "intr";
+  else 
+    return "task";
+
+}
 
 void print_var_conflict_error_message(var_list_entry v)
 {
   dhash_scan scanner;
   var_use u;
-  char *ftype;
+  const char *ftype;
   char atype[20];
   data_declaration f;
   location loc;
@@ -672,15 +685,7 @@ void print_var_conflict_error_message(var_list_entry v)
   
   while( (u=dhnext(&scanner)) ) {
     f = u->function;
-
-    // function context
-    ftype = NULL;
-    if( !f->task_context ) 
-      ftype = "intr";
-    else if(f->reentrant_interrupt_context || f->atomic_interrupt_context)
-      ftype = "task/intr";
-    else 
-      ftype = "task";
+    ftype = context_name(f);
 
     // access type
     atype[0] = '\0';
@@ -710,7 +715,7 @@ void print_var_debug_summary(var_list_entry v, bool conflict)
 {
   dhash_scan s;
   var_use u;
-  char *ftype;
+  const char *ftype;
   data_declaration f;
 
   printf("  %c  %c  %c  %c  %c   : %s%s%s\n",
@@ -726,13 +731,7 @@ void print_var_debug_summary(var_list_entry v, bool conflict)
   while( (u=dhnext(&s)) ) {
     f = u->function;
 
-    ftype = NULL;
-    if( !f->task_context ) 
-      ftype = "interrupt";
-    else if(f->reentrant_interrupt_context || f->atomic_interrupt_context)
-      ftype = "task/interrupt";
-    else 
-      ftype = "task";
+    ftype = context_name(f);
     
     printf("                    ");
     
@@ -757,7 +756,7 @@ void print_alias_debug_summary(alias_list_entry a, bool conflict)
 {
   dhash_scan s;
   var_use u;
-  char *ftype;
+  const char *ftype;
   data_declaration d,f;
 
   printf("  %c  %c  %c  %c  %c   : alias for type %s\n",
@@ -773,13 +772,7 @@ void print_alias_debug_summary(alias_list_entry a, bool conflict)
   while( (u=dhnext(&s)) ) {
     f = u->function;
 
-    ftype = NULL;
-    if( !f->task_context ) 
-      ftype = "interrupt";
-    else if(f->reentrant_interrupt_context || f->atomic_interrupt_context)
-      ftype = "task/interrupt";
-    else 
-      ftype = "task";
+    ftype = context_name(f);
     
     printf("                    ");
     
@@ -844,11 +837,13 @@ void find_function_vars(data_declaration fn)
   else if( fn->definition ) 
     fdecl = CAST(function_decl, fn->definition);
   else {
+#if 0
     // FIXME: deal with these
     error("can't find definition for function %s%s%s!!", 
           fn->container ? fn->container->name : "",
           fn->container ? "." : "", 
           fn->name);
+#endif
     return;
   }
     

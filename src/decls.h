@@ -118,10 +118,27 @@ typedef struct data_declaration {
 				   interrupt handlers, e.g.). Set by the 
 				   `spontaneous' attribute */
   /* used for functions.  describes the types of entry points from
-     which the function is called. */
-  bool task_context;
-  bool reentrant_interrupt_context;
-  bool atomic_interrupt_context;
+     which the function is called.
+     It distinguishes the 6 combinations of the three properties
+       task/interrupt, atomic/non-atomic, reentrant/non-reentrant
+     where task => non-reentrant
+     In the constant names, non-x is implicit
+  */
+  enum contexts {
+    c_atomic_task = 1,
+    c_task = 2,
+    c_atomic_int = 4,
+    c_int = 8,
+    c_reentrant_atomic_int = 16,
+    c_reentrant_int = 32
+  } contexts;
+  /* For entrypoints: context of entry. For everything else: 0 */
+  enum contexts entrypoint;
+  /* Functions which are called from two different nonreentrant
+     entry points are not considered nonreentrant. These field
+     helps track that. */
+  struct data_declaration *nonreentrant_caller;
+  bool multiple_nonreentrant_callers;
 
   /* keywords for specifying concurrency information about a function */
   bool task_only;

@@ -133,9 +133,10 @@ void init_data_declaration(data_declaration dd, declaration ast,
   dd->calls = NULL;
   dd->connections = NULL;
   dd->spontaneous = FALSE;
-  dd->task_context = FALSE;
-  dd->reentrant_interrupt_context = FALSE;
-  dd->atomic_interrupt_context = FALSE;
+  dd->contexts = 0;
+  dd->entrypoint = 0;
+  dd->nonreentrant_caller = NULL;
+  dd->multiple_nonreentrant_callers = TRUE;
   dd->task_only = FALSE;
   dd->uninterruptable = FALSE;
   dd->magic_reduce = NULL;

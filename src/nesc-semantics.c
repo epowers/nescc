@@ -65,7 +65,8 @@ bool nesc_attribute(attribute a)
 {
   const char *name = a->word1->cstring.data;
 
-  return !strcmp(name, "C") || !strcmp(name, "spontaneous") || !strcmp(name, "combine");
+  return !strcmp(name, "C") || !strcmp(name, "spontaneous") ||
+    !strcmp(name, "combine") || !strcmp(name, "nonreentrant");
 }
 
 type get_actual_function_type(type t)
