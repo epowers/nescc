@@ -50,9 +50,7 @@ while ($temp = shift @ARGV) {
 # Copy the input arguments to another array.
 @myargs = @ARGV;
 
-use Cwd;
-$mycwd = getcwd;
-$topfile = "${mycwd}/${outputdir}/TOSIndex.xml";
+$topfile = "${outputdir}/TOSIndex.xml";
 open(TOSINDEX, ">", $topfile)
   or die "Can't open top level index file: $!";
 
