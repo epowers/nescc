@@ -164,6 +164,7 @@ struct data_declaration {
   bool isgeneric; 		/* generic parameters of commands and events,
 				   implies isparameter */
   bool async_access;		/* Some kind of access in an async context */
+  bool async_write;		/* A write in async context */
   bool norace;
 
   /* For constants */
