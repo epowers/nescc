@@ -24,6 +24,7 @@ Boston, MA 02111-1307, USA.  */
 void fv_init();
 void fv_cleanup();
 void find_function_vars(data_declaration fn);
+void check_for_conflicts(void);
 
 
 #endif

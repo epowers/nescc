@@ -95,40 +95,6 @@ typedef enum {
 
 
 /**
- * check the variable refs in the given function.  Errors are
- * generated if any of the refs might create a race condition.
- **/
-static void check_variable_refs(data_declaration fn, entry_point_type type) 
-{
-  dhash_table vars;
-  dhash_scan scanner;
-  node n;
-
-  printf("\n\n\n++++++++++++++++++++++++++++++++++++++++\n");
-  n = fn->ast->next;
-  fn->ast->next = NULL;
-  AST_print( CAST(node,fn->ast) );
-  fn->ast->next = n;
-  printf("----------------------------------------\n");
-
-  if( !is_function_decl(fn->ast) )
-    return;
-
-  
-  //vars = AST_find_vars(conc_region, CAST(node, CAST(function_decl,fn->ast)->stmt));
-  find_function_vars(fn);
-  scanner = dhscan(vars);
-  for(n=(node)dhnext(&scanner); n; n=(node)dhnext(&scanner)) {
-    AST_print( n );
-    printf("------------------------------\n");
-  }
-
-  exit(1);
-}
-
-
-
-/**
  * recurse down the call tree from a particular function, marking
  * called functions with the given type.q
  **/
@@ -198,12 +164,6 @@ static void mark_functions(gnode parent, entry_point_type type, int indent,
     if( fn->task_only ) 
       warning("task_only function `%s' called from atomic interrupt context",fn->name);
   }
-
-
-  // check the variable refs in the current function
-  // 
-  // FIXME: add this back
-  check_variable_refs(fn,type);
 
 
   // mark that this function has been seen, before we recurse
@@ -294,6 +254,45 @@ static void mark_entry_points(cgraph callgraph)
 
 
 
+/**
+ * check the variable refs in the given function.  Errors are
+ * generated if any of the refs might create a race condition.
+ **/
+static void check_variable_refs(cgraph callgraph) //data_declaration fn, entry_point_type type) 
+{
+  ggraph cg = cgraph_graph(callgraph);
+  gnode n;
+  node temp;
+
+  fv_init();
+
+  // first pass - collect the list of all vars
+  graph_scan_nodes (n, cg) {
+    data_declaration fn = NODE_GET(endp, n)->function;
+
+#if 0
+    printf("\n\n\n++++++++++++++++++++++++++++++++++++++++\n");
+    temp = fn->ast->next;
+    fn->ast->next = NULL;
+    AST_print( CAST(node,fn->ast) );
+    fn->ast->next = temp;
+    printf("----------------------------------------\n");
+#endif    
+
+    // FIXME: do I need to deal w/ the variable_decls in the graph??
+    if( is_function_decl(fn->ast) )
+      find_function_vars(fn);
+  }
+
+
+  // now go throught the variable list, and look for conflicts
+  check_for_conflicts();
+
+
+  fv_cleanup();
+}
+
+
 
 
 
@@ -311,9 +310,11 @@ void perform_concurrency_checks(cgraph callgraph)
   unparse_start(outfile);
   set_function_separator(".");
   disable_line_directives();
-  fv_init();
+
   mark_entry_points(callgraph);
-  fv_cleanup();
+  check_variable_refs(callgraph);
+
+
   unparse_end();
   fprintf(outfile, "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n");
 

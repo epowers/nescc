@@ -1,17 +1,15 @@
 
-
 #include "parser.h"
 #include "dhash.h"
 #include "c-parse.h"
 #include "AST_utils.h"
-//#include "nesc-cg.h"
-//#include "graph.h"
+#include "semantics.h"
 #include "constants.h"
 
 #include "nesc-findvars.h"
 
 
-static void add_ref(expression e);
+static void add_ref(expression e, bool is_write);
 
 
 
@@ -30,8 +28,8 @@ typedef struct var_use {
 // variables.  nesc-findvars generates a global list of var_list_entry
 // structures.
 typedef struct var_list_entry { 
-  char *module;
-  char *name;
+  const char *module;
+  const char *name;
   
   dhash_table vars;   // list of data declarations for the variables
   dhash_table funcs;  // list of struct var_use, that define how the var is used in each function that uses it
@@ -50,6 +48,11 @@ static region fv_region = NULL;
 
 // the current function being operated on, so we don't have to look it up all the time
 static data_declaration current_function = NULL;
+static const char *current_module_name = NULL;
+
+static env fv_current_env = NULL;
+static env fv_module_env = NULL;
+
 
 // whether or not we are currently in an atomic statement
 bool in_atomic = FALSE;
@@ -64,12 +67,15 @@ bool in_atomic = FALSE;
 static void find_statement_vars(statement stmt);
 static void find_expression_vars(expression expr);
 
-static void find_elist_vars(expression elist)
+static void find_elist_vars(expression elist, bool add_elements)
 {
   expression e;
 
-  scan_expression (e, elist)
+  scan_expression (e, elist) {
+    if(add_elements)
+      add_ref(e, FALSE);
     find_expression_vars(e);
+  }
 }
 
 
@@ -83,18 +89,15 @@ static void find_expression_vars(expression expr)
 
   switch (expr->kind)
     {
+      // ignore bare identifiers.  all actual accesses are added in the parent statements
     case kind_identifier: 
-      add_ref(expr);
       break;
 
-    case kind_atomic_stmt:
-      in_atomic = 1;
-      find_statement_vars(CAST(atomic_stmt,expr)->stmt);
-      in_atomic = 0;
+    case kind_interface_deref:
       break;
 
     case kind_comma:
-      find_elist_vars(CAST(comma, expr)->arg1);
+      find_elist_vars(CAST(comma, expr)->arg1, FALSE);
       break;
 
     case kind_cast_list: {
@@ -114,7 +117,7 @@ static void find_expression_vars(expression expr)
       break;
     }
     case kind_init_list: {
-      find_elist_vars(CAST(init_list, expr)->args);
+      find_elist_vars(CAST(init_list, expr)->args, FALSE);
       break;
     }
     case kind_conditional: {
@@ -143,30 +146,54 @@ static void find_expression_vars(expression expr)
       function_call fce = CAST(function_call, expr);
 
       find_expression_vars(fce->arg1);
-      find_elist_vars(fce->args);
+      find_elist_vars(fce->args, TRUE);
       break;
     }
     case kind_generic_call: {
       generic_call fce = CAST(generic_call, expr);
 
       find_expression_vars(fce->arg1);
-      find_elist_vars(fce->args);
+      find_elist_vars(fce->args, TRUE);
       break;
     }
-    case kind_extension_expr:
+    case kind_extension_expr: {
       find_expression_vars(CAST(unary, expr)->arg1);
       break;
+    }
+    // unary updates
+    case kind_preincrement: case kind_postincrement: case kind_predecrement: case kind_postdecrement: {
+      unary ue = CAST(unary, expr);
 
+      add_ref(ue->arg1,TRUE);
+      find_expression_vars(ue->arg1);
+      break;
+    }
+    // binary updates
+    case kind_assign:  case kind_plus_assign:  case kind_minus_assign:  case kind_times_assign:  case kind_divide_assign:  case kind_modulo_assign:
+    case kind_lshift_assign:  case kind_rshift_assign:  case kind_bitand_assign:  case kind_bitor_assign:  case kind_bitxor_assign: {
+      binary be = CAST(binary, expr);
+      
+      add_ref(be->arg1, TRUE);
+      add_ref(be->arg2, FALSE);
+      find_expression_vars(be->arg1);
+      find_expression_vars(be->arg2);
+      break;
+    }
     default:
-      if (is_unary(expr))
-	find_expression_vars(CAST(unary, expr)->arg1);
-      else if (is_binary(expr))
-	{
-	  binary be = CAST(binary, expr);
+      if (is_unary(expr)) {
+        unary ue = CAST(unary, expr);
+
+        add_ref(ue->arg1, FALSE);
+	find_expression_vars(ue->arg1);
+      }
+      else if (is_binary(expr)) {
+        binary be = CAST(binary, expr);
           
-	  find_expression_vars(be->arg1);
-	  find_expression_vars(be->arg2);
-	}
+        add_ref(be->arg1, FALSE);
+        add_ref(be->arg2, FALSE);
+        find_expression_vars(be->arg1);
+        find_expression_vars(be->arg2);
+      }
       else 
 	assert(0);
       break;
@@ -188,6 +215,10 @@ static void find_statement_vars(statement stmt)
       compound_stmt cs = CAST(compound_stmt, stmt);
       statement s;
       declaration d;
+      env temp_env;
+
+      temp_env = fv_current_env;
+      fv_current_env = cs->env->id_env;
 
       scan_declaration (d, cs->decls)
 	if (is_data_decl(d))
@@ -204,6 +235,9 @@ static void find_statement_vars(statement stmt)
 
       scan_statement (s, cs->stmts)
 	find_statement_vars(s);
+
+      fv_current_env = temp_env;
+
       break;
     }
     case kind_if_stmt: {
@@ -280,9 +314,9 @@ static void find_statement_vars(statement stmt)
       break;
     }
     case kind_atomic_stmt: {
-      atomic_stmt as = CAST(atomic_stmt, stmt);
-
-      find_statement_vars(as->stmt);
+      in_atomic = 1;
+      find_statement_vars(CAST(atomic_stmt,stmt)->stmt);
+      in_atomic = 0;
       break;
     }
     default: assert(0);
@@ -306,6 +340,8 @@ static int fv_compare(void *entry1, void *entry2)
   if ( safe_strcmp(v1->name,v2->name) ) return 0;
   if ( safe_strcmp(v1->module,v2->module) ) return 0;
   return 1;
+
+  //return strcmp(v1->name,v2->name)==0 && strcmp(v1->module,v2->module)==0;
 }
 
 
@@ -342,9 +378,11 @@ static unsigned long fv_var_use_hash(void *entry)
 //////////////////////////////////////////////////////////////////////
 
 // returns TRUE if the var belongs to a local scope
-static inline bool is_local_variable(expression e)
+static inline bool is_local_variable(identifier id)
 {
-  // FIXME: DO THIS 
+  if( env_lookup_stop(fv_current_env, id->cstring.data, fv_module_env) )
+    return TRUE;
+
   return FALSE;
 }
 
@@ -364,7 +402,7 @@ static inline bool check_write(expression e)
 
 
 
-static var_list_entry new_table_entry(char *module, char *name)
+static var_list_entry new_table_entry(const char *module, const char *name)
 {
   var_list_entry v;
 
@@ -379,42 +417,50 @@ static var_list_entry new_table_entry(char *module, char *name)
 }
 
 
-static void add_ref(expression e)
+static void add_ref(expression e, bool is_write)
 {
-  bool is_write;
   var_list_entry v;
   var_use u;
-
+  identifier id;
 
   // ignore things that aren't identifiers
   if( !is_identifier(e) )    
     return;
+  id = CAST(identifier,e);
 
-  AST_print(CAST(node,e));
+  // ignore static values
+  if( id->cst )
+    return;
 
   // ignore function calls
   if( is_function_name(e) )  
     return;
 
   // ignore local variables
-  if(is_local_variable(e) )    
+  if(is_local_variable(id) ) {
+    //printf(" -         : %s.%s\n", current_module_name, id->cstring.data);
     return; 
-
-  // determine if we have a read or a write
-  is_write = check_write(e);
+  }
+  
+#if 0
+  printf("    %c  %c   : %s.%s\n", 
+         is_write ? 'w' : ' ',
+         in_atomic ? 'a' : ' ',
+         current_module_name, id->cstring.data);
+#endif
 
   // look for an existing entry
   {
     struct var_list_entry vstruct;
     
-    vstruct.module = "foo";
-    vstruct.name = "bar";
+    vstruct.module = current_module_name;
+    vstruct.name = id->cstring.data;
     v = dhlookup(fv_table, &vstruct); 
   }
 
   // allocate a new entry, if necessary
   if( !v ) {
-    v = new_table_entry("foo", "bar");
+    v = new_table_entry(current_module_name, id->cstring.data);
     dhadd(fv_table, v);
   }
 
@@ -431,6 +477,7 @@ static void add_ref(expression e)
       u->write = FALSE;
       u->read_in_atomic = FALSE;
       u->write_in_atomic = FALSE;
+      dhadd(v->funcs, u);
     } 
   }
   
@@ -449,11 +496,148 @@ static void add_ref(expression e)
       v->write = TRUE;
     } else {
       u->read = TRUE;
-      v->write = TRUE;
+      v->read = TRUE;
     }
   }
 }
  
+
+
+/*
+typedef struct var_list_entry { 
+  char *module;
+  char *name;
+  
+  dhash_table vars;   // list of data declarations for the variables
+  dhash_table funcs;  // list of struct var_use, that define how the var is used in each function that uses it
+
+  bool read;
+  bool write;
+  bool read_in_atomic;
+  bool write_in_atomic;
+
+} *var_list_entry;
+*/
+bool accesses_only_in_tasks(var_list_entry v)
+{
+  dhash_scan scanner;
+  var_use u;
+
+  scanner = dhscan(v->funcs);
+  
+  while( (u=dhnext(&scanner)) ) {
+    //printf("    %s\n", u->function->name);
+    if( u->function->reentrant_interrupt_context || 
+        u->function->atomic_interrupt_context )
+      return FALSE;
+  }
+
+  // made it through the list w/o finding a non-task function.
+  return TRUE;
+}
+
+
+void print_conflict_error_message(var_list_entry v)
+{
+  dhash_scan scanner;
+  var_use u;
+  char *ftype;
+  data_declaration f;
+  
+
+  error("Detected data conflict for %s%s%s.  List of accesses follow:",
+        v->module ? v->module : "",
+        v->module ? "." : "",
+        v->name);
+
+  scanner = dhscan(v->funcs);
+  
+  while( (u=dhnext(&scanner)) ) {
+    f = u->function;
+
+    ftype = NULL;
+    if( !f->task_context ) 
+      ftype = "interrupt";
+    else if(f->reentrant_interrupt_context || f->atomic_interrupt_context)
+      ftype = "task/interrupt";
+    else 
+      ftype = "task";
+
+    fprintf(stderr,"%s:%ld:\n    Access to %s%s%s in %s%s%s (%s, %s%s%s%s%s%s)\n", 
+            f->definition ? f->definition->location->filename : f->ast->location->filename,
+            f->definition ? f->definition->location->lineno : f->ast->location->lineno,
+
+            v->module ? v->module : "",
+            v->module ? "." : "",
+            v->name, 
+
+            f->container ? f->container->name : "",
+            f->container ? "." : "",
+            f->name, 
+
+            ftype,
+            
+            u->read ? "r" : "",
+            u->write ? "w" : "",
+            (u->read | u->write) && (u->read_in_atomic | u->write_in_atomic) ? ", " : "",
+            (u->read_in_atomic | u->write_in_atomic) ? "atomic " : "",
+            u->read_in_atomic ? "r" : "",
+            u->write_in_atomic ? "w" : "");
+  }
+
+  fprintf(stderr, "\n");
+}
+
+
+void print_debug_summary(var_list_entry v, bool conflict) 
+{
+  dhash_scan s;
+  var_use u;
+  char *ftype;
+  data_declaration f;
+
+  printf("  %c  %c  %c  %c  %c   : %s%s%s\n",
+         conflict ? 'X' : ' ',
+         v->read ? 'r' : ' ',
+         v->write ? 'w' : ' ',
+         v->read_in_atomic ? 'r' : ' ',
+         v->write_in_atomic ? 'w' : ' ',
+         v->module ? v->module : "", v->module ? "." : "", v->name);
+  
+  
+  
+  s = dhscan(v->funcs);
+  
+  while( (u=dhnext(&s)) ) {
+    f = u->function;
+    
+    ftype = NULL;
+    if( !f->task_context ) 
+      ftype = "interrupt";
+    else if(f->reentrant_interrupt_context || f->atomic_interrupt_context)
+      ftype = "task/interrupt";
+    else 
+      ftype = "task";
+    
+    printf("                    ");
+    
+    printf("- %s%s%s (%s, %s%s%s%s%s%s)\n", 
+           f->container ? f->container->name : "",
+           f->container ? "." : "",
+           f->name, 
+           
+           ftype,
+           
+           u->read ? "r" : "",
+           u->write ? "w" : "",
+           (u->read | u->write) && (u->read_in_atomic | u->write_in_atomic) ? ", " : "",
+           (u->read_in_atomic | u->write_in_atomic) ? "atomic " : "",
+           u->read_in_atomic ? "r" : "",
+           u->write_in_atomic ? "w" : "");
+  }
+}
+
+
 
 
 //////////////////////////////////////////////////////////////////////
@@ -465,7 +649,7 @@ void fv_init()
   if(fv_region == NULL) 
     fv_region = newregion();
 
-  fv_table = new_dhash_table(fv_region, 64, fv_compare, fv_hash);
+  fv_table = new_dhash_table(fv_region, 512, fv_compare, fv_hash);
 }
 
 void fv_cleanup()
@@ -478,11 +662,61 @@ void fv_cleanup()
 
 void find_function_vars(data_declaration fn)
 {
-  current_function = fn;
+  function_decl fdecl = CAST(function_decl,fn->ast);
 
-  find_statement_vars( CAST(function_decl,fn->ast)->stmt );
+  current_function = fn;
+  if( fn->container ) {
+    fv_current_env = fv_module_env = fn->container->impl->ienv->id_env;
+    current_module_name = fn->container->name;
+  } else {
+    fv_current_env = fv_module_env = global_env->id_env;
+    current_module_name = NULL;
+  }
+
+
+  find_statement_vars( fdecl->stmt );
+
 
   current_function = NULL;
+  current_module_name = NULL;
+  fv_current_env = NULL;
+  fv_module_env = NULL;
+}
+
+
+// walk the list of variables, and find data races
+void check_for_conflicts(void) 
+{
+  dhash_scan scanner;
+  var_list_entry v;
+  bool conflict;
+
+  scanner = dhscan(fv_table);
+  
+  while( (v=dhnext(&scanner)) ) {
+    conflict = TRUE;
+    
+    // no conflict if all writes
+    if( !v->write && !v->write_in_atomic )
+      conflict = FALSE;
+    
+    // no conflict if all accesses are in atomic
+    else if( !v->read && !v->write )
+      conflict = FALSE;
+
+    // no conflict if all accesses are in tasks
+    else if( accesses_only_in_tasks(v) ) 
+      conflict = FALSE;
+
+    // otherwise, there is a conflict!
+    
+    // print summary info
+    print_debug_summary(v, conflict);
+
+    if( conflict ) 
+      print_conflict_error_message( v );
+  } 
+  
 }
 
 
