@@ -20,6 +20,7 @@ Boston, MA 02111-1307, USA.  */
 #include "nesc-generate.h"
 #include "nesc-inline.h"
 #include "nesc-component.h"
+#include "nesc-configuration.h"
 #include "nesc-semantics.h"
 #include "nesc-c.h"
 #include "unparse.h"
@@ -1150,14 +1151,18 @@ static void prt_nido_initializations(nesc_declaration mod) {
     }
 
   if (mod->is_abstract) {
-    dd_list_pos ap_instance_list = dd_first(mod->abs_parms);
-    declaration aplist = DD_GET(declaration, ap_instance_list);
+    dd_list ap_instance_list = mod->abs_parms;
+    declaration apdecl;
+
+    //declaration aplist = DD_GET(declaration, ap_instance_list);
+
     for (instance = 0; instance < mod->abstract_instance_count; instance++) {
       outputln("/* Module %s instance %d */", mod->name, instance);
 
       outputln("/* Abstract parameters */");
       /* Abstract parameters */
-      scan_declaration(d, aplist) {
+      apdecl = DD_GET(declaration, dd_getindex(ap_instance_list, instance));
+      scan_declaration(d, apdecl) {
 	if (d->kind == kind_data_decl) {
 	  data_decl dd = CAST(data_decl, d);
 	  declaration vd;
@@ -1179,9 +1184,6 @@ static void prt_nido_initializations(nesc_declaration mod) {
 	  }
 	}
       }
-      ap_instance_list = dd_next(ap_instance_list);
-      assert(ap_instance_list != NULL);
-      aplist = DD_GET(declaration, ap_instance_list);
 
       outputln("/* Instance variables */");
       /* Now add instance variables */
@@ -1253,7 +1255,11 @@ void generate_c_code(nesc_declaration program, const char *target_name,
   fprintf(stderr,"\n\nMDW: generate_c_code starting\n\n\n");
 
   /* Process abstract component parameters */
-  process_abstract_params(CAST(configuration, program->impl));
+  assert(is_configuration(program->impl));
+
+  assert(program->conf_instances != NULL);
+  assert(dd_length(program->conf_instances) == 1);
+  process_abstract_params(DD_GET(nesc_configuration_instance, dd_first(program->conf_instances)));
 
   /* Find each module's connections and mark uncallable functions */
   dd_scan (mod, modules)

@@ -241,6 +241,7 @@ void build_component(region r, nesc_declaration cdecl)
   if (is_configuration(cdecl->impl)) {
     configuration conf = CAST(configuration, cdecl->impl);
     nesc_configuration_instance cinst = ralloc(r, struct nesc_configuration_instance);
+    cdecl->conf_instances = dd_new_list(r);
     init_configuration_instance(cinst, conf);
     process_configuration(conf, cinst);
   } else {

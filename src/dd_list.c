@@ -211,3 +211,17 @@ dd_list_pos dd_find(dd_list l, void *find)
 
   return NULL;
 }
+
+dd_list_pos dd_getindex(dd_list l, int index) {
+/* Returns: The element of l at index 'index', or NULL if no such index
+*/
+  dd_list_pos scan;
+  int cur_index = 0;
+
+  dd_scan (scan, l) {
+    if (cur_index == index) return scan;
+    cur_index++;
+  }
+
+  return NULL;
+}

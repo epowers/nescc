@@ -33,6 +33,9 @@ typedef struct nesc_declaration {
   int abstract_instance_count;
   dd_list abs_parms; 
 
+  /* for configurations */
+  dd_list conf_instances;
+
 } *nesc_declaration;
 
 #endif

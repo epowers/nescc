@@ -40,7 +40,9 @@ void init_configuration_instance(nesc_configuration_instance cinst, configuratio
   cinst->ienv = new_environment(parse_region, conf->ienv->parent, TRUE, FALSE);
   cinst->instance_number = 
     conf->cdecl->is_abstract?(conf->cdecl->abstract_instance_count++):(-1);
+  cinst->crefs = dd_new_list(parse_region);
   current.env = cinst->ienv;
+  dd_add_last(parse_region, conf->cdecl->conf_instances, cinst);
 }
 
 void component_scan(data_declaration cref, env_scanner *scan)
@@ -265,9 +267,15 @@ static void check_generic_arguments(expression args, typelist gparms)
  * appropriate constant value.
  */
 static void eval_const_expr(declaration parent_aparms, expression expr) {
-  fprintf(stderr, "MDW: eval_const_expr kind %d %s\n",
-      expr->kind, expr->cst?"CONST":"");
-  if (expr->cst) return;
+  fprintf(stderr, "MDW: eval_const_expr expr 0x%lx kind %d %s\n",
+      (unsigned long)expr, expr->kind, expr->cst?"CONST":"");
+
+  // Note that 'expr' is shared across all instances of is associated
+  // component_ref. Rather than copy 'component_ref->args' for each
+  // instance, we just clear out any initializers and overwrite for
+  // each instance of 'expr' processed. 
+  if (is_lexical_cst(expr)) return;
+  expr->cst = NULL; 
 
   if (is_binary(expr)) {
     binary bin = CAST(binary, expr);
@@ -277,10 +285,30 @@ static void eval_const_expr(declaration parent_aparms, expression expr) {
 
   } else if (is_identifier(expr)) {
     /* Only allowed identifiers are in parent_aparms */
-
+    identifier id = CAST(identifier, expr);
+    declaration d;
+    variable_decl found_vd = NULL;
+    scan_declaration(d, parent_aparms) {
+      data_decl dd; 
+      variable_decl vd;
+      assert(d->kind == kind_data_decl);
+      dd = CAST(data_decl, d);
+      assert(dd->decls->kind == kind_variable_decl);
+      vd = CAST(variable_decl, dd->decls);
+      if (!strcmp(vd->ddecl->name, id->cstring.data)) {
+	found_vd = vd;
+	break;
+      }
+    }
+    if (!found_vd) {
+      error("cannot find `%s' in abstract parameters");
+      return;
+    }
+    fprintf(stderr,"MDW: eval_const_expr: identifier assigned from vd 0x%lx ('%s')\n", (unsigned long)found_vd, found_vd->ddecl->name);
+    expr->cst = found_vd->arg1->cst; 
 
   } else {
-    error("MDW: Don't know how to handle non-binary expressions in abstract parameter initialization");
+    error_with_location(expr->location, "XXX MDW XXX: eval_const_expr: Cannot handle expr kind %d\n", expr->kind);
     return;
   }
 
@@ -304,13 +332,6 @@ static declaration copy_declaration_list(region r, declaration dl) {
     newdd = new_data_decl(r, dd->location, dd->modifiers, CAST(declaration, newvd));
     newdd->next = NULL;
 
-    //newdd = ralloc(r, data_decl);
-    //memcpy(newdd, dd, sizeof(struct data_decl));
-    //newvd = ralloc(r, struct variable_decl);
-    //memcpy(newvd, vd, sizeof(struct variable_decl));
-    //newdd->decls = newvd;
-    //newdd->next = NULL;
-
     if (newl == NULL) {
       newl = CAST(declaration, newdd);
       tail = newl;
@@ -322,30 +343,25 @@ static declaration copy_declaration_list(region r, declaration dl) {
   return newl;
 }
 
-static void resolve_abstract_parameters(declaration parent_aparms, component_ref comp) {
-  expression args = comp->args;
+static bool resolve_abstract_parameters(declaration parent_aparms, nesc_configuration_cref cref) {
+  expression args = cref->comp->args;
   expression arg;
-  declaration aparms = CAST(component, comp->cdecl->ast)->abs_param_list;
+  declaration aparms = DD_GET(declaration, dd_getindex(cref->comp->cdecl->abs_parms, cref->instance_number));
   declaration aparm;
   data_decl dd;
   variable_decl vd;
   type aparm_type;
-  declaration new_aparm_head;
   region r = parse_region;
 
-  fprintf(stderr,"MDW: resolve_abstract_parameters: comp %s\n", comp->cdecl->name);
-
-  new_aparm_head = copy_declaration_list(r, aparms);
-  dd_add_last(r, comp->cdecl->abs_parms, new_aparm_head);
-  aparms = new_aparm_head;
-
-  fprintf(stderr,"MDW: resolve_abstract_parameters: abs_parms length %ld\n", dd_length(comp->cdecl->abs_parms));
+  fprintf(stderr,"MDW: resolve_abstract_parameters: abs_parms length %ld\n", dd_length(cref->comp->cdecl->abs_parms));
+  fprintf(stderr,"\nMDW: resolve_abstract_parameters: comp %s instance %d\n", cref->comp->cdecl->name, cref->instance_number);
+  fprintf(stderr,"\nMDW: aparms ptr is 0x%lx\n", (unsigned long)aparms);
 
   // Start head of aparms list, skipping _INSTANCENUM
   assert(aparms != NULL);
   if (aparms->next == NULL && args != NULL) {
     error_with_location(args->location, "too few initialization parameters for abstract component");
-    return;
+    return FALSE;
   }
   aparm = CAST(declaration, aparms->next);
   assert(is_data_decl(aparm));
@@ -354,22 +370,24 @@ static void resolve_abstract_parameters(declaration parent_aparms, component_ref
   aparm_type = vd->ddecl->type;
   if (!aparm_type) {
     error("abstract component does not have _INSTANCENUM variable? This is a bug - contact mdw@cs.berkeley.edu");
-    return;
+    return FALSE;
   }
 
   scan_expression(arg, args) {
-    fprintf(stderr, "MDW: resolve_abstract_parameters: aparm %s\n", vd->ddecl->name);
+    fprintf(stderr, "MDW: resolve_abstract_parameters: vd '%s'\n", vd->ddecl->name);
 
     eval_const_expr(parent_aparms, arg);
     if (!arg->cst) {
       error_with_location(arg->location, "constant expression expected");
-      return;
+      return FALSE;
     } 
 
     if (constant_integral(arg->cst) && !cval_inrange(arg->cst->cval, aparm_type)) {
       error_with_location(arg->location, "constant out of range for argument type");
-      return;
+      return FALSE;
     }
+
+    fprintf(stderr,"MDW: Setting cst for vd 0x%lx ('%s')\n", (unsigned long)vd, vd->ddecl->name);
 
     if (arg->cst->type == int_type) {
       vd->arg1 = build_int_constant(r, arg->location, 
@@ -390,7 +408,7 @@ static void resolve_abstract_parameters(declaration parent_aparms, component_ref
     if (aparm == NULL) {
       if (arg->next != NULL) {
 	error_with_location(args->location, "too few initialization parameters for abstract component");
-	return;
+	return FALSE;
       }
     } else {
       assert(is_data_decl(aparm));
@@ -399,15 +417,18 @@ static void resolve_abstract_parameters(declaration parent_aparms, component_ref
       aparm_type = vd->ddecl->type;
       if (!aparm_type) {
 	error_with_location(arg->location, "too many arguments");
-	return;
+	return FALSE;
       }
     }
   }
 
   if (aparm) {
     error_with_location(args->location, "too few initialization parameters for abstract component");
-    return;
+    return FALSE;
   }
+
+  fprintf(stderr,"MDW: done with resolve_abstract_parameters: comp %s instance %d\n", cref->comp->cdecl->name, cref->instance_number);
+  return TRUE;
 
 
 }
@@ -771,6 +792,7 @@ static void require_components(region r, configuration c, nesc_configuration_ins
       const char *cname = comp->word1->cstring.data;
       const char *asname =
 	(comp->word2 ? comp->word2 : comp->word1)->cstring.data;
+      nesc_configuration_cref cref;
 
       fprintf(stderr,"MDW: Component %s requires %s\n",
 	  cdecl->name, cname);
@@ -780,17 +802,21 @@ static void require_components(region r, configuration c, nesc_configuration_ins
 	if (is_module(comp->cdecl->impl)) {
 	  // Only increment instance count for modules; for configurations
 	  // this is done before process_configuration
-	  comp->instance_number = instance_number = comp->cdecl->abstract_instance_count;
+	  instance_number = comp->cdecl->abstract_instance_count;
 	  comp->cdecl->abstract_instance_count++;
 	  fprintf(stderr,"MDW: AIC for %s incremented to %d\n",
 	      comp->cdecl->name, comp->cdecl->abstract_instance_count);
 	} else {
 	  // For configurations, the instance number has already been incremented
-	  comp->instance_number = instance_number = comp->cdecl->abstract_instance_count - 1;
+	  instance_number = comp->cdecl->abstract_instance_count - 1;
 	}
 
+	// Append per-instance copy of abs_parms to cdecl->abs_parms
+	dd_add_last(r, comp->cdecl->abs_parms, 
+	    copy_declaration_list(r, CAST(component, comp->cdecl->ast)->abs_param_list));
+
       } else {
-	comp->instance_number = instance_number = -1; // Indicates not an abstract component
+	instance_number = -1; // Indicates not an abstract component
       }
 
       init_data_declaration(&tempdecl, CAST(declaration, comp), asname,
@@ -811,6 +837,11 @@ static void require_components(region r, configuration c, nesc_configuration_ins
       if (old_decl)
 	error_with_location(comp->location, "redefinition of `%s'", asname);
       declare(cinst->ienv, &tempdecl, FALSE);
+
+      cref = ralloc(r, struct nesc_configuration_cref);
+      cref->comp = comp;
+      cref->instance_number = instance_number;
+      dd_add_last(r, cinst->crefs, cref);
     }
 }
 
@@ -914,18 +945,60 @@ void process_configuration(configuration c, nesc_configuration_instance cinst)
 /* Recurse through component graph and resolve abstract parameters to 
  * constants.
  */
-void process_abstract_params(configuration c) {
-  component_ref comp;
-  fprintf(stderr,"MDW: process_abstract_params: %s\n", c->cdecl->name);
+bool process_abstract_params(nesc_configuration_instance cinst) {
+  dd_list_pos cr;
 
-  scan_component_ref (comp, c->components) {
-    if (comp->cdecl->is_abstract && comp->args) {
-      fprintf(stderr,"MDW: Processing abstract parameters for %s\n", comp->cdecl->name);
-      resolve_abstract_parameters(c, comp);
-    }                        
-    if (is_configuration(comp->cdecl->impl)) {
-      process_abstract_params(CAST(configuration, comp->cdecl->impl));
+  fprintf(stderr,"\nMDW: process_abstract_params for configuration: %s parent_instance %d\n", cinst->configuration->cdecl->name, cinst->instance_number);
+
+  assert(cinst->crefs != NULL);
+  dd_scan(cr, cinst->crefs) {
+    nesc_configuration_cref cref = DD_GET(nesc_configuration_cref, cr);
+    if (cref->comp->cdecl->is_abstract && cref->comp->args) {
+      // If the parent is abstract, get a handle to its abs params
+      declaration parent_aparms = NULL;
+      if (cinst->configuration->cdecl->is_abstract) {
+	parent_aparms = DD_GET(declaration, 
+	    dd_getindex(cinst->configuration->cdecl->abs_parms, cinst->instance_number));
+	assert(parent_aparms != NULL);
+      }
+
+      if (!resolve_abstract_parameters(parent_aparms, cref)) {
+	return FALSE;
+      }
+
+      if (is_configuration(cref->comp->cdecl->impl)) {
+   	if (!process_abstract_params(
+	    DD_GET(nesc_configuration_instance,
+	      dd_getindex(cref->comp->cdecl->conf_instances, cref->instance_number)))) {
+	  return FALSE;
+	}
+      }
     }
   }
+
+  fprintf(stderr,"MDW: process_abstract_params DONE for configuration: %s parent_instance %d\n", cinst->configuration->cdecl->name, cinst->instance_number);
+  return TRUE;
 }
+
+//void process_abstract_params(configuration c, int parent_instance) {
+//  component_ref comp;
+//  fprintf(stderr,"\nMDW: process_abstract_params for configuration: %s parent_instance %d\n", c->cdecl->name, parent_instance);
+//
+//  scan_component_ref (comp, c->components) {
+//    if (comp->cdecl->is_abstract && comp->args) {
+//      declaration parent_aparms = NULL;
+//      fprintf(stderr,"MDW: Processing abstract parameters for component_ref %s\n", comp->cdecl->name);
+//      if (c->cdecl->is_abstract) {
+//	parent_aparms = DD_GET(declaration, dd_getindex(c->cdecl->abs_parms, parent_instance));
+//      }
+//      resolve_abstract_parameters(parent_aparms, comp);
+//    }                        
+//    if (is_configuration(comp->cdecl->impl)) {
+//      fprintf(stderr,"MDW: process_abstract_params recursing\n");
+//      process_abstract_params(CAST(configuration, comp->cdecl->impl), comp->instance_number);
+//    }
+//  }
+//
+//  fprintf(stderr,"MDW: process_abstract_params done with configuration: %s parent_instance %d\n", c->cdecl->name, parent_instance);
+//}
 

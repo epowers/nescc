@@ -550,12 +550,11 @@ interface WORD1 WORD2 [ PARMS ]
 WORD2 is optional
 if PARMS == null, then this is just 'interface WORD1 WORD2'")
 
-(deftype component_ref declaration (word1 word2 args cdecl instance_number)
+(deftype component_ref declaration (word1 word2 args cdecl) 
   "a reference to component WORD1 'as' WORD2
 WORD2 is optional
 ARGS are the abstract parameters (maybe NULL even if this is an abstract component)
-CDECL is filled in to point to the loaded component
-INSTANCE_NUMBER is filled in with the abstract instance number")
+CDECL is filled in to point to the loaded component")
 
 (deftype connection node (ep1 ep2)
   "A connection between interfaces EP1 and EP2")

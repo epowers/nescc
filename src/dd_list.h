@@ -143,4 +143,8 @@ dd_list_pos dd_find(dd_list l, void *find);
 /* Returns: The element of l whose data is 'find', or NULL if it isn't found
 */
 
+dd_list_pos dd_getindex(dd_list l, int index);
+/* Returns: The element of l at index 'index', or NULL if no such index
+*/
+
 #endif
