@@ -32,11 +32,11 @@ if ($#ARGV < 1) {
     &fail("Usage: nc2momllib <output directory> <input director(ies) for nesC files> <options that start with "-">");
 }
 
-# Get the name of the output directory
-$outputdir = shift @ARGV;
+# Get the name of the output directory for the top level index file.
+my $outputdir = shift @ARGV;
 
-# Get the input director(ies) and copy the rest of the arguments to @myargs
-while ($temp = shift @ARGV) {
+# Get the input director(ies).
+while (my $temp = shift @ARGV) {
   $_ = $temp;
   if (/^(-).*/) {
     unshift @ARGV, $temp;
@@ -47,16 +47,18 @@ while ($temp = shift @ARGV) {
   }
 }
 
-# Copy the input arguments to another array.
+# Copy the rest of the input arguments to another array.
 @myargs = @ARGV;
 
-$topfile = "${outputdir}/TOSIndex.xml";
-open(TOSINDEX, ">", $topfile)
+open(TOSINDEX, ">", "${outputdir}/TOSIndex.xml")
   or die "Can't open top level index file: $!";
 
 print TOSINDEX "<entity name=\"TOSIndex\" class=\"ptolemy.moml.EntityLibrary\">\n";
 
-while ($inputdir = shift @inputdirs) {
+# Open each input directory and create an .xml file for each .nc file
+# and an index.xml file in the current directory and all
+# subdirectories.
+while (my $inputdir = shift @inputdirs) {
   openrecursive($inputdir);
 }
 
@@ -73,12 +75,13 @@ sub fail {
 }
 
 sub openrecursive {
-  my $myinputdir = shift(@_);
-  my $fh;
-  opendir($fh, $myinputdir) or die "Could not open tinyos subdirectory: $!";
+  # Open the current directory.
+  my $inputdir = shift(@_);
+  my $inputdir_handle;
+  opendir($inputdir_handle, $inputdir) or die "Could not open tinyos subdirectory: $!";
 
-  my $entitypath = $myinputdir;
-  @entitynameparts = split "\/", $entitypath;
+  # Get the name of the current directory from the absolute pathname.
+  @entitynameparts = split "\/", $inputdir;
   my $entityname = pop @entitynameparts;
 
   print TOSINDEX "<entity name=\"${entityname}\" class=\"ptolemy.moml.EntityLibrary\">\n";
@@ -86,19 +89,21 @@ sub openrecursive {
   print TOSINDEX "    <?moml\n";
   print TOSINDEX "      <group>\n";
 
-  my @allfiles = grep !/^\.\.\z/, readdir $fh;
+  # Get all files in current directory (including "."), except for ".."
+  my @allfiles = grep !/^\.\.\z/, readdir $inputdir_handle;
   foreach my $tempfile (@allfiles) {
+    # Process files in current directory.
     if ($tempfile eq ".") {
       # Make another copy of the input arguments.
       my @tempargs = @myargs;
 
-      unshift @tempargs, "-I${myinputdir}";
-      push @tempargs, "${myinputdir}";
+      unshift @tempargs, "-I${inputdir}";
+      push @tempargs, "${inputdir}";
 
       unshift @tempargs, "-tosdir=$TOSDIR";
       unshift @tempargs, "-fmoml-ptinyos-component=$PTINYOS_COMPONENT";
       unshift @tempargs, "-fmoml-ptinyos-prefix=$PTINYOS_PREFIX";
-      unshift @tempargs, "-fmomldir=$myinputdir";
+      unshift @tempargs, "-fmomldir=$inputdir";
       unshift @tempargs, "-fmomllib";
       #unshift @tempargs, "-fsyntax-only";
       unshift @tempargs, "$exec_prefix/bin/ncc";
@@ -106,15 +111,15 @@ sub openrecursive {
       system(@tempargs) == 0
         or warn "Warning: system(@tempargs) had errors: $!";
 
-      if (-e "${myinputdir}/index.xml") {
-        my $myprintpath = $myinputdir;
+      if (-e "${inputdir}/index.xml") {
+        my $myprintpath = $inputdir;
         $myprintpath =~ s/${TOSDIR}/tos/;
 
         print TOSINDEX "<input source=\"${myprintpath}/index.xml\"/>\n";
       }
-
-    } elsif (-d "${myinputdir}/${tempfile}" and ($tempfile ne "CVS")) {
-      openrecursive("${myinputdir}/${tempfile}");
+    } elsif (-d "${inputdir}/${tempfile}" and ($tempfile ne "CVS")) {
+      # Open subdirectories.
+      openrecursive("${inputdir}/${tempfile}");
     }
   }
   print TOSINDEX "      </group>\n";
