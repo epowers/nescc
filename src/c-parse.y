@@ -29,7 +29,7 @@ Boston, MA 02111-1307, USA. */
 
 %pure_parser
 
-%expect 2
+%expect 4
 
 %{
 #include <stdio.h>
@@ -1526,6 +1526,9 @@ attrib:
 	| any_word '(' IDENTIFIER ',' nonnull_exprlist ')'
 		{ $$ = new_attribute
 		    (pr, $2.location, $1, new_word(pr, $3.location, $3.id), $5);
+		}
+	| any_word '(' exprlist ')'
+		{ $$ = new_attribute(pr, $2.location, $1, NULL, $3);
 		}
 	;
 
