@@ -1,4 +1,4 @@
-// $Id: Xinterfacedef_ref.java,v 1.3 2005/01/11 23:27:53 idgay Exp $
+// $Id: Xinterfacedef_ref.java,v 1.4 2005/01/17 21:11:11 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -17,6 +17,6 @@ import org.xml.sax.*;
 public class Xinterfacedef_ref extends NDElement
 {
     public NDElement start(NDReader reader, Attributes attrs) {
-	return NescDefinition.lookup(reader, attrs, "interfacedef");
+	return NescDefinition.lookup(attrs, reader, "interfacedef");
     }
 }

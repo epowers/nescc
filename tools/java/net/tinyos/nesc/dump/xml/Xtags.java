@@ -1,4 +1,4 @@
-// $Id: Xtags.java,v 1.1 2005/01/11 23:27:53 idgay Exp $
+// $Id: Xtags.java,v 1.2 2005/01/17 21:11:11 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -18,7 +18,8 @@ public class Xtags extends NDList
 {
     public static LinkedList list;
 
-    public void end() {
+    public NDElement end() {
 	list = l;
+	return this;
     }
 }

@@ -1,4 +1,4 @@
-// $Id: NescDefinition.java,v 1.3 2005/01/11 23:27:53 idgay Exp $
+// $Id: NescDefinition.java,v 1.4 2005/01/17 21:11:10 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -11,6 +11,7 @@
 
 package net.tinyos.nesc.dump.xml;
 
+import net.tinyos.nesc.dump.*;
 import org.xml.sax.*;
 import java.util.*;
 
@@ -30,6 +31,6 @@ public class NescDefinition extends Definition
 
     static synchronized Definition lookup(Attributes attrs, NDReader reader,
 					  String elementName) {
-	return defs.lookup(attrs.getValue("qname"), attrs, reader, elementName);
+	return defs.lookup(reader, attrs.getValue("qname"), attrs, elementName);
     }
 }

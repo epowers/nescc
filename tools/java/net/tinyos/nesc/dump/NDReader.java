@@ -1,4 +1,4 @@
-// $Id: NDReader.java,v 1.3 2005/01/11 23:27:52 idgay Exp $
+// $Id: NDReader.java,v 1.4 2005/01/17 21:10:29 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -79,7 +79,7 @@ public class NDReader extends DefaultHandler
     }
 
     public NDElement parent() {
-	return activeElements.elementAt(activeElements.length() - 2);
+	return (NDElement)activeElements.elementAt(activeElements.size() - 2);
     }
 
     public void startElement(String uri, String localName, String qName,

@@ -1,4 +1,4 @@
-// $Id: Xcomponents.java,v 1.3 2005/01/11 23:27:53 idgay Exp $
+// $Id: Xcomponents.java,v 1.4 2005/01/17 21:11:11 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -17,7 +17,8 @@ public class Xcomponents extends NDList
 {
     public static LinkedList list;
 
-    public void end() {
+    public NDElement end() {
 	list = l;
+	return this;
     }
 }

@@ -1,4 +1,4 @@
-// $Id: Xstructured_element.java,v 1.3 2005/01/11 23:27:53 idgay Exp $
+// $Id: Xstructured_element.java,v 1.4 2005/01/17 21:11:11 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -20,7 +20,7 @@ public class Xstructured_element extends NDElement
     public Value value;
 
     public NDElement start(NDReader reader, Attributes attrs) {
-	field = Xfield.lookup(reader, attrs);
+	field = (Xfield)Xfield.lookup(reader, attrs);
 	return this;
     }
 

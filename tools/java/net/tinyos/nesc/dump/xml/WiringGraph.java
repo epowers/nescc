@@ -1,4 +1,4 @@
-// $Id: WiringGraph.java,v 1.1 2005/01/11 23:27:53 idgay Exp $
+// $Id: WiringGraph.java,v 1.2 2005/01/17 21:11:11 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -18,7 +18,7 @@ public class WiringGraph
     protected Hashtable endpoints = new Hashtable();
 
     public WiringNode lookup(DataDefinition epDecl) {
-	WiringNode found = endpoints.get(epDecl);
+	WiringNode found = (WiringNode)endpoints.get(epDecl);
 
 	if (found == null) {
 	    found = new WiringNode(epDecl);
