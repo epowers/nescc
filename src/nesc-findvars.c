@@ -75,7 +75,7 @@ bool in_atomic = FALSE;
 // functions for trapsing through the AST
 //////////////////////////////////////////////////////////////////////
 
-static void find_statement_vars(statement stmt);
+static void find_statement_vars(statement stmt, bool is_read);
 static void find_expression_vars(expression expr, bool is_read, bool is_write);
 
 static void find_elist_vars(expression elist)
@@ -119,10 +119,18 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write)
     case kind_interface_deref:
       break;
 
-    case kind_comma:
-      find_elist_vars(CAST(comma, expr)->arg1);
-      break;
+    case kind_comma: {
+      expression e;
 
+      // the last exrepssion in a comma list can be an lvalue and an rvalue
+      scan_expression (e, elist) {
+        if( e->next )
+          find_expression_vars(CAST(comma, expr)->arg1, FALSE, FALSE);
+        else 
+          find_expression_vars(CAST(comma, expr)->arg1, is_read, is_write);
+      }
+      break;
+    }
     case kind_cast_list: {
       find_expression_vars(CAST(cast_list, expr)->init_expr, FALSE, FALSE);
       break;
@@ -149,21 +157,20 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write)
       if (ce->condition->cst)
 	{
 	  if (definite_zero(ce->condition))
-	    find_expression_vars(ce->arg2, TRUE, FALSE);
+	    find_expression_vars(ce->arg2, is_read, is_write);
 	  else
-	    find_expression_vars(ce->arg1, TRUE, FALSE);
+	    find_expression_vars(ce->arg1, is_read, is_write);
 	}
       else
 	{
 	  find_expression_vars(ce->condition, TRUE, FALSE);
-	  find_expression_vars(ce->arg1, TRUE, FALSE);
-	  find_expression_vars(ce->arg2, TRUE, FALSE);
+	  find_expression_vars(ce->arg1, is_read, is_write);
+	  find_expression_vars(ce->arg2, is_read, is_write);
 	}
       break;
     }
     case kind_compound_expr:
-      /* BUG: last statement is "read" */
-      find_statement_vars(CAST(compound_expr, expr)->stmt);
+      find_statement_vars(CAST(compound_expr, expr)->stmt, is_read);
       break;
 
     case kind_function_call: {
@@ -233,10 +240,9 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write)
       // FIXME: need this when the rvalue is an array.  Are there other times?
       break;
     }
-    /* BUG: gcc allows (int)x = 2 (i.e., cast as lvalue) */
-    /*      gcc allows (1, x) = 2 (i.e., comma lists as lvalues) */
-    /*      gcc allows (x ? x : x) = 2 (i.e., ?: as lvalue) */
-    /* Note that ({x;}) = 2 is an error at least ;-) */
+    case kind_cast:
+	find_expression_vars(CAST(unary,expr)->arg1, is_read, is_write);
+        break;
     default:
       // FIXME: are these read/write flags reasonable?
       if (is_unary(expr)) {
@@ -255,7 +261,12 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write)
 
 }
 
-static void find_statement_vars(statement stmt)
+
+// NOTE: the is_read flag is _only_ set TRUE when processing a
+// kind_compound_expr.  This is because the last statement in a
+// compound expression is the lvalue for the entire compound
+// expression.
+static void find_statement_vars(statement stmt, bool is_read)
 {
   if (!stmt)
     return;
@@ -281,8 +292,13 @@ static void find_statement_vars(statement stmt)
 		find_expression_vars(vd->arg1, TRUE, FALSE);
 	  }
 
-      scan_statement (s, cs->stmts)
-	find_statement_vars(s);
+      // pass the is_read flag on to the last statement
+      scan_statement (s, cs->stmts) {
+        if( s->next ) 
+          find_statement_vars(s, FALSE);
+        else 
+          find_statement_vars(s, is_read);
+      }
 
       break;
     }
@@ -292,28 +308,28 @@ static void find_statement_vars(statement stmt)
       if (is->condition->cst)
 	{
 	  if (definite_zero(is->condition))
-	    find_statement_vars(is->stmt2);
+	    find_statement_vars(is->stmt2, FALSE);
 	  else
-	    find_statement_vars(is->stmt1);
+	    find_statement_vars(is->stmt1, FALSE);
 	}
       else
 	{
 	  find_expression_vars(is->condition, TRUE, FALSE);
-	  find_statement_vars(is->stmt1);
-	  find_statement_vars(is->stmt2);
+	  find_statement_vars(is->stmt1, FALSE);
+	  find_statement_vars(is->stmt2, FALSE);
 	}
       break;
     }
     case kind_labeled_stmt: {
       labeled_stmt ls = CAST(labeled_stmt, stmt);
 
-      find_statement_vars(ls->stmt);
+      find_statement_vars(ls->stmt, is_read);
       break;
     }
     case kind_expression_stmt: {
       expression_stmt es = CAST(expression_stmt, stmt);
 
-      find_expression_vars(es->arg1, FALSE, FALSE);
+      find_expression_vars(es->arg1, is_read, FALSE);
       break;
     }
     case kind_while_stmt: case kind_dowhile_stmt: case kind_switch_stmt: {
@@ -325,17 +341,17 @@ static void find_statement_vars(statement stmt)
 	  // do s while (0): just include size of s
           // while (0) s: size is 0
 	  if (stmt->kind == kind_dowhile_stmt)
-	    find_statement_vars(cs->stmt);
+	    find_statement_vars(cs->stmt, FALSE);
 	  break;
 	}
       find_expression_vars(cs->condition, TRUE, FALSE);
-      find_statement_vars(cs->stmt);
+      find_statement_vars(cs->stmt, FALSE);
       break;
     }
     case kind_for_stmt: {
       for_stmt fs = CAST(for_stmt, stmt);
 
-      find_statement_vars(fs->stmt);
+      find_statement_vars(fs->stmt, FALSE);
       find_expression_vars(fs->arg1, TRUE, FALSE);
       find_expression_vars(fs->arg2, TRUE, FALSE);
       find_expression_vars(fs->arg3, TRUE, FALSE);
@@ -360,7 +376,7 @@ static void find_statement_vars(statement stmt)
     }
     case kind_atomic_stmt: {
       in_atomic = 1;
-      find_statement_vars(CAST(atomic_stmt,stmt)->stmt);
+      find_statement_vars(CAST(atomic_stmt,stmt)->stmt, FALSE);
       in_atomic = 0;
       break;
     }
@@ -400,13 +416,14 @@ static int fv_alias_list_compare(void *entry1, void *entry2)
 {
   alias_list_entry a1 = (alias_list_entry) entry1;
   alias_list_entry a2 = (alias_list_entry) entry2;
-  return a1->pointer_type == a2->pointer_type;
+  
+  return type_equal(a1->pointer_type, a2->pointer_type);
 }
 
 static unsigned long fv_alias_list_hash(void *entry)
 {
   alias_list_entry a = (alias_list_entry) entry;
-  return hashPtr(a->pointer_type);
+  return type_hash(a->pointer_type);
 }
 
 
@@ -500,8 +517,6 @@ static void note_pointer_use(expression e, bool is_read, bool is_write)
   alias_list_entry a;
   var_use u;
 
-  /* BUG: this is too early. Aliases are not yet known.
-     (i.e., the note_address_of has to happen in an earlier pass) */
   // find an entry for this type of pointer
   a = get_alias_list_entry( type_points_to(e->type) );
 
@@ -852,7 +867,7 @@ void find_function_vars(data_declaration fn)
   }
 
 
-  find_statement_vars( fdecl->stmt );
+  find_statement_vars( fdecl->stmt, FALSE );
 
 
   current_function = NULL;
