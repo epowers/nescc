@@ -951,6 +951,15 @@ primary:
 			error("events must be signaled with signal");
 		      else if (type_task(calltype))
 			error("tasks must be posted with post");
+
+		      /* FIXME: The whole calls thing is yucky */
+		      if (is_identifier(fc->arg1))
+			{
+			  data_declaration ddecl = CAST(identifier, fc->arg1)->ddecl;
+
+			  if (ddecl->kind == decl_function)
+			    note_identifier_use(ddecl, TRUE);
+			}
 		    }
 
 		  $$ = $1;

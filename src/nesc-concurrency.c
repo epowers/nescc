@@ -61,7 +61,10 @@ static region conc_region = NULL;
 
 static void print_ddecl(data_declaration ddecl)
 {
-  psd_options opts = psd_print_default;
+  psd_options opts = 0;
+
+  if (ddecl->definition && !ddecl->suppress_definition)
+    opts |= psd_print_default;
 
 #ifdef SEPARATE_CONTAINER
   opts |= psd_skip_container;
@@ -248,7 +251,7 @@ static void mark_entry_points(cgraph callgraph)
       data_declaration fn = NODE_GET(endp, n)->function;
 
       // skip things that aren't entry points
-      if( !fn->spontaneous  &&  graph_first_edge_in(n) != NULL )
+      if( !fn->spontaneous  &&  graph_first_edge_in(n) != NULL && !type_task(fn->type))
         continue;
 
       
