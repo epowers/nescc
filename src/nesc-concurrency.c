@@ -197,9 +197,12 @@ static void check_async_vars(dd_list avars)
 
 		if (first)
 		  {
+		    location vloc =
+		      v->definition ? v->definition->location : v->ast->location;
 		    first = FALSE;
-		    nesc_warning("non-atomic accesses to shared variable `%s':",
-				 v->name);
+		    nesc_warning_with_location
+		      (vloc, "non-atomic accesses to shared variable `%s':",
+		       v->name);
 		  }
 
 		if ((u->c & (c_read | c_write)) == (c_read | c_write) &&

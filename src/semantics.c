@@ -1585,6 +1585,7 @@ static int duplicate_decls(data_declaration newdecl, data_declaration olddecl,
       olddecl->spontaneous = newdecl->spontaneous;
       dd_add_last(parse_region, spontaneous_calls, olddecl);
     }
+  olddecl->norace |= newdecl->norace;
 
   /* For functions, static overrides non-static.  */
   if (newdecl->kind == decl_function)
