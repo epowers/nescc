@@ -65,7 +65,6 @@ static void print_ddecl(data_declaration ddecl)
   if (ddecl->definition && !ddecl->suppress_definition)
     opts |= psd_print_default;
 
-
   if (is_function_decl(ddecl->ast))
     {
       function_decl d = CAST(function_decl, ddecl->ast);
@@ -204,7 +203,7 @@ static void mark_functions(gnode parent, entry_point_type type, int indent,
   // check the variable refs in the current function
   // 
   // FIXME: add this back
-  //  check_variable_refs(fn,type);
+  check_variable_refs(fn,type);
 
 
   // mark that this function has been seen, before we recurse
@@ -312,7 +311,9 @@ void perform_concurrency_checks(cgraph callgraph)
   unparse_start(outfile);
   set_function_separator(".");
   disable_line_directives();
+  fv_init();
   mark_entry_points(callgraph);
+  fv_cleanup();
   unparse_end();
   fprintf(outfile, "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n");
 

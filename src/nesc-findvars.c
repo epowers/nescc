@@ -4,12 +4,13 @@
 #include "dhash.h"
 #include "c-parse.h"
 #include "AST_utils.h"
-#include "nesc-cg.h"
-#include "graph.h"
+//#include "nesc-cg.h"
+//#include "graph.h"
+#include "constants.h"
 
 #include "nesc-findvars.h"
 
-/*
+
 static void add_ref(expression e);
 
 
@@ -83,12 +84,12 @@ static void find_expression_vars(expression expr)
   switch (expr->kind)
     {
     case kind_identifier: 
-      add_ref(expr):
+      add_ref(expr);
       break;
 
     case kind_atomic_stmt:
       in_atomic = 1;
-      find_elist_vars(CAST(atomic_stmt,expr)->stmt);
+      find_statement_vars(CAST(atomic_stmt,expr)->stmt);
       in_atomic = 0;
       break;
 
@@ -171,18 +172,16 @@ static void find_expression_vars(expression expr)
       break;
     }
 
-  return sum;
 }
 
 static void find_statement_vars(statement stmt)
 {
   if (!stmt)
-    return 0;
+    return;
 
   switch (stmt->kind)
     {
     case kind_asm_stmt: {
-      1;
       break;
     }
     case kind_compound_stmt: {
@@ -219,7 +218,7 @@ static void find_statement_vars(statement stmt)
 	}
       else
 	{
-	  2 + find_expression_vars(is->condition);
+	  find_expression_vars(is->condition);
 	  find_statement_vars(is->stmt1);
 	  find_statement_vars(is->stmt2);
 	}
@@ -249,7 +248,7 @@ static void find_statement_vars(statement stmt)
 	    find_statement_vars(cs->stmt);
 	  break;
 	}
-      2 + find_expression_vars(cs->condition);
+      find_expression_vars(cs->condition);
       find_statement_vars(cs->stmt);
       break;
     }
@@ -289,7 +288,6 @@ static void find_statement_vars(statement stmt)
     default: assert(0);
     }
 
-  return sum;
 }
 
 
@@ -328,7 +326,7 @@ static int fv_var_use_compare(void *entry1, void *entry2)
 }
 
 
-static unsigned long fv_func_hash(void *entry)
+static unsigned long fv_var_use_hash(void *entry)
 {
   var_use u = (var_use) entry;
  
@@ -372,10 +370,10 @@ static var_list_entry new_table_entry(char *module, char *name)
 
   v = ralloc(fv_region, struct var_list_entry);
   v->module = module;
-  v->nane = name;
+  v->name = name;
   
-  vars = new_dhash_table(fv_region, 16, comparePtr, hashPtr);
-  funcs = new_dhash_table(fv_region, 16, fv_var_use_compare, fv_var_use_hash);
+  v->vars = new_dhash_table(fv_region, 16, comparePtr, hashPtr);
+  v->funcs = new_dhash_table(fv_region, 16, fv_var_use_compare, fv_var_use_hash);
 
   return v;
 }
@@ -392,12 +390,14 @@ static void add_ref(expression e)
   if( !is_identifier(e) )    
     return;
 
+  AST_print(CAST(node,e));
+
   // ignore function calls
   if( is_function_name(e) )  
     return;
 
   // ignore local variables
-  if(is_local_variable e)    
+  if(is_local_variable(e) )    
     return; 
 
   // determine if we have a read or a write
@@ -409,7 +409,7 @@ static void add_ref(expression e)
     
     vstruct.module = "foo";
     vstruct.name = "bar";
-    vp = dhlookup(fv_table, &vstruct); 
+    v = dhlookup(fv_table, &vstruct); 
   }
 
   // allocate a new entry, if necessary
@@ -465,7 +465,7 @@ void fv_init()
   if(fv_region == NULL) 
     fv_region = newregion();
 
-  dhash_table fv_table = new_dhash_table(fv_region, 64, fv_compare, fv_hash);
+  fv_table = new_dhash_table(fv_region, 64, fv_compare, fv_hash);
 }
 
 void fv_cleanup()
@@ -480,9 +480,9 @@ void find_function_vars(data_declaration fn)
 {
   current_function = fn;
 
-  find_expression_vars(fn->stmt);
+  find_statement_vars( CAST(function_decl,fn->ast)->stmt );
 
   current_function = NULL;
 }
 
-*/
+

@@ -65,10 +65,10 @@ int wcs_mb_size(const wchar_t *wstr);
    (typically log2 of the alignment of allocations) */
 #define ALIGNMENT_BITS 3
 
-inline unsigned long hashPtr(const void *p);
-inline int comparePtr(const void *entry1, const void *entry2);
+inline unsigned long hashPtr(void *p);
+inline int comparePtr(void *entry1, void *entry2);
 
-inline unsigned long hashStr(unsigned const char *s);
+inline unsigned long hashStr(const char *);
 
 
 #endif

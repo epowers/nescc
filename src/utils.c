@@ -144,7 +144,7 @@ int wcs_mb_size(const wchar_t *wstr)
 /**
  * Returns a reasonable hash for a pointer value
  **/
-inline unsigned long hashPtr(const void *p) 
+inline unsigned long hashPtr(void *p) 
 {
   return (unsigned long)p >> ALIGNMENT_BITS;
 }
@@ -153,7 +153,7 @@ inline unsigned long hashPtr(const void *p)
 /**
  * Returns a reasonable hash for a pointer value
  **/
-inline int comparePtr(const void *entry1, const void *entry2)
+inline int comparePtr(void *entry1, void *entry2)
 {
   return entry1 == entry2;
 }
@@ -165,7 +165,7 @@ inline int comparePtr(const void *entry1, const void *entry2)
  * FIXME: the return value is only effected by the final 32 characters
  * in the string.
  **/
-inline unsigned long hashStr(unsigned const char *s) 
+inline unsigned long hashStr(const char *s) 
 {
   register unsigned long code;
 
