@@ -1537,7 +1537,7 @@ static void print_cg_html(const char *component_name, const char *component_file
     int ret;
     checked_graphviz_version = TRUE;
 
-    ret = system("dot -Tnosuchlanguage </dev/null 2>&1 | grep cmap > /dev/null");
+    ret = system("echo digraph '{' '}' | dot -Tnosuchlanguage 2>&1 | grep cmap > /dev/null");
     if(ret == 0)
       graphviz_supports_cmap = TRUE;
     else 

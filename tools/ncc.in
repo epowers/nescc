@@ -71,6 +71,9 @@ for ($i = 0; $i <= $#ARGV; $i++) {
     push @new_args, $_ if !$strip;
 }
 
+# Remove trailing / from TOSDIR, if any (it confuses the topdir stuff)
+chop $TOSDIR if $TOSDIR =~ m!/$!;
+
 if ($print_tosdir)
 {
     print $TOSDIR, "\n";
