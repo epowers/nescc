@@ -1,4 +1,4 @@
-// $Id: DefinitionTable.java,v 1.1 2004/12/24 00:49:06 idgay Exp $
+// $Id: DefinitionTable.java,v 1.2 2005/01/07 18:29:16 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -18,7 +18,8 @@ class DefinitionTable
 {
     protected Hashtable allDefinitions;
 
-    synchronized Definition lookup(Object key, Attributes attrs, NDReader reader, String elementName) {
+    synchronized Definition lookup(NDReader reader, Object key,
+				   Attributes attrs, String elementName) {
 	Definition me = (Definition)allDefinitions.get(key);
 	if (me == null) {
 	    try {

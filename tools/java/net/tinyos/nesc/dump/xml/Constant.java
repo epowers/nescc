@@ -1,4 +1,4 @@
-// $Id: Xcomponent_ref.java,v 1.2 2005/01/07 18:29:17 idgay Exp $
+// $Id: Constant.java,v 1.1 2005/01/07 18:29:15 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -11,11 +11,15 @@
 
 package net.tinyos.nesc.dump.xml;
 
-import org.xml.sax.*;
-
-public class Xcomponent_ref extends NDElement
+public class Constant
 {
-    public NDElement start(NDReader reader, Attributes attrs) {
-	return NescDefinition.lookup(reader, attrs, "component");
+    public static Constant decode(String s) {
+	switch (s.charAt(0)) {
+	case 'I': return new IntegerConstant(s);
+	case 'F': return new FloatConstant(s);
+	case 'S': return new StringConstant(s);
+	case 'V': return new NonConstant();
+	case 'U': default: return new UnknownConstant();
+	}
     }
 }

@@ -1,4 +1,4 @@
-// $Id: Xcomponent_ref.java,v 1.2 2005/01/07 18:29:17 idgay Exp $
+// $Id: Xarray_element.java,v 1.1 2005/01/07 18:29:16 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,9 +13,19 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
-public class Xcomponent_ref extends NDElement
+public class Xarray_element extends NDElement
 {
-    public NDElement start(NDReader reader, Attributes attrs) {
-	return NescDefinition.lookup(reader, attrs, "component");
+    public long from, to;
+    public Value value;
+
+    public NDElement start(Attributes attrs) {
+	from = numberDecode(attrs.getValue("from"), -1);
+	to = numberDecode(attrs.getValue("to"), -1);
+	return this;
+    }
+
+    public void child(NDElement subElement) {
+	if (subElement instanceof Value)
+	    value = (Value)subElement;
     }
 }

@@ -1,4 +1,4 @@
-// $Id: Xcomponent_ref.java,v 1.2 2005/01/07 18:29:17 idgay Exp $
+// $Id: SimpleType.java,v 1.1 2005/01/07 18:29:16 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,9 +13,13 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
-public class Xcomponent_ref extends NDElement
+public class SimpleType extends Type
 {
-    public NDElement start(NDReader reader, Attributes attrs) {
-	return NescDefinition.lookup(reader, attrs, "component");
+    public String cname; /* C name of type */
+
+    public NDElement start(Attributes attrs) {
+	super.start(attrs);
+	cname = attrs.getValue("cname");
+	return this;
     }
 }

@@ -1,4 +1,4 @@
-// $Id: Xcomponent_ref.java,v 1.2 2005/01/07 18:29:17 idgay Exp $
+// $Id: Xtype_pointer.java,v 1.1 2005/01/07 18:29:17 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,9 +13,12 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
-public class Xcomponent_ref extends NDElement
+public class Xtype_pointer extends Type
 {
-    public NDElement start(NDReader reader, Attributes attrs) {
-	return NescDefinition.lookup(reader, attrs, "component");
+    public Type subType;
+
+    public void child(NDElement subElement) {
+	if (subElement instanceof Type)
+	    subType = (Type)subElement;
     }
 }

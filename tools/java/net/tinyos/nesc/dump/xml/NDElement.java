@@ -1,4 +1,4 @@
-// $Id: NDElement.java,v 1.2 2004/12/24 00:49:06 idgay Exp $
+// $Id: NDElement.java,v 1.3 2005/01/07 18:29:16 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -32,5 +32,30 @@ abstract public class NDElement {
     }
 
     public void whitespace() {
+    }
+
+
+    static public long numberDecode(String s, long def) {
+	if (s != null) {
+	    try {
+		return Long.decode(s);
+	    }
+	    catch (NumberFormatException e) { }
+	}
+	return def;
+    }
+
+    static public long realDecode(String s, double def) {
+	if (s != null) {
+	    try {
+		return Double.decode(s);
+	    }
+	    catch (NumberFormatException e) { }
+	}
+	return def;
+    }
+
+    static public boolean boolDecode(String s) {
+	return s != null;
     }
 }

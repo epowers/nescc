@@ -1,4 +1,4 @@
-// $Id: Xcomponent_ref.java,v 1.2 2005/01/07 18:29:17 idgay Exp $
+// $Id: Xtype_array.java,v 1.1 2005/01/07 18:29:17 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,9 +13,19 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
-public class Xcomponent_ref extends NDElement
+public class Xtype_array extends Type
 {
-    public NDElement start(NDReader reader, Attributes attrs) {
-	return NescDefinition.lookup(reader, attrs, "component");
+    public Type subType;
+    public Constant length;
+
+    public NDElement start(Attributes attrs) {
+	super.start(attrs);
+	length = Constant.decode(attrs.getValue("elements"));
+	return this;
+    }
+
+    public void child(NDElement subElement) {
+	if (subElement instanceof Type)
+	    subType = (Type)subElement;
     }
 }
