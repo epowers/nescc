@@ -82,6 +82,9 @@ sub openrecursive {
   my $entityname = pop @entitynameparts;
 
   print TOSINDEX "<entity name=\"${entityname}\" class=\"ptolemy.moml.EntityLibrary\">\n";
+  print TOSINDEX "  <configure>\n";
+  print TOSINDEX "    <?moml\n";
+  print TOSINDEX "      <group>\n";
 
   my @allfiles = grep !/^\.\.\z/, readdir $fh;
   foreach my $tempfile (@allfiles) {
@@ -114,5 +117,8 @@ sub openrecursive {
       openrecursive("${myinputdir}/${tempfile}");
     }
   }
+  print TOSINDEX "      </group>\n";
+  print TOSINDEX "    ?>\n";
+  print TOSINDEX "  </configure>\n";
   print TOSINDEX "</entity>\n";
 }
