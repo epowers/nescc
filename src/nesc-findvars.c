@@ -878,48 +878,21 @@ static void print_var_conflict_error_message(var_list_entry v)
 }
 
 
-static void print_var_debug_summary(var_list_entry v, bool conflict, 
-                                    bool read, bool write, bool aread, bool awrite) 
-{ 
-  var_use u;
-  data_declaration f;
-
-  printf("  %c  %c  %c  %c  %c   : %s\n",
-         conflict ? 'X' : ' ',
-         read ? 'r' : ' ',
-         write ? 'w' : ' ',
-         aread ? 'r' : ' ',
-         awrite ? 'w' : ' ',
-         ddecl_name(v->ddecl));
-  
-  u = v->refs;
-  while( u ) {
-    f = u->function;
-    printf("                    - %s (%s, %s)\n", 
-           ddecl_name(f),
-           context_name(f),
-           get_atype(u));
-    u = u->next;
-  }
-}
-
-
-
 // look through a list of refs, and produce a summary for conflict detection purposes
-static void summarize_var_use(var_use u, bool *read, bool *write, bool *aread, bool *awrite)
+static void summarize_var_use(var_use u, int *read, int *write, int *aread, int *awrite)
 {
-  *read = FALSE;
-  *write = FALSE;
-  *aread = FALSE;
-  *awrite = FALSE;
+  *read = 0;
+  *write = 0;
+  *aread = 0;
+  *awrite = 0;
 
   while( u ) {
     if( u->flags & USE_IN_ATOMIC ) {
-      if(u->flags & USE_READ) *aread = TRUE;
-      if(u->flags & USE_WRITE) *awrite = TRUE;
+      if(u->flags & USE_READ) (*aread)++;
+      if(u->flags & USE_WRITE) (*awrite)++;
     } else {
-      if(u->flags & USE_READ) *read = TRUE;
-      if(u->flags & USE_WRITE) *write = TRUE;
+      if(u->flags & USE_READ) (*read)++;
+      if(u->flags & USE_WRITE) (*write)++;
     }
     u = u->next;
   }
@@ -1075,14 +1048,11 @@ void check_for_conflicts(void)
   dhash_scan scanner;
   var_list_entry v;
   bool conflict;
-  bool read, write, aread, awrite;
+  int read, write, aread, awrite;
 
   
   // go through the aliased vars, and add conflicts as appropriate
-#define ALIAS_ERRORS 1
-#ifdef ALIAS_ERRORS
   process_aliased_vars();
-#endif  
   
   // check regular variable conflicts
   scanner = dhscan(fv_var_list);
@@ -1106,8 +1076,13 @@ void check_for_conflicts(void)
     // otherwise, there is a conflict!
     
     // print summary info
-    print_var_debug_summary(v, conflict, read, write, aread, awrite);
-
+    printf("%s:%ld:  VAR SUMMARY:  %s   conflict: %s   unsafe: %dr %dw   safe: %dr %dw\n",
+           v->ddecl->ast->location->filename, v->ddecl->ast->location->lineno, 
+           ddecl_name(v->ddecl), 
+           conflict ? "yes" : "no",
+           read, write,
+           aread, awrite);
+ 
     if( conflict ) 
       print_var_conflict_error_message( v );
   } 
@@ -1115,9 +1090,7 @@ void check_for_conflicts(void)
   printf("\n--------------------------------------------------\n\n");
 
 
-#ifdef ALIAS_ERRORS
   print_aliased_vars_debug_summary();
-#endif
 
 }
 
