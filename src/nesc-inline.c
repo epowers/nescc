@@ -355,6 +355,11 @@ void inline_functions(cgraph callgraph)
   region igr = newregion();
   ggraph ig = make_ig(igr, callgraph);
   gnode n;
+  int inline_size = 15;
+
+  if(getenv("INLINE_SIZE"))
+    inline_size = atoi(getenv("INLINE_SIZE"));
+
 
   /* Inline all stub functions */
   graph_scan_nodes (n, ig)
@@ -379,7 +384,7 @@ void inline_functions(cgraph callgraph)
 	  graph_scan_in (e, n)
 	    edgecount++;
       
-	  if (in->size <= 15 || edgecount == 1)
+	  if (in->size <= inline_size || (getenv("INLINE_ONECALL") && edgecount == 1))
 	    inline_function(n, in);
 	}
     }
