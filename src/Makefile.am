@@ -175,6 +175,7 @@ EXTRA_DIST = 					\
 	machine/self.c				\
 	machine/avr.c				\
 	machine/keil.c				\
+	machine/msp430.c			\
 	tdspecs					\
 	nesc-compile				\
 	COPYING					\

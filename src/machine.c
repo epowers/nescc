@@ -22,11 +22,13 @@ Boston, MA 02111-1307, USA.  */
 #include "machine/avr.c"
 #include "machine/self.c"
 #include "machine/keil.c"
+#include "machine/msp430.c"
 
 static machine_spec *machines[] = {
   &avr_machine,
   &self_machine,
   &keil_machine,
+  &msp430_machine,
   NULL
 };
 
