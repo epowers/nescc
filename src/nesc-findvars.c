@@ -879,7 +879,7 @@ static void print_var_conflict_error_message(var_list_entry v)
 
 
 // look through a list of refs, and produce a summary for conflict detection purposes
-static void summarize_var_use(var_use u, int *read, int *write, int *aread, int *awrite)
+static void summarize_var_use(var_use u, int *read, int *write, int *aread, int *awrite, bool include_aliases)
 {
   *read = 0;
   *write = 0;
@@ -887,12 +887,14 @@ static void summarize_var_use(var_use u, int *read, int *write, int *aread, int 
   *awrite = 0;
 
   while( u ) {
-    if( u->flags & USE_IN_ATOMIC ) {
-      if(u->flags & USE_READ) (*aread)++;
-      if(u->flags & USE_WRITE) (*awrite)++;
-    } else {
-      if(u->flags & USE_READ) (*read)++;
-      if(u->flags & USE_WRITE) (*write)++;
+    if( include_aliases || !(u->flags & USE_VIA_POINTER) ) {
+      if( u->flags & USE_IN_ATOMIC ) {
+        if(u->flags & USE_READ) (*aread)++;
+        if(u->flags & USE_WRITE) (*awrite)++;
+      } else {
+        if(u->flags & USE_READ) (*read)++;
+        if(u->flags & USE_WRITE) (*write)++;
+      }
     }
     u = u->next;
   }
@@ -1049,7 +1051,6 @@ void check_for_conflicts(void)
   var_list_entry v;
   bool conflict;
   int read, write, aread, awrite;
-
   
   // go through the aliased vars, and add conflicts as appropriate
   process_aliased_vars();
@@ -1059,7 +1060,7 @@ void check_for_conflicts(void)
   while( (v=dhnext(&scanner)) ) {
     conflict = TRUE;
     
-    summarize_var_use(v->refs, &read, &write, &aread, &awrite);
+    summarize_var_use(v->refs, &read, &write, &aread, &awrite, TRUE);
 
     // no conflict if all reads
     if( !write && !awrite )
@@ -1076,12 +1077,17 @@ void check_for_conflicts(void)
     // otherwise, there is a conflict!
     
     // print summary info
-    printf("%s:%ld:  VAR SUMMARY:  %s   conflict: %s   unsafe: %dr %dw   safe: %dr %dw\n",
-           v->ddecl->ast->location->filename, v->ddecl->ast->location->lineno, 
-           ddecl_name(v->ddecl), 
-           conflict ? "yes" : "no",
-           read, write,
-           aread, awrite);
+    {
+      int na_read, na_write, na_aread, na_awrite;
+      summarize_var_use(v->refs, &na_read, &na_write, &na_aread, &na_awrite, FALSE);
+
+      printf("%s:%ld:  VAR SUMMARY:  %s   conflict: %s   rw: %d,%d  atomic rw: %d,%d   pointer rw: %d,%d  atomic pointer rw: %d,%d\n",
+             v->ddecl->ast->location->filename, v->ddecl->ast->location->lineno, 
+             ddecl_name(v->ddecl), 
+             conflict ? "yes" : "no",
+             na_read, na_write, na_aread, na_awrite,
+             read-na_read, write-na_write, aread-na_aread, awrite-na_awrite);
+    }
  
     if( conflict ) 
       print_var_conflict_error_message( v );
