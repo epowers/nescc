@@ -22,7 +22,7 @@ Boston, MA 02111-1307, USA. */
 #include "galsc-a.h"
 
 // Construct and return the argument list for the source trigger in
-// 'pconn'.
+// 'pconn'.  Return NULL if trigger is an unused port.
 static typelist get_sourceargs(galsc_parameter_connection pconn) {
     assert(pconn);
     endpoint trigger_ep = pconn->conn->ep2;
@@ -40,15 +40,24 @@ static typelist get_sourceargs(galsc_parameter_connection pconn) {
                 typelist_scanner scanargs;
                 type argt;
 
-                type temptype = (temp.function) ?
-                    temp.function->type : temp.port->type;
-                assert(temptype);
+                if (!temp.function && temp.port && !temp.port->type) {
+                    warning_with_location(temp.port->ast->location,
+                            "Port not connected (%s.%s)",
+                            temp.port->container->name,
+                            temp.port->name);
+                    return NULL;
+                } else {
                 
-                typelist_scan(type_function_arguments(temptype), &scanargs);
-
-                // FIXME what if void type
-                while ((argt = typelist_next(&scanargs))) {
-                    typelist_append(sourceargs, argt);
+                    type temptype = (temp.function) ?
+                        temp.function->type : temp.port->type;
+                    assert(temptype);
+                    
+                    typelist_scan(type_function_arguments(temptype), &scanargs);
+                    
+                    // FIXME what if void type
+                    while ((argt = typelist_next(&scanargs))) {
+                        typelist_append(sourceargs, argt);
+                    }
                 }
             }
         }
@@ -90,7 +99,8 @@ static bool match_parameter_return_type(endp target, endp source) {
 // "source" consists of a trigger port or function and a list of
 // parameters.
 //
-// Assumes that ports have already been assigned types.
+// If port does not have as assigned type, it is unused, and we don't
+// check the connection (but mark it as matching).
 //
 // Returns TRUE if the end points of the connection match.
 bool match_parameter_get(endp target, endp source) {
@@ -117,6 +127,16 @@ bool match_parameter_get(endp target, endp source) {
     
     // Construct the argument list for the source.
     typelist sourceargs = get_sourceargs(pconn);
+
+    // Port has no assigned type, so don't check connection (but mark
+    // as matching).
+    if (!source->function && source->port && !sourceargs) {
+        warning_with_location(source->port->ast->location,
+                "Target(s) of unconnected port (%s.%s) were not type checked.",
+                source->port->container->name,
+                source->port->name);
+        return TRUE;
+    }
 
     // Type check the argument lists and return types.
     if (type_lists_compatible(targetargs, sourceargs) &&

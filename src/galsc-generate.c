@@ -665,7 +665,9 @@ static void prt_galsc_port_sizes(dd_list ports) {
     // Print the enum declaring the size for each port
     dd_scan (port, ports) {
         data_declaration p = DD_GET(data_declaration, port);
-        if (p->in) {
+        // If p is an input port and it has an assigned type (port is
+        // not used if it does not have as assigned type).
+        if (p->in && p->type) {
             outputln("enum {");
 
             indent();
@@ -694,7 +696,9 @@ static void prt_galsc_port_sizes(dd_list ports) {
     dd_scan (port, ports) {
         // Add up the all the port sizes.
         data_declaration p = DD_GET(data_declaration, port);
-        if (p->in) {
+        // If p is an input port and it has an assigned type (port is
+        // not used if it does not have as assigned type).
+        if (p->in && p->type) {
             if (ismultiple) {
                 output_string(" + ");
             }
@@ -733,7 +737,9 @@ static void prt_galsc_port_struct(dd_list ports) {
     dd_list_pos port;
     dd_scan (port, ports) {
         data_declaration p = DD_GET(data_declaration, port);
-        if (p->in) {
+        // If p is an input port and it has an assigned type (port is
+        // not used if it does not have as assigned type).
+        if (p->in && p->type) {
             declarator tdeclarator;
             type_element tmodifiers;
             type2ast(parse_region, dummy_location, p->type, NULL, &tdeclarator, &tmodifiers);
@@ -792,7 +798,9 @@ void prt_galsc_port_function_declarations(dd_list ports) {
     dd_list_pos port;
     dd_scan (port, ports) {
         data_declaration p = DD_GET(data_declaration, port);
-        if (p->in) {
+        // If p is an input port and it has an assigned type (port is
+        // not used if it does not have as assigned type).
+        if (p->in && p->type) {
             prt_galsc_port_get_function_header(p);
             outputln(";");
             prt_galsc_port_put_function_header(p);
@@ -806,7 +814,9 @@ void prt_galsc_port_functions(dd_list ports) {
     dd_list_pos port;
     dd_scan (port, ports) {
         data_declaration p = DD_GET(data_declaration, port);
-        if (p->in) {
+        // If p is an input port and it has an assigned type (port is
+        // not used if it does not have as assigned type).
+        if (p->in && p->type) {
             prt_galsc_port_get_function(p);
             prt_galsc_port_put_function(p);
         }
@@ -852,7 +862,9 @@ static void prt_galsc_sched_init_function(dd_list ports, dd_list parameters) {
     dd_list_pos pos;
     dd_scan (pos, ports) {
         data_declaration p = DD_GET(data_declaration, pos);
-        if (p->in) {
+        // If p is an input port and it has an assigned type (port is
+        // not used if it does not have as assigned type).
+        if (p->in && p->type) {
             declarator tdeclarator;
             type_element tmodifiers;
             type2ast(parse_region, dummy_location, p->type, NULL, &tdeclarator, &tmodifiers);
