@@ -342,11 +342,11 @@ void unparse_start(FILE *to)
   function_separator = "$";
 }
 
-void unparse_end(void) deletes
+void unparse_end(void) 
 {
 }
 
-void unparse(FILE *to, declaration program) deletes
+void unparse(FILE *to, declaration program) 
 {
   unparse_start(to);
   prt_toplevel_declarations(program);
