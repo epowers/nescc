@@ -18,6 +18,7 @@ Boston, MA 02111-1307, USA. */
 #include "parser.h"
 #include "constants.h"
 #include "nesc-uses.h"
+#include "nesc-semantics.h"
 #include "AST_utils.h"
 #include "AST_walk.h"
 #include "c-parse.h"
@@ -218,7 +219,7 @@ static void collect_uses_expr(expression expr, context c)
 	  if (warn_fnptr && 
 	      (!current_function ||
 	       strcmp(current_function->name, "TOSH_run_next_task") != 0))
-	    warning_with_location(fce->location, "call via function pointer");
+	    nesc_warning_with_location(fce->location, "call via function pointer");
 	  collect_uses_expr(fce->arg1, exe_c | c_read);
 	}
       else

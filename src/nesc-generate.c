@@ -564,13 +564,13 @@ static void combine_warning(struct connections *c)
     {
       /* Warnings to be enabled when result_t gets defined correctly */
       if (c->called->interface)
-	warning("calls to %s.%s in %s are uncombined",
-		c->called->interface->name,
-		c->called->name,
-		c->called->container->name);
+	nesc_warning("calls to %s.%s in %s are uncombined",
+		     c->called->interface->name,
+		     c->called->name,
+		     c->called->container->name);
       else
-	warning("calls to %s in %s are uncombined",
-		c->called->name, c->called->container->name);
+	nesc_warning("calls to %s in %s are uncombined",
+		     c->called->name, c->called->container->name);
     }
 }
 

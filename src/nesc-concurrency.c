@@ -59,8 +59,8 @@ void async_violation(gnode n)
 	data_declaration caller = NODE_GET(endp, graph_edge_from(edge))->function;
 
 	if (caller->actual_async)
-	  warning_with_location(u->l, "`%s' called asynchronously from `%s'",
-				decl_printname(fn), decl_printname(caller));
+	  nesc_warning_with_location(u->l, "`%s' called asynchronously from `%s'",
+				     decl_printname(fn), decl_printname(caller));
       }
 }
 
@@ -198,8 +198,8 @@ static void check_async_vars(dd_list avars)
 		if (first)
 		  {
 		    first = FALSE;
-		    warning("non-atomic accesses to shared variable `%s':",
-			    v->name);
+		    nesc_warning("non-atomic accesses to shared variable `%s':",
+				 v->name);
 		  }
 
 		if ((u->c & (c_read | c_write)) == (c_read | c_write) &&
@@ -209,7 +209,7 @@ static void check_async_vars(dd_list avars)
 		  cname = "read";
 		else
 		  cname = "write";
-		warning_with_location(u->l, "  non-atomic %s", cname);
+		nesc_warning_with_location(u->l, "  non-atomic %s", cname);
 	      }
 	  }
     }

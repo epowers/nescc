@@ -96,4 +96,8 @@ void handle_combine_attribute(location loc, const char *combiner, type *t);
      modifying *t as appropriate
  */
 
+/* Some macros to make nesc_error easier to deal with */
+#define nesc_warning (nesc_error ? error : warning)
+#define nesc_warning_with_location (nesc_error ? error_with_location : warning_with_location)
+
 #endif
