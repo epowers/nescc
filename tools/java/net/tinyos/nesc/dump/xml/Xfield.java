@@ -1,4 +1,4 @@
-// $Id: Xfield.java,v 1.3 2005/01/17 21:11:11 idgay Exp $
+// $Id: Xfield.java,v 1.4 2005/01/17 22:57:27 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -37,10 +37,12 @@ public class Xfield extends Definition
 	me.packed = boolDecode(attrs.getValue("packed"));
 	String s = attrs.getValue("size");
 	if (s != null)
-	    size = Constant.decode(s);
+	    me.size = Constant.decode(s);
 	s = attrs.getValue("bit-size");
 	if (s != null)
-	    bitSize = Constant.decode(s);
+	    me.bitSize = Constant.decode(s);
+
+	return me;
     }
 
     static synchronized Definition lookup(NDReader reader, Attributes attrs) {

@@ -1,4 +1,4 @@
-// $Id: Xtype_array.java,v 1.1 2005/01/07 18:29:17 idgay Exp $
+// $Id: Xtype_array.java,v 1.2 2005/01/17 22:57:27 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -27,5 +27,14 @@ public class Xtype_array extends Type
     public void child(NDElement subElement) {
 	if (subElement instanceof Type)
 	    subType = (Type)subElement;
+    }
+
+    public boolean equals(Object obj) {
+	if (!(obj instanceof Xtype_array))
+	    return false;
+	Xtype_array other = (Xtype_array)obj;
+	return subType.equals(other.subType) &&
+	    ((!length.constant() && !other.length.constant()) ||
+	     length.equals(other.length));
     }
 }

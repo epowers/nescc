@@ -1,4 +1,4 @@
-// $Id: Xtype_var.java,v 1.1 2005/01/07 22:17:51 idgay Exp $
+// $Id: Xtype_var.java,v 1.2 2005/01/17 22:57:27 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -20,5 +20,11 @@ public class Xtype_var extends Type
     public void child(NDElement subElement) {
 	if (subElement instanceof Xtypedef)
 	    var = (Xtypedef)subElement;
+    }
+
+    public boolean equals(Object obj) {
+	if (!(obj instanceof Xtype_var))
+	    return false;
+	return var == ((Xtype_var)obj).var;
     }
 }

@@ -1,4 +1,4 @@
-// $Id: Xtype_qualified.java,v 1.1 2005/01/07 18:29:17 idgay Exp $
+// $Id: Xtype_qualified.java,v 1.2 2005/01/17 22:57:27 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -29,5 +29,15 @@ public class Xtype_qualified extends Type
     public void child(NDElement subElement) {
 	if (subElement instanceof Type)
 	    subType = (Type)subElement;
+    }
+
+    public boolean equals(Object obj) {
+	if (!(obj instanceof Xtype_qualified))
+	    return false;
+	Xtype_qualified other = (Xtype_qualified)obj;
+	return subType.equals(other.subType) &&
+	    qconst == other.qconst &&
+	    qvolatile == other.qvolatile &&
+	    qrestrict == other.qrestrict;
     }
 }

@@ -1,4 +1,4 @@
-// $Id: WiringPosition.java,v 1.1 2005/01/11 23:27:53 idgay Exp $
+// $Id: WiringPosition.java,v 1.2 2005/01/17 22:57:27 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -16,6 +16,21 @@ public class WiringPosition
     public WiringNode node;
     public Xarguments args;
 
+    public WiringPosition() { }
+
+    public WiringPosition(WiringNode n) { 
+	node = n;
+    }
+
+    public WiringPosition(WiringNode n, Xarguments a) { 
+	node = n;
+	args = a;
+    }
+
+    public WiringPosition(WiringPosition p) { 
+	copy(p);
+    }
+    
     public void copy(WiringPosition from) {
 	node = from.node;
 	args = from.args;

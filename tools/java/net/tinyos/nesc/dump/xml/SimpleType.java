@@ -1,4 +1,4 @@
-// $Id: SimpleType.java,v 1.1 2005/01/07 18:29:16 idgay Exp $
+// $Id: SimpleType.java,v 1.2 2005/01/17 22:57:26 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -21,5 +21,11 @@ public class SimpleType extends Type
 	super.start(attrs);
 	cname = attrs.getValue("cname");
 	return this;
+    }
+
+    public boolean equals(Object obj) {
+	if (!(obj instanceof SimpleType))
+	    return false;
+	return cname.equals(((SimpleType)obj).cname);
     }
 }

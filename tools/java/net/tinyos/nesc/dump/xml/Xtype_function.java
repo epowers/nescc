@@ -1,4 +1,4 @@
-// $Id: Xtype_function.java,v 1.2 2005/01/11 23:27:53 idgay Exp $
+// $Id: Xtype_function.java,v 1.3 2005/01/17 22:57:27 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -32,5 +32,17 @@ public class Xtype_function extends Type
 	    returns = (Type)subElement;
 	if (subElement instanceof Xfunction_parameters)
 	    parameters = ((Xfunction_parameters)subElement).l;
+    }
+
+    public boolean equals(Object obj) {
+	if (!(obj instanceof Xtype_function))
+	    return false;
+	Xtype_function other = (Xtype_function)obj;
+
+	if (!returns.equals(other.returns))
+	    return false;
+	if (oldstyle || other.oldstyle)
+	    return oldstyle == other.oldstyle;
+	return varargs == other.varargs && parameters.equals(other.parameters);
     }
 }

@@ -1,4 +1,4 @@
-// $Id: Xvalue_structured.java,v 1.3 2005/01/17 22:57:28 idgay Exp $
+// $Id: KnownConstant.java,v 1.1 2005/01/17 22:57:26 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -11,20 +11,13 @@
 
 package net.tinyos.nesc.dump.xml;
 
-import org.xml.sax.*;
-import java.util.*;
-
-public class Xvalue_structured extends Value
+abstract public class KnownConstant extends Constant
 {
-    public LinkedList fields = new LinkedList();
-
-    public void child(NDElement subElement) {
-	super.child(subElement);
-	if (subElement instanceof Xstructured_element)
-	    fields.add(subElement);
+    public boolean known() {
+	return true;
     }
 
-    public boolean equals(Object obj) {
-	return false;
+    public boolean constant() {
+	return true;
     }
 }

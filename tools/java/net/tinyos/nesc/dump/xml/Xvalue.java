@@ -1,4 +1,4 @@
-// $Id: Xvalue.java,v 1.1 2005/01/07 18:29:17 idgay Exp $
+// $Id: Xvalue.java,v 1.2 2005/01/17 22:57:27 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -20,5 +20,11 @@ public class Xvalue extends Value
     public NDElement start(Attributes attrs) {
 	cst = Constant.decode(attrs.getValue("cst"));
 	return this;
+    }
+
+    public boolean equals(Object obj) {
+	if (!(obj instanceof Xvalue))
+	    return false;
+	return cst.equals(((Xvalue)obj).cst);
     }
 }

@@ -1,4 +1,4 @@
-// $Id: Constant.java,v 1.1 2005/01/07 18:29:15 idgay Exp $
+// $Id: Constant.java,v 1.2 2005/01/17 22:57:16 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -11,7 +11,7 @@
 
 package net.tinyos.nesc.dump.xml;
 
-public class Constant
+abstract public class Constant
 {
     public static Constant decode(String s) {
 	switch (s.charAt(0)) {
@@ -21,5 +21,13 @@ public class Constant
 	case 'V': return new NonConstant();
 	case 'U': default: return new UnknownConstant();
 	}
+    }
+
+    public boolean known() {
+	return false;
+    }
+
+    public boolean constant() {
+	return false;
     }
 }

@@ -1,4 +1,4 @@
-// $Id: NonConstant.java,v 1.1 2005/01/07 18:29:16 idgay Exp $
+// $Id: NonConstant.java,v 1.2 2005/01/17 22:57:26 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,4 +13,7 @@ package net.tinyos.nesc.dump.xml;
 
 public class NonConstant extends Constant
 {
+    public boolean equals(Object obj) {
+	return false;
+    }
 }

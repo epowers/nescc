@@ -1,4 +1,4 @@
-// $Id: Xvalue_array.java,v 1.2 2005/01/11 23:27:53 idgay Exp $
+// $Id: Xvalue_array.java,v 1.3 2005/01/17 22:57:28 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -22,5 +22,9 @@ public class Xvalue_array extends Value
 	super.child(subElement);
 	if (subElement instanceof Xarray_element)
 	    elements.add(subElement);
+    }
+
+    public boolean equals(Object obj) {
+	return false;
     }
 }

@@ -1,4 +1,4 @@
-// $Id: Definition.java,v 1.3 2005/01/07 22:17:50 idgay Exp $
+// $Id: Definition.java,v 1.4 2005/01/17 22:57:26 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -27,5 +27,18 @@ abstract public class Definition extends NDElement
 		attributes = new LinkedList();
 	    attributes.add(subElement);
 	}
+    }
+
+    /* Returns an attribute called name, or null for none */
+    public Xattribute_value attributeLookup(String name) {
+	ListIterator elems = attributes.listIterator();
+
+	while (elems.hasNext()) {
+	    Xattribute_value attr = (Xattribute_value)elems.next();
+
+	    if (attr.attribute.name.equals(name))
+		return attr;
+	}
+	return null;
     }
 }

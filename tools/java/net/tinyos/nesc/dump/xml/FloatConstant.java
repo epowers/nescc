@@ -1,4 +1,4 @@
-// $Id: FloatConstant.java,v 1.1 2005/01/07 18:29:16 idgay Exp $
+// $Id: FloatConstant.java,v 1.2 2005/01/17 22:57:26 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -11,11 +11,17 @@
 
 package net.tinyos.nesc.dump.xml;
 
-public class FloatConstant extends Constant
+public class FloatConstant extends KnownConstant
 {
     public double value;
 
     public FloatConstant(String s) {
 	value = NDElement.realDecode(s.substring(2), 0.0);
+    }
+
+    public boolean equals(Object obj) {
+	if (!(obj instanceof FloatConstant))
+	    return false;
+	return value == ((FloatConstant)obj).value;
     }
 }

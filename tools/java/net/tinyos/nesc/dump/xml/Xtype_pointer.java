@@ -1,4 +1,4 @@
-// $Id: Xtype_pointer.java,v 1.1 2005/01/07 18:29:17 idgay Exp $
+// $Id: Xtype_pointer.java,v 1.2 2005/01/17 22:57:27 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -20,5 +20,11 @@ public class Xtype_pointer extends Type
     public void child(NDElement subElement) {
 	if (subElement instanceof Type)
 	    subType = (Type)subElement;
+    }
+
+    public boolean equals(Object obj) {
+	if (!(obj instanceof Xtype_pointer))
+	    return false;
+	return subType.equals(((Xtype_array)obj).subType);
     }
 }

@@ -1,4 +1,4 @@
-// $Id: StringConstant.java,v 1.1 2005/01/07 18:29:16 idgay Exp $
+// $Id: StringConstant.java,v 1.2 2005/01/17 22:57:27 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -11,11 +11,17 @@
 
 package net.tinyos.nesc.dump.xml;
 
-public class StringConstant extends Constant
+public class StringConstant extends KnownConstant
 {
     public String value;
 
     public StringConstant(String s) {
 	value = s.substring(2);
+    }
+
+    public boolean equals(Object obj) {
+	if (!(obj instanceof StringConstant))
+	    return false;
+	return value.equals(((StringConstant)obj).value);
     }
 }

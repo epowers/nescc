@@ -1,4 +1,4 @@
-// $Id: NDReader.java,v 1.4 2005/01/17 21:10:29 idgay Exp $
+// $Id: NDReader.java,v 1.5 2005/01/17 22:56:37 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -46,7 +46,7 @@ public class NDReader extends DefaultHandler
 	parser.setContentHandler(this);
     }
 
-    NDElement parse(InputSource source) throws IOException {
+    public NDElement parse(InputSource source) throws IOException {
 	top = null;
 	try {
 	    parser.parse(source);
@@ -56,7 +56,7 @@ public class NDReader extends DefaultHandler
 	return top;
     }
 
-    NDElement parse(String id) throws IOException {
+    public NDElement parse(String id) throws IOException {
 	return parse(new InputSource(id));
     }
 
