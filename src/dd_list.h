@@ -52,6 +52,11 @@ void dd_add_last(region r, dd_list l, void *data);
 /* Effects: Adds a new element containing `data' to the end of l.
    Modifies: l
 */
+void dd_add_last_nodups(region r, dd_list l, void *data);
+/* Effects: Adds a new element containing `data' to the end of l.
+   Does not add the element if it is already present in the list.
+   Modifies: l
+*/
 void dd_insert_before(region r, dd_list_pos where, void *data);
 /* Effects: Adds a new element containg `data' after element `where'.
    Modifies: the list containing `where'

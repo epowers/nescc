@@ -354,6 +354,7 @@ void inline_functions(cgraph callgraph)
   graph_scan_nodes (n, ig)
     {
       struct inline_node *in = NODE_GET(struct inline_node *, n);
+
       
       if (!in->fn->definition)
 	inline_function(n, in);
@@ -377,6 +378,16 @@ void inline_functions(cgraph callgraph)
 	    inline_function(n, in);
 	}
     }
+
+  graph_scan_nodes (n, ig) {
+    struct inline_node *in = NODE_GET(struct inline_node *, n);
+    fprintf(stderr,"MDW: inline graph node %s.%s.%s %s\n",
+	in->fn->container?in->fn->container->name:"null",
+	in->fn->interface?in->fn->interface->name:"null",
+	in->fn->name,
+	in->fn->makeinline?"INLINED":"");
+  }
+
   deleteregion(igr);
 }
 

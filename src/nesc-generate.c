@@ -279,6 +279,10 @@ struct connections
   dd_list/*<full_connection>*/ normal_calls;
 };
 
+static bool full_connection_equals(full_connection fc1, full_connection fc2) {
+  return (fc1->ep == fc2->ep) && (fc1->caller_instance == fc2->caller_instance);
+}
+
 static full_connection new_full_connection(region r, endp ep, expression cond,
 				 expression args,
 				 int caller_instance)
@@ -358,6 +362,8 @@ void prt_ncf_direct_call(struct connections *c,
 */
 {
   bool first = TRUE;
+
+  print_endp("MDW: prt_ncf_direct_call: ", ccall->ep);
 
   /* set result for last call */
   if (last_call && !type_void(return_type))
@@ -443,6 +449,7 @@ void prt_ncf_direct_calls(struct connections *c,
     full_connection ccall = DD_GET(full_connection, call);
     assert(!ccall->cond);
     print_endp("MDW: prt_ncf_direct_calls: ", ccall->ep);
+    fprintf(stderr, "MDW: prt_ncf_direct_calls: instancenum %d caller_instance %d\n", instancenum, ccall->caller_instance);
     if (instancenum == -1 || instancenum == ccall->caller_instance) {
       prt_ncf_direct_call(c, ccall, (num_calls>0), 0, return_type, called_fd);
       num_calls--;
@@ -619,7 +626,7 @@ static void prt_nesc_connection_function(data_declaration fn, endp ep)
     output(" --MDW */\n");
   }
 
-  if (fn->container && fn->container->is_abstract && ep->instance != 0) {
+  if (fn->container && fn->container->is_abstract && !fn->interface->static_interface && ep->instance != 0) {
     // Only emit one instance
     fprintf(stderr, "    * MDW: returning early\n");
     return;
@@ -730,10 +737,11 @@ void prt_nesc_module(cgraph cg, nesc_declaration mod)
 
 static bool find_reachable_functions(struct connections *c, gnode n,
 				     expression gcond, expression gargs,
-				     int instance)
+				     int instance, bool *foundany)
 {
   endp ep = NODE_GET(endp, n);
-  print_endp("MDW: find_reachable_functions: ep ", ep);
+  print_endp("\nMDW: find_reachable_functions: ep ", ep);
+  fprintf(stderr,"MDW: find_reachable_functions: instance %d\n", instance);
 
   if (ep->args)
     {
@@ -762,17 +770,28 @@ static bool find_reachable_functions(struct connections *c, gnode n,
 	   is_module(((nesc_declaration)ep->function->container)->impl))
     {
       full_connection target = new_full_connection(c->r, ep, gcond, gargs, instance);
+      dd_list l = c->called->gparms && !gcond ? c->generic_calls : c->normal_calls;
+      dd_list_pos scan;
+      bool found = FALSE;
 
       assert(!graph_first_edge_out(n));
 
-      print_endp("MDW: adding EP to call list: ", ep);
-      fprintf(stderr,"MDW: adding EP to call list for %s (0x%lx)\n",
-	  c->called->name, (unsigned long)c->called);
+      print_endp("MDW: scanning EP for call list: ", ep);
 
-      dd_add_last(c->r, 
-		  c->called->gparms && !gcond ?
-		    c->generic_calls : c->normal_calls, 
-		  target);
+      /* Eliminate redundant calls: Scan to see if 'target' is in list */
+      dd_scan (scan, l) {
+	full_connection fc = DD_GET(full_connection, scan);
+	if (full_connection_equals(fc, target)) { 
+	  found = TRUE; break;
+	}
+      }
+      if (!found) {
+	print_endp("MDW: adding EP for call list: ", ep);
+	fprintf(stderr,"MDW: adding EP to call list for %s (0x%lx)\n",
+	    c->called->name, (unsigned long)c->called);
+	dd_add_last_nodups(c->r, l, target);
+      }
+      *foundany = TRUE;
     }
   else
     {
@@ -781,7 +800,7 @@ static bool find_reachable_functions(struct connections *c, gnode n,
       fprintf(stderr,"  MDW: Recursing into graph_scan_out (ep=0x%lx)\n", (unsigned long)ep);
       graph_mark_node(n);
       graph_scan_out (out, n)
-	if (find_reachable_functions(c, graph_edge_to(out), gcond, gargs, instance))
+	if (find_reachable_functions(c, graph_edge_to(out), gcond, gargs, instance, foundany))
 	  return TRUE;
       graph_unmark_node(n);
       fprintf(stderr,"  MDW: Done with graph_scan_out (ep=0x%lx)\n", (unsigned long)ep);
@@ -790,26 +809,29 @@ static bool find_reachable_functions(struct connections *c, gnode n,
   return FALSE;
 }
 
-static void find_connected_functions(struct connections *c, int instance)
+static bool find_connected_functions(struct connections *c, int instance)
 {
   gnode called_fn_node;
   endp ep;
+  bool foundany = FALSE;
 
   graph_clear_all_marks(cgraph_graph(c->cg));
   called_fn_node = fn_lookup(c->cg, c->called, instance);
 
   ep = NODE_GET(endp, called_fn_node);
   print_endp("MDW: find_connected_functions: got ep: ", ep);
+  fprintf(stderr,"MDW: find_connected_functions: instance: %d\n", instance);
 
   assert(!graph_first_edge_in(called_fn_node));
 
-  if (find_reachable_functions(c, called_fn_node, NULL, NULL, instance))
+  if (find_reachable_functions(c, called_fn_node, NULL, NULL, instance, &foundany))
     error_with_location(c->called->ast->location,
 			"cycle in configuration (for %s%s%s.%s)",
 			c->called->container->name,
 			c->called->interface ? "." : "",
 			c->called->interface ? c->called->interface->name : "",
 			c->called->name);
+  return foundany;
 }
 
 void find_function_connections(data_declaration fndecl, void *data)
@@ -817,7 +839,7 @@ void find_function_connections(data_declaration fndecl, void *data)
   cgraph cg = data;
   int num_instances, instance, last_normal_calls_length;
 
-  fprintf(stderr,"\nMDW: find_function_connections: fndecl %s (type %d)\n", fndecl->name, fndecl->ftype);
+  fprintf(stderr,"\nMDW: find_function_connections: fndecl %s.%s.%s (type %d)\n", fndecl->container->name, fndecl->interface->name, fndecl->name, fndecl->ftype);
 
   if (!fndecl->defined)
     {
@@ -826,15 +848,17 @@ void find_function_connections(data_declaration fndecl, void *data)
 
       fprintf(stderr,"MDW: find_function_connections: NOT DEFINED\n");
       if (fndecl->container) {
-        fprintf(stderr,"MDW: container is %s (0x%lx) is_abstract %d aic %d\n", 
+        fprintf(stderr,"MDW: container is %s (0x%lx) is_abstract %d aic %d interface %s static_interface %d\n", 
 	    fndecl->container->name,
 	    (unsigned long)fndecl->container,
 	    fndecl->container->is_abstract,
-	    fndecl->container->abstract_instance_count);
+	    fndecl->container->abstract_instance_count,
+	    fndecl->interface->name,
+	    fndecl->interface->static_interface);
       }
 
       num_instances = num_abstract_instances(fndecl);
-      if (!num_instances) num_instances = 1;
+      if (!num_instances || fndecl->interface->static_interface) num_instances = 1;
 
       /* XXX MDW: Try doing this once */
       fndecl->connections = connections = ralloc(r, struct connections);
@@ -846,7 +870,8 @@ void find_function_connections(data_declaration fndecl, void *data)
 
       last_normal_calls_length = 0;
       for (instance = 0; instance < num_instances; instance++) {
-	find_connected_functions(connections, instance);
+	bool foundany = find_connected_functions(connections, 
+	    (fndecl->interface->static_interface)?(-1):(instance));
 
   	/* a function is uncallable if it has no default definition and
    	 * non-generic: no connections
@@ -855,8 +880,12 @@ void find_function_connections(data_declaration fndecl, void *data)
 
 	if (!(fndecl->definition ||
   	      !dd_is_empty(connections->generic_calls) ||
-  	      (!fndecl->gparms && !dd_is_empty(connections->normal_calls) &&
-	       dd_length(connections->normal_calls) != last_normal_calls_length))) {
+  	      (!fndecl->gparms && !dd_is_empty(connections->normal_calls)) ||
+	      // dd_length(connections->normal_calls) != last_normal_calls_length
+	      foundany)) {
+	  fprintf(stderr,"MDW: setting fndecl uncallable: %s.%s\n",
+	      fndecl->container->name, fndecl->name);
+
   	  fndecl->uncallable = TRUE; 
 	} else {
   	  fndecl->suppress_definition =
@@ -907,7 +936,11 @@ static void mark_reachable_function(cgraph cg,
     if (!num_ddecl_instances) num_ddecl_instances = 1;
     for (caller_instance = 0; caller_instance < num_caller_instances; caller_instance++) {
       for (ddecl_instance = 0; ddecl_instance < num_ddecl_instances; ddecl_instance++) {
-	graph_add_edge(fn_lookup(cg, caller, caller_instance), fn_lookup(cg, ddecl, ddecl_instance), NULL);
+	gnode gn1 = fn_lookup(cg, caller, caller_instance);
+	gnode gn2 = fn_lookup(cg, ddecl, ddecl_instance);
+	print_endp("\nMDW: mark_reachable_function: ep1 ", NODE_GET(endp, gn1));
+	print_endp("MDW: mark_reachable_function: ep2 ", NODE_GET(endp, gn2));
+	graph_add_edge(gn1, gn2, NULL);
       }
     }
   }
@@ -966,12 +999,13 @@ static void prt_nesc_function(data_declaration fn, endp ep)
 {
   assert(fn->kind == decl_function);
 
-  print_endp("   MDW: prt_nesc_function EP ", ep);
+  print_endp("\nMDW: prt_nesc_function EP ", ep);
   fprintf(stderr, "   MDW: prt_nesc_function %s (%d instances) (inum %d)\n", fn->name, num_abstract_instances(fn), ep->instance);
 
   if (fn->definition && !fn->suppress_definition) {
     // Only emit one instance 
-    if (!fn->container || !fn->container->is_abstract || (ep->instance == 0)) {
+    if (!fn->container || !fn->container->is_abstract || 
+	fn->interface->static_interface || (ep->instance == 0)) {
       fprintf(stderr, "   MDW: prt_function_body\n");
       prt_function_body(CAST(function_decl, fn->definition));
     }
@@ -1057,6 +1091,7 @@ static void prt_noninline_functions(cgraph callgraph)
   graph_scan_nodes (fns, cgraph_graph(callgraph))
     {
       data_declaration fn = NODE_GET(endp, fns)->function;
+      print_endp("\nMDW: prt_noninline_functions: ep ", NODE_GET(endp, fns));
 
       if (!isinlined(fn))
 	{

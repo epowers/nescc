@@ -161,6 +161,10 @@ void declare_interface_ref(interface_ref iref, declaration gparms,
   if (old_decl)
     error("redefinition of `%s'", iname);
   ddecl = declare(current.env, &tempdecl, FALSE);
+
+  fprintf(stderr,"MDW: declared interface %s (static %d) 0x%lx\n",
+      iname, ddecl->static_interface, (unsigned long)ddecl);
+
   /* We don't make the interface type generic. Instead, we push the generic
      type into each function in copy_interface_functions.  This is because
      the syntax for invoking or defining a function on a generic interface

@@ -318,8 +318,6 @@ static bool lookup_endpoint(nesc_configuration_instance cinst, endpoint ep, endp
 {
   parameterised_identifier pid;
   environment lookup_env = cinst->ienv;
-  // XXX MDW: Don't think I need this
-  //if (cinst->instance_number == -1) lookup_env = cinst->configuration->ienv;
 
   lep->component = lep->interface = lep->function = NULL;
   // The default instance is the instance number of the enclosing configuration 
@@ -385,6 +383,12 @@ static bool lookup_endpoint(nesc_configuration_instance cinst, endpoint ep, endp
 	      //fprintf(stderr,"MDW: lookup_endpoint decl is interface_ref\n");
 	      assert(!lep->interface);
 	      lep->interface = d;
+
+	      // If wiring to a static interface, instance is -1
+	      if (d->static_interface) {
+		fprintf(stderr,"MDW: lookup_endpoint: interface is static (0x%lx)\n", d->interface);
+		lep->instance = -1;
+	      }
 
 #ifdef NO_FUNCTION_INTERFACE_MATCHING
 	      /* Can't lookup a function inside an interface (no partial interface

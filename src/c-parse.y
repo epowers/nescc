@@ -1042,8 +1042,7 @@ primary:
 	| primary '[' nonnull_exprlist ']' 
 		{ $$ = make_array_ref($2.location, $1, $3); }
         | primary '.' identifier 
-	        { fprintf(stderr,"MDW: making field ref\n"); 
-       	          $$ = make_field_ref($2.location, $1, $3.id); }
+	        { $$ = make_field_ref($2.location, $1, $3.id); }
 	| primary POINTSAT identifier
 		{ $$ = make_field_ref($2.location, make_dereference($2.location, $1),
 				      $3.id); }

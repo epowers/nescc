@@ -86,6 +86,12 @@ void dd_add_last(region r, dd_list l, void *data)
   dd_insert_before(r, (dd_list_pos)&l->null, data);
 }
 
+void dd_add_last_nodups(region r, dd_list l, void *data)
+{
+  if (dd_find(l, data) == NULL) 
+    dd_insert_before(r, (dd_list_pos)&l->null, data);
+}
+
 void dd_insert_before(region r, dd_list_pos where, void *data)
 /* Effects: Adds a new element containg `data' after element `where'.
    Modifies: the list containing `where'
