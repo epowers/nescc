@@ -238,7 +238,8 @@ nesc_decl compile(location loc, source_language l,
 	container->env = env;
       nd = parse();
 #ifdef GALSC
-      //fprintf(stderr, "Finished parsing %s.\n", name);
+      if (flag_verbose) 
+          fprintf(stderr, "Finished parsing %s.\n", name);
 #endif
       deleteregion_ptr(&current.fileregion);
       end_input();
