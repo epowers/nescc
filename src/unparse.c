@@ -684,8 +684,11 @@ bool prt_simple_declarator(declarator d, data_declaration ddecl,
 		     it is known. */
 		  expression dsize = type_array_size(ddecl->type);
 
-		  output("[%lu]",
-			 (unsigned long)constant_uint_value(dsize->cst));
+		  if (dsize)
+		    output("[%lu]",
+			   (unsigned long)constant_uint_value(dsize->cst));
+		  else /* we never found the size */
+		    output("[]");
 		}
 	      else
 		output("[]");

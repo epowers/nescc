@@ -2679,6 +2679,34 @@ declaration finish_decl(declaration decl, expression init)
 	    dd->type = init->type;
 	}
     }
+  /* Check for a size */
+  if (type_array(dd->type))
+    {
+      /* Don't you love gcc code? */
+      int do_default
+	= (dd->needsmemory
+	   /* Even if pedantic, an external linkage array
+	      may have incomplete type at first.  */
+	   ? pedantic && !dd->isexternalscope
+	   : !dd->isfilescoperef);
+
+      if (!type_array_size(dd->type))
+	{
+	  if (do_default)
+	    error_with_decl(decl, "array size missing in `%s'",
+			    decl_printname(dd));
+	  /* This is what gcc has to say about the next line
+	     (see comment/question above):
+	     If a `static' var's size isn't known,
+	     make it extern as well as static, so it does not get
+	     allocated.
+	     If it is not `static', then do not mark extern;
+	     finish_incomplete_decl will give it a default size
+	     and it will get allocated.  */
+	  else if (!pedantic && dd->needsmemory && !dd->isexternalscope)
+	    dd->isfilescoperef = 1;
+	}
+    }
 
   if (is_module_local_static(dd) && use_nido)
     dd_add_last(regionof(current.container->local_statics),
