@@ -999,6 +999,7 @@ static void print_aliased_vars_debug_summary()
       printf("%s:%ld:  &%s.%s   type=%s\n", pa->location->filename, pa->location->lineno, 
              a->module, a->name, 
              type_name(fv_region,pa->type));
+    // FIXME: print the expr here
 
     printf("\n");
   }
@@ -1017,11 +1018,12 @@ static void print_aliased_vars_debug_summary()
              tdecl->ast->location->filename, tdecl->ast->location->lineno,
              tdecl->kind == kind_struct_ref ? "struct" : (tdecl->kind == kind_enum_ref ? "enum" : "union"));
     }
-    
 
     // add this ref
     for(u=p->refs; u; u=u->next)
       printf("%s:%ld:  %s\n", u->location->filename, u->location->lineno, get_atype(u));
+    // FIXME: print the used expr here
+
 
     printf("\n");
   }
