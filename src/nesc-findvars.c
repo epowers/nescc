@@ -606,16 +606,8 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write,
     }
 
     default:
-      if(expr->cst) {
-#if 0
-        printf("SKIPPING CST: ");
-        set_unparse_outfile(stdout);
-        prt_expression(expr,TRUE);
-        printf("\n");
-#endif
+      if(expr->cst)
         return;
-      }
-
       assert(0);
       break;
     }
