@@ -97,6 +97,7 @@ libparser_a_SOURCES =				\
 	galsc-env.h				\
 	galsc-generate.c			\
 	galsc-generate.h			\
+	galsc-keywords.h			\
 	galsc-main.c				\
 	galsc-main.h				\
 	galsc-types.c				\
