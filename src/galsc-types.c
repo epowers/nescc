@@ -22,7 +22,8 @@ Boston, MA 02111-1307, USA. */
 #include "galsc-a.h"
 
 // Construct and return the argument list for the source trigger in
-// 'pconn'.  Return NULL if trigger is an unused port.
+// 'pconn'.  Return NULL if trigger is an unused port.  Mark parameter
+// as used (for GET).
 static typelist get_sourceargs(galsc_parameter_connection pconn) {
     assert(pconn);
     endpoint trigger_ep = pconn->conn->ep2;
@@ -35,6 +36,8 @@ static typelist get_sourceargs(galsc_parameter_connection pconn) {
         if (lookup_endpoint(trigger_configuration_env, ep, &temp)) {
             // FIXME: what about args for functions?
             if (temp.parameter) {
+                // Mark parameter as used.
+                temp.parameter->parameter_get_used = TRUE;
                 typelist_append(sourceargs, temp.parameter->type);
             } else {
                 typelist_scanner scanargs;
@@ -221,6 +224,9 @@ bool match_parameter_put(endp target, endp source) {
     // "source" is either a function or a port.
     assert( (source->function != NULL) ^ (source->port != NULL) );
 
+    // Mark parameter as used.
+    target->parameter->parameter_get_used = TRUE;
+    
     // 'trigger' is the source function or port, and must not contain
     // a parameter list.
     data_declaration trigger = (source->function) ? source->function : source->port;
@@ -457,6 +463,12 @@ static bool galsc_type_check_parameter(region r, gnode n) {
 
         assert(source->parameter);
 
+        // Mark global parameter as used if any of the local
+        // parameters are used.
+        if (source->parameter->parameter_get_used) {
+            target->parameter->parameter_get_used = TRUE;
+        }
+
         // Local parameter will have a put type only if it is being used for
         // a put call.
         if (source->parameter->parameter_put_type) {
@@ -565,7 +577,6 @@ void galsc_type_check(region r, cgraph master, dd_list ports, dd_list parameters
                     parameter->container->name,
                     parameter->name);
         }
-
     }
 }
 

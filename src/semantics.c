@@ -161,6 +161,7 @@ void init_data_declaration(data_declaration dd, declaration ast,
   dd->portsize_definition = NULL;
   dd->parameters = NULL;
   dd->parameter_put_type = NULL;
+  dd->parameter_get_used = FALSE;
 #endif
 }
 

@@ -219,6 +219,9 @@ struct data_declaration {
 
     // Return type of a TinyGUYS parameter that is used for PUT.
     type parameter_put_type;
+
+    // TRUE if parameter GET function is used.
+    bool parameter_get_used;
 #endif
     
 };

@@ -1,5 +1,10 @@
 Limitations and known bugs in galsC 0.1 release:
 
+- Generated code may not compile or warnings may be generated if the
+galsC source code contains any of the following:
+  - parameters whose GET() functions are connected to unused functions.
+  - ports whose GET() and PUT() functions are connected to unused functions.
+
 - Type checker does not currently check the command/event type for a
 parameter GET connection.
 

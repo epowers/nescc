@@ -449,7 +449,10 @@ void prt_galsc_parameter_functions(dd_list parameters) {
     dd_list_pos pos;
     dd_scan (pos, parameters) {
         data_declaration p = DD_GET(data_declaration, pos);
-        prt_galsc_parameter_get_function(p);
+        // Print only if parameter is read in this application.
+        if (p->parameter_get_used) {
+            prt_galsc_parameter_get_function(p);
+        }
         // Print only if parameter is updated in this application.
         if (p->parameter_put_type) {
             prt_galsc_parameter_put_function(p);
@@ -462,8 +465,11 @@ void prt_galsc_parameter_function_declarations(dd_list parameters) {
     dd_list_pos pos;
     dd_scan (pos, parameters) {
         data_declaration p = DD_GET(data_declaration, pos);
-        prt_galsc_parameter_get_function_header(p);
-        outputln(";");
+        // Print only if parameter is read in this application.
+        if (p->parameter_get_used) {
+            prt_galsc_parameter_get_function_header(p);
+            outputln(";");
+        }
         // Print only if parameter is updated in this application.
         if (p->parameter_put_type) {
             prt_galsc_parameter_put_function_header(p);
@@ -775,15 +781,19 @@ static void prt_galsc_parameter_struct(dd_list parameters) {
     dd_scan(pos, parameters) {
         data_declaration p = DD_GET(data_declaration, pos);
 
-        // Print the type of the parameter.
-        declarator tdeclarator;
-        type_element tmodifiers;
-        type2ast(parse_region, dummy_location, p->type, NULL, &tdeclarator, &tmodifiers);
-        prt_type_elements(tmodifiers, 0);
+        // Print only if parameter is used in this application.
+        if (p->parameter_get_used || p->parameter_put_type) {
 
-        // Print the name of the parameter.
-        prt_galsc_name_ddecl(p);
-        outputln(";");
+            // Print the type of the parameter.
+            declarator tdeclarator;
+            type_element tmodifiers;
+            type2ast(parse_region, dummy_location, p->type, NULL, &tdeclarator, &tmodifiers);
+            prt_type_elements(tmodifiers, 0);
+
+            // Print the name of the parameter.
+            prt_galsc_name_ddecl(p);
+            outputln(";");
+        }
     }
 
     unindent();
@@ -888,12 +898,16 @@ static void prt_galsc_sched_init_function(dd_list ports, dd_list parameters) {
 
     dd_scan (pos, parameters) {
         data_declaration p = DD_GET(data_declaration, pos);
-        output("GALSC_params.");
-        prt_variable_decl( CAST(variable_decl, p->ast) );
-        outputln(";");
-        output("GALSC_params_buffer.");
-        prt_variable_decl( CAST(variable_decl, p->ast) );
-        outputln(";\n");
+
+        // Print only if parameter is used in this application.
+        if (p->parameter_get_used || p->parameter_put_type) {
+            output("GALSC_params.");
+            prt_variable_decl( CAST(variable_decl, p->ast) );
+            outputln(";");
+            output("GALSC_params_buffer.");
+            prt_variable_decl( CAST(variable_decl, p->ast) );
+            outputln(";\n");
+        }
     }
 
     outputln("GALSC_params_buffer_flag = FALSE;");
