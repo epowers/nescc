@@ -60,6 +60,9 @@ static bool using_momllib = FALSE;
 
 static region moml_region = NULL;
 
+// The name of the Ptolemy II class which represents a nesC component.
+static const char *ptinyos_component_class = NULL;
+
 // Initialize the memory region for the moml tools.
 static void init_moml_region() {
     if (moml_region == NULL) {
@@ -82,6 +85,15 @@ void momllib_set() {
 // Indicates if we should generate momllib.
 bool is_momllib_set() {
     return using_momllib;
+}
+
+// Set the name of the Ptolemy II class which represents a nesC component.
+void moml_ptinyos_component_set(const char *classname) {
+    ptinyos_component_class = classname;
+}
+
+const char *moml_ptinyos_component_get() {
+    return ptinyos_component_class;
 }
 
 // Print the standard MoML boilerplate code.
@@ -150,7 +162,7 @@ static void prt_nc2momllib_component_ports(nesc_declaration c) {
 
 // Print the MoML code for the component in the argument named "c".
 static void prt_nc2momllib_component(nesc_declaration c, const char *filename) {
-    outputln("<entity name=\"%s\" class=\"ptolemy.codegen.nc.NCActor\">", c->name);
+    outputln("<entity name=\"%s\" class=\"%s\">", c->name, moml_ptinyos_component_get());
     indent();
     outputln("<property name=\"source\" value=\"%s\"/>", filename);
     prt_nc2momllib_component_ports(c);

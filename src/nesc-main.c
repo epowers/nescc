@@ -209,6 +209,12 @@ bool nesc_option(char *p)
       {
           momllib_set();
       }
+  // Specifies the name of the Ptolemy II class which represents a
+  // nesC component.
+  else if (!strncmp(p, "fmoml-ptinyos-component=", strlen("fmoml-ptinyos-component=")))
+      {
+          moml_ptinyos_component_set(p + strlen("fmoml-ptinyos-component="));
+      }
 #endif
   else if (!strcmp (p, "Wnesc-docstring"))
     warn_unexpected_docstring = 1;
