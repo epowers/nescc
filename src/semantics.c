@@ -142,7 +142,7 @@ void init_data_declaration(data_declaration dd, declaration ast,
   dd->nuses = NULL;
   dd->fn_uses = NULL;
   dd->connections = NULL;
-  dd->spontaneous = FALSE;
+  dd->spontaneous = 0;
   dd->magic_reduce = NULL;
   dd->makeinline = FALSE;
   dd->container_function = NULL;
@@ -1573,7 +1573,7 @@ static int duplicate_decls(data_declaration newdecl, data_declaration olddecl,
   olddecl->Cname |= newdecl->Cname;
   if (newdecl->spontaneous && !olddecl->spontaneous)
     {
-      olddecl->spontaneous = TRUE;
+      olddecl->spontaneous = newdecl->spontaneous;
       dd_add_last(parse_region, spontaneous_calls, olddecl);
     }
 

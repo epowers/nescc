@@ -57,7 +57,7 @@ use new_use(location l, context c)
   use u = ralloc(rr, struct use);
 
   u->l = l;
-
+  u->fn = current_function;
   u->c = use_context(c);
 
   return u;

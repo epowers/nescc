@@ -77,6 +77,11 @@ typedef enum { decl_variable, decl_constant, decl_function,
 	       decl_magic_function,
 	       decl_interface_ref, decl_component_ref } data_kind;
 
+typedef enum  {
+  c_call_atomic = 1,		/* bit set if atomic calls to this fn */
+  c_call_nonatomic = 2	/* bit set if non-atomic calls to this fn */
+} call_contexts;
+
 struct data_declaration {
   data_kind kind;
   const char *name;
@@ -119,9 +124,10 @@ struct data_declaration {
   bool in_system_header;
   bool Cname;			/* name is in C name space (don't rename!)
 				   Set by the `C' attribute. */
-  bool spontaneous;		/* TRUE if called by environment (main,
-				   interrupt handlers, e.g.). Set by the 
-				   `spontaneous' attribute */
+  call_contexts spontaneous;	/* Call contexts for environmental calls
+				   (main, interrupt handlers, e.g.). Set by
+				   the `spontaneous', `interrupt' and
+				   `signal' attributes */
 
   dd_list/*use*/ nuses;		/* List of uses of this identifier */
 
@@ -142,10 +148,7 @@ struct data_declaration {
      and f calls g outside an atomic statement, then 
       g->call_contexts == c_call_atomic
   */
-  enum {
-    c_call_atomic = 1,		/* bit set if atomic calls to this fn */
-    c_call_nonatomic = 2	/* bit set if non-atomic calls to this fn */
-  } call_contexts;	       
+  call_contexts call_contexts;	       
   bool makeinline;		/* Mark this function inline when generating code */
   gnode ig_node;		/* inline-graph node for this function */
   struct data_declaration *interface;	/* nesC: interface this cmd/event belongs to */

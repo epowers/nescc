@@ -129,7 +129,7 @@ static void rec_contexts(gnode n, int call_contexts)
 {
   gedge edge;
   data_declaration fn = NODE_GET(endp, n)->function;
-  bool new_context = fn->call_contexts | call_contexts;
+  int new_context = fn->call_contexts | call_contexts | fn->spontaneous;
 
   if (new_context == fn->call_contexts)
     return;
@@ -144,8 +144,12 @@ static void rec_contexts(gnode n, int call_contexts)
 	{
 	  if (u->c & c_atomic)
 	    cc = c_call_atomic;
-	  rec_contexts(graph_edge_to(edge), cc);
 	}
+      else /* Non-call use. Conservatively assume that there may be
+	      atomic and non-atomic calls if this value ends up used as
+	      a function pointer */
+	cc = c_call_atomic | c_call_nonatomic;
+      rec_contexts(graph_edge_to(edge), cc);
     }
 }
 
@@ -156,7 +160,7 @@ static void find_fn_contexts(cgraph callgraph)
   
   /* Find least fixed point of call_contexts w/ recursive graph walk */
   graph_scan_nodes (n, cg)
-    rec_contexts(n, c_call_nonatomic);
+    rec_contexts(n, 0);
 }
 
 static void check_async_vars(dd_list avars)
@@ -180,7 +184,14 @@ static void check_async_vars(dd_list avars)
 	    if (v->async_write)
 	      bad_contexts |= c_read;
 
-	    if (!(u->c & c_atomic) && u->c & bad_contexts)
+	    /* Bad uses are uses that are both:
+	       - outside atomic statements (and fns only called from atomic
+	         statements)
+	       - uses specified by bad_contexts
+	    */
+	    if (!(u->c & c_atomic ||
+		  !(u->fn->call_contexts & c_call_nonatomic))
+		&& u->c & bad_contexts)
 	      {
 		const char *cname;
 
