@@ -79,7 +79,7 @@ static var_use add_var_use(var_use *first, var_use *last, data_declaration funct
   }
 
   if( flags == 0 )
-    flags = 0;
+    assert(0);
 
   return u;
 }
@@ -652,7 +652,7 @@ static void find_statement_vars(statement stmt, bool is_read, expression pa_expr
 
 	    scan_variable_decl (vd, CAST(variable_decl, CAST(data_decl, d)->decls))
 	      if (vd->ddecl->kind == decl_variable && vd->ddecl->vtype != variable_static)
-		find_expression_vars(vd->arg1, TRUE, FALSE, NULL);
+		find_expression_vars(vd->arg1, TRUE, FALSE, vd->arg1);
 	  }
 
       // pass the is_read and pa_expr flags on to the last statement
