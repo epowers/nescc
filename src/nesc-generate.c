@@ -870,8 +870,6 @@ void find_function_connections(data_declaration fndecl, void *data)
   cgraph cg = data;
   int num_instances, instance, last_normal_calls_length;
 
-  fprintf(stderr,"\nMDW: find_function_connections: fndecl %s.%s.%s (type %d)\n", fndecl->container->name, fndecl->interface->name, fndecl->name, fndecl->ftype);
-
   if (!fndecl->defined)
     {
       region r = parse_region;
@@ -884,12 +882,12 @@ void find_function_connections(data_declaration fndecl, void *data)
 	    (unsigned long)fndecl->container,
 	    fndecl->container->is_abstract,
 	    fndecl->container->abstract_instance_count,
-	    fndecl->interface->name,
-	    fndecl->interface->static_interface);
+	    fndecl->interface?(fndecl->interface->name):("null"),
+	    fndecl->interface?fndecl->interface->static_interface:0);
       }
 
       num_instances = num_abstract_instances(fndecl);
-      if (!num_instances || fndecl->interface->static_interface) num_instances = 1;
+      if (!num_instances || !fndecl->interface || fndecl->interface->static_interface) num_instances = 1;
 
       /* XXX MDW: Try doing this once */
       fndecl->connections = connections = ralloc(r, struct connections);
@@ -902,7 +900,7 @@ void find_function_connections(data_declaration fndecl, void *data)
       last_normal_calls_length = 0;
       for (instance = 0; instance < num_instances; instance++) {
 	bool foundany = find_connected_functions(connections, 
-	    (fndecl->interface->static_interface)?(-1):(instance));
+	    (!fndecl->interface || fndecl->interface->static_interface)?(-1):(instance));
 
   	/* a function is uncallable if it has no default definition and
    	 * non-generic: no connections

@@ -23,6 +23,7 @@ Boston, MA 02111-1307, USA.  */
 #include "semantics.h"
 #include "nesc-semantics.h"
 #include "constants.h"
+#include "nesc-generate.h"
 #include "c-parse.h"
 #include "AST_utils.h"
 
@@ -956,7 +957,7 @@ bool process_abstract_params(nesc_configuration_instance cinst) {
   assert(cinst->crefs != NULL);
   dd_scan(cr, cinst->crefs) {
     nesc_configuration_cref cref = DD_GET(nesc_configuration_cref, cr);
-    if (cref->comp->cdecl->is_abstract && cref->comp->args) {
+    if (cref->comp->cdecl->is_abstract) {
       // If the parent is abstract, get a handle to its abs params
       declaration parent_aparms = NULL;
       if (cinst->configuration->cdecl->is_abstract) {
@@ -965,8 +966,30 @@ bool process_abstract_params(nesc_configuration_instance cinst) {
 	assert(parent_aparms != NULL);
       }
 
-      if (!resolve_abstract_parameters(parent_aparms, cref)) {
-	return FALSE;
+      /* Set _NUMINSTANCES initializer */
+      if (cref->instance_number == 0 && is_module(cref->comp->cdecl->impl)) {
+	module mod = CAST(module, cref->comp->cdecl->impl);
+	declaration dlist = mod->decls, d;
+	scan_declaration(d, dlist) {
+	  data_decl dd;
+	  variable_decl vd;
+	  if (d->kind != kind_data_decl) continue;
+	  dd = CAST(data_decl, d);
+	  vd = CAST(variable_decl, dd->decls);
+	  fprintf(stderr,"MDW: process_abstract_params: scanning '%s'\n", vd->ddecl->name);
+	  if (!strcmp(vd->ddecl->name, NESC_NUMINSTANCES_LITERAL)) {
+	    fprintf(stderr,"MDW: process_abstract_params: Setting _NUMINSTANCES to %d\n", mod->cdecl->abstract_instance_count);
+	    vd->arg1 = build_int_constant(parse_region, dd->location,
+		int_type, mod->cdecl->abstract_instance_count);
+	    break;
+	  }
+	}
+      }
+
+      if (cref->comp->args) {
+	if (!resolve_abstract_parameters(parent_aparms, cref)) {
+	  return FALSE;
+	}
       }
 
       if (is_configuration(cref->comp->cdecl->impl)) {

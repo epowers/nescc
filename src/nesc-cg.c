@@ -126,7 +126,7 @@ gnode fn_lookup(cgraph cg, data_declaration fndecl, int instance_num)
   // Override 'instance_num' if this is in fact not an abstract component,
   // or is part of a static interface
   if (!fndecl->container || !fndecl->container->is_abstract ||
-      (fndecl->interface && fndecl->interface->static_interface)) {
+      !fndecl->interface || fndecl->interface->static_interface) {
     ep.instance = -1;
   } else {
     ep.instance = instance_num;
