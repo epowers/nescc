@@ -29,26 +29,48 @@ $PTINYOS_COMPONENT = "ptolemy.domains.nc.lib.NCComponent";
 $PTINYOS_PREFIX = "\$CLASSPATH";
 
 if ($#ARGV < 1) {
-    &fail("Usage: nc2momllib <output directory> <input directory for nesC files> <options>");
+    &fail("Usage: nc2momllib <output directory> <input director(ies) for nesC files> <options that start with "-">");
 }
 
+# Get the name of the output directory
 $outputdir = shift @ARGV;
-$inputdir = shift @ARGV;
 
-unshift @ARGV, "-I$inputdir";
-push @ARGV, "$inputdir";
+# Get the input director(ies) and copy the rest of the arguments to @myargs
+while ($temp = shift @ARGV) {
+  $_ = $temp;
+  if (/^(-).*/) {
+    unshift @ARGV, $temp;
+    last;
+  } else {
+    # Save the input directory
+    push @inputdirs, $temp;
+  }
+}
 
-unshift @ARGV, "-tosdir=$TOSDIR";
-unshift @ARGV, "-fmoml-ptinyos-component=$PTINYOS_COMPONENT";
-unshift @ARGV, "-fmoml-ptinyos-prefix=$PTINYOS_PREFIX";
-unshift @ARGV, "-fmomldir=$outputdir";
-unshift @ARGV, "-fmomllib";
-#unshift @ARGV, "-fsyntax-only";
-unshift @ARGV, "$exec_prefix/bin/ncc";
+# Copy the input arguments to another array.
+@myargs = @ARGV;
 
-exec @ARGV;
-print STDERR "Couldn't execute ncc\n";
-exit 2;
+while ($inputdir = shift @inputdirs) {
+  # Make another copy of the input arguments.
+  my @tempargs = @myargs;
+
+  unshift @tempargs, "-I$inputdir";
+  push @tempargs, "$inputdir";
+
+  unshift @tempargs, "-tosdir=$TOSDIR";
+  unshift @tempargs, "-fmoml-ptinyos-component=$PTINYOS_COMPONENT";
+  unshift @tempargs, "-fmoml-ptinyos-prefix=$PTINYOS_PREFIX";
+  unshift @tempargs, "-fmomldir=$outputdir";
+  unshift @tempargs, "-fmomllib";
+#unshift @tempargs, "-fsyntax-only";
+  unshift @tempargs, "$exec_prefix/bin/ncc";
+
+  system(@tempargs) == 0
+    or die "system @tempargs failed: $?";
+}
+
+#print STDERR "Couldn't execute ncc\n";
+#exit 2;
 
 sub fail {
     print STDERR "$_[0]\n";
