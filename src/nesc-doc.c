@@ -40,6 +40,8 @@ Boston, MA 02111-1307, USA.  */
 
   
 */
+
+
 #include <unistd.h>
 #include <limits.h>
 #include <stdlib.h>
@@ -49,24 +51,16 @@ Boston, MA 02111-1307, USA.  */
 #include <errno.h>
 #include <string.h>
 
-#include "dhash.h"
 #include "parser.h"
 #include "c-parse.h"
-#include "nesc-doc.h"
-#include "nesc-component.h"
 #include "nesc-semantics.h"
-#include "nesc-c.h"
 #include "unparse.h"
 #include "AST_utils.h"
-#include "edit.h"
 #include "semantics.h"
-#include "constants.h"
-#include "sd_list.h"
 #include "nesc-cg.h"
 #include "graph.h"
 #include "nesc-env.h"
-#include "regions.h"
-
+#include "nesc-doc.h"
 
 
 static region doc_region = NULL;
