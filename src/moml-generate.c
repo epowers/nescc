@@ -145,7 +145,7 @@ static void prt_moml_component_ports(nesc_declaration c) {
 
       if (idecl->kind == decl_interface_ref)
 	{
-            outputln("<port name=\"%s\" class=\"ptolemy.actor.TypedIOPort\">", idecl->name);
+            outputln("<port name=\"%s\" class=\"ptolemy.actor.IOPort\">", idecl->name);
 
             indent();
             if (idecl->required) {
@@ -169,7 +169,7 @@ static void prt_moml_component_ports(nesc_declaration c) {
              */
 	}
       else {
-          outputln("<port name=\"%s\" class=\"ptolemy.actor.TypedIOPort\">", idecl->name);
+          outputln("<port name=\"%s\" class=\"ptolemy.actor.IOPort\">", idecl->name);
           //iterator(idecl, data);
       }
       outputln("</port>");
