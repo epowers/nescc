@@ -372,10 +372,7 @@ static void preprocess_setargs(void *data, const char **argv)
       argv[arg++] = "-x";
       argv[arg++] = "c";
     }
-#ifdef __APPLE_CC__
-  /* The default preprocessor is amazingly broken */
-  argv[arg++] = "-traditional-cpp";
-#endif
+
   argv[arg++] = "-imacros";
   argv[arg++] = fix_filename(filename_region, cpp_macros);
   argv[arg++] = fix_filename(filename_region, closure->filename);
