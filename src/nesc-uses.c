@@ -208,7 +208,8 @@ static void collect_uses_expr(expression expr, context c)
       else if (!(is_interface_deref(fce->arg1) ||
 	    is_generic_call(fce->arg1) ||
 	    (is_identifier(fce->arg1) &&
-	     CAST(identifier, fce->arg1)->ddecl->kind == decl_function) ||
+	     (CAST(identifier, fce->arg1)->ddecl->kind == decl_function ||
+	      CAST(identifier, fce->arg1)->ddecl->kind == decl_magic_function)) ||
 	    fce->va_arg_call))
 	{
 	  if (warn_fnptr)

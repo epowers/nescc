@@ -140,7 +140,7 @@ static void rec_contexts(gnode n, int call_contexts)
       use u = EDGE_GET(use, edge);
       int cc = new_context;
 
-      if (u->c & c_call)
+      if (u->c & c_fncall)
 	{
 	  if (u->c & c_atomic)
 	    cc = c_call_atomic;
