@@ -1925,3 +1925,56 @@ unsigned long type_hash(type t)
       assert(0);
     }
 }
+
+
+bool type_contains(type parent, type child)
+{
+  // FIXME: should this use type_compatable, instead fo type_equal?
+  if(type_equal(parent,child))
+    return TRUE;
+
+  // ARRAYS.  an array type contains another if both have the same
+  // base type, and parent does not have fewer levels than child
+  if( type_array(parent) ) {
+    int parent_level=0;
+    int child_level=0;
+    
+    // find base types, and count array levels
+    while(parent->kind == tk_array) {
+      parent = parent->u.array.arrayof;
+      parent_level++;
+    }
+    while(child->kind == tk_array) {
+      child = child->u.array.arrayof;
+      child_level++;
+    }
+
+    if(parent_level >= child_level  &&  type_equal(parent,child))
+      return TRUE;
+    else
+      return FALSE;
+  }
+
+  // STRUCTURES.  Look 
+  if( type_tagged(parent) ) {
+    // if parent is an enum, then the type_equal() above was sufficient
+    if( type_enum(parent) ) 
+      return FALSE;
+
+    // recurse on field values
+    {
+      field_declaration field;
+
+      for (field = parent->u.tag->fieldlist; field; field = field->next)
+	if (type_contains(field->type, child))
+	  return TRUE;
+    }
+    
+    // no match
+    return FALSE;
+  }
+
+
+  return FALSE;
+}
+

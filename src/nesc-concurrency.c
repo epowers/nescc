@@ -330,11 +330,11 @@ static void print_call_errors(cgraph callgraph)
  * check the variable refs in the given function.  Errors are
  * generated if any of the refs might create a race condition.
  **/
-static void check_variable_refs(cgraph callgraph) //data_declaration fn, entry_point_type type) 
+static void check_variable_refs(cgraph callgraph)
 {
   ggraph cg = cgraph_graph(callgraph);
   gnode n;
-  bool iscall;
+  //bool iscall;
 
   fv_init();
 
@@ -342,7 +342,8 @@ static void check_variable_refs(cgraph callgraph) //data_declaration fn, entry_p
   graph_scan_nodes (n, cg) {
     data_declaration fn = NODE_GET(endp, n)->function;
 
-    if (iscall && !builtin_declaration(fn))
+    //if (iscall && !builtin_declaration(fn))
+    if ( !builtin_declaration(fn) )
       find_function_vars(fn);
   }
 
