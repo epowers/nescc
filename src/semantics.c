@@ -2334,6 +2334,26 @@ dd_list check_parameter(data_declaration dd,
   return extra_attr;
 }
 
+static bool error_signature(type fntype)
+/* Returns: TRUE if fntype is the "error in function declaration"
+     type signature (varargs with one argument of type error_type)
+*/
+{
+  typelist tl;
+  typelist_scanner stl;
+
+  if (!type_function_varargs(fntype))
+    return FALSE;
+
+  tl = type_function_arguments(fntype);
+
+  if (!tl || empty_typelist(tl))
+    return FALSE;
+
+  typelist_scan(tl, &stl);
+  return typelist_next(&stl) == error_type && !typelist_next(&stl);
+}
+
 /* Start definition of variable 'elements d' with attributes attributes, 
    asm specification astmt.
    If initialised is true, the variable has an initialiser.
@@ -2521,7 +2541,7 @@ declaration start_decl(declarator d, asm_stmt astmt, type_element elements,
 	    }
 
 	  if ((type_command(var_type) || type_event(var_type)) &&
-	      type_function_varargs(var_type))
+	      type_function_varargs(var_type) && !error_signature(var_type))
 	    error("varargs commands and events are not supported");
 
 	  check_function(&tempdecl, CAST(declaration, vd), class, scf,
