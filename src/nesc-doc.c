@@ -1728,9 +1728,9 @@ DOC WARNING: your version of `dot' does not support client-side
 
               // arrow
               if(prov->interface && req->interface->required == prov->interface->required) 
-                fprintf(text_file, "    <td align=\"center\">&nbsp;->&nbsp;</td>\n");
-              else 
                 fprintf(text_file, "    <td align=\"center\">&nbsp;=&nbsp;</td>\n");
+              else 
+                fprintf(text_file, "    <td align=\"center\">&nbsp;->&nbsp;</td>\n");
 
               // provides side
               fprintf(text_file, "    <td align=\"left\"><a href=\"%s\">%s</a>.",
