@@ -352,7 +352,7 @@ static bool prt_network_increment(expression e)
 
 static bool prt_network_read(expression e)
 {
-  if (!((type_network_base_type(e->type)) &&
+  if (!(e->type && type_network_base_type(e->type) &&
 	(e->context & c_read) && !(e->context & c_write)))
     return FALSE;
 

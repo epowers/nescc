@@ -171,7 +171,6 @@ init_lex (void)
     {
       UNSET_RESERVED_WORD ("const");
       UNSET_RESERVED_WORD ("volatile");
-      UNSET_RESERVED_WORD ("network"); // kchang
       UNSET_RESERVED_WORD ("typeof");
       UNSET_RESERVED_WORD ("signed");
       UNSET_RESERVED_WORD ("inline");
