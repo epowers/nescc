@@ -54,6 +54,9 @@ open(TOSINDEX, ">", "${outputdir}/TOSIndex.xml")
   or die "Can't open top level index file: $!";
 
 print TOSINDEX "<entity name=\"TOSIndex\" class=\"ptolemy.moml.EntityLibrary\">\n";
+print TOSINDEX "  <configure>\n";
+print TOSINDEX "    <?moml\n";
+print TOSINDEX "      <group>\n";
 
 # Open each input directory and create an .xml file for each .nc file
 # and an index.xml file in the current directory and all
@@ -62,6 +65,9 @@ while (my $inputdir = shift @inputdirs) {
   openrecursive($inputdir);
 }
 
+print TOSINDEX "      </group>\n";
+print TOSINDEX "    ?>\n";
+print TOSINDEX "  </configure>\n";
 print TOSINDEX "</entity>\n";
 
 close(TOSINDEX);
@@ -85,9 +91,9 @@ sub openrecursive {
   my $entityname = pop @entitynameparts;
 
   print TOSINDEX "<entity name=\"${entityname}\" class=\"ptolemy.moml.EntityLibrary\">\n";
-  print TOSINDEX "  <configure>\n";
-  print TOSINDEX "    <?moml\n";
-  print TOSINDEX "      <group>\n";
+#  print TOSINDEX "  <configure>\n";
+#  print TOSINDEX "    <?moml\n";
+#  print TOSINDEX "      <group>\n";
 
   # Get all files in current directory (including "."), except for ".."
   my @allfiles = grep !/^\.\.\z/, readdir $inputdir_handle;
@@ -122,8 +128,8 @@ sub openrecursive {
       openrecursive("${inputdir}/${tempfile}");
     }
   }
-  print TOSINDEX "      </group>\n";
-  print TOSINDEX "    ?>\n";
-  print TOSINDEX "  </configure>\n";
+#  print TOSINDEX "      </group>\n";
+#  print TOSINDEX "    ?>\n";
+#  print TOSINDEX "  </configure>\n";
   print TOSINDEX "</entity>\n";
 }
