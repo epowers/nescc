@@ -1,4 +1,4 @@
-This is the 1.1.1 (beta test) release of nesC. 
+This is the 1.1.1 (final beta test) release of nesC. 
 
 Installation instructions are in INSTALL. Note that nesC includes a patched
 GNU assembler for the AVR (to support debugging).  An appopriate version of
@@ -12,10 +12,22 @@ Changes in nesC 1.1.1
   tos/platforms and tos/sensorboards: a platform or sensorboard 
   can be used if its directory is specified with an explicit -I directive
   (see doc/ncc.html for details).
-- A few small bug fixes
-- msp430 and env targets (env gets the machine specification from an
-  environment variable, see doc/ncc.html for details)
 - support for Tython
+- support -Wparentheses (warnings on statements like 'if (var = value) ...',
+  and other similar C pitfalls)
+- nesC editing modes for emacs, vim and kde (kate, kwrite, kdevelop):
+  these are in tools/editor-modes, and get installed to 
+  <installdir>/lib/ncc/editor-modes. Read the appropriate readme.txt file
+  for installation directions
+- msp430 and env targets (env gets the machine specification from an
+  environment variable and is intended to ease implementation of new
+  platforms, see doc/envtarget.html for details)
+- new hwevent, atomic_hwevent attributes to tell nesC which functions
+  are interrupt entry points (hwevent: interrupt entry point, invoked
+  with interrupts enabled; atomic_hwevent: interrupt entry point, invoked
+  with interrupts disabled) - these should ease porting to new platforms
+- new keywords (future use): abstract, new
+- A few small bug fixes
 
 Changes in nesC 1.1
 ===================

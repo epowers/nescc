@@ -1071,12 +1071,14 @@ interface parameter values at the call-site.
 
 \nesc assumes an execution model that consists of run-to-completion
 \emph{tasks} (that typically represent the ongoing computation), and
-\emph{interrupt handlers} that are signaled asynchronously by hardware.  A
-scheduler for \nesc can execute tasks in any order, but must obey the
-run-to-completion rule (the standard \tinyos scheduler follows a FIFO
-policy). Because tasks are not preempted and run to completion, they are
-atomic with respect to each other, but are not atomic with respect to
-interrupt handlers.
+\emph{interrupt handlers} that are signaled asynchronously by hardware. The
+compiler relies on the user-provided \code{hwevent} and
+\code{atomic\_hwevent} attributes to recognise interrupt handlers (see
+Section~\ref{sec:attributes}).  A scheduler for \nesc can execute tasks in
+any order, but must obey the run-to-completion rule (the standard \tinyos
+scheduler follows a FIFO policy). Because tasks are not preempted and run
+to completion, they are atomic with respect to each other, but are not
+atomic with respect to interrupt handlers.
 
 As this is a concurrent execution model, \nesc programs are susceptible to
 race conditions, in particular data races on the program's \emph{shared
@@ -1304,7 +1306,7 @@ single-attribute:\\
 \>	identifier \kw{(} argument-expression-list \kw{)}\\
 \end{tabbing} \end{quote}
 
-\nesc supports three attributes:
+\nesc supports five attributes:
 \begin{itemize}
 \item \code{C}: This attribute is used for a C declaration or definition
 $d$ at the top-level of a module (it is ignored for all other
@@ -1318,6 +1320,18 @@ are not visible in the source code. Typically, functions that are
 called spontaneously are interrupt handlers, and the C \code{main}
 function. Section~\ref{sec:app} discusses how the \nesc compiler
 uses the \code{spontaneous} attribute during compilation.
+
+\item \code{hwevent}: This attribute can be used on any function
+$f$ (in modules or C code). It indicates that $f$ is an interrupt
+handling function, invoked automatically by the hardware. This implies
+that $f$ is both \code{spontaneous} and asynchronous code (AC).
+
+\item \code{atomic\_hwevent}: This attribute can be used on any function $f$
+(in modules or C code). It indicates that $f$ is an interrupt handling
+function, invoked automatically by the hardware, with interrupts
+disabled. This implies that $f$ is both \code{spontaneous} and asynchronous
+code (AC), and, additionally, that the body of $f$ runs as if it was
+wrapped in an \code{atomic} statement.
 
 \item \code{combine($fnname$)}: This attribute specifies the combining
 function for a type in a \kw{typedef} declaration. The combining function
