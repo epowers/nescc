@@ -53,6 +53,11 @@ static void print_ddecl(FILE *out, data_declaration ddecl)
   if (ddecl->definition && !ddecl->suppress_definition)
     opts |= psd_print_default;
 
+  if( ddecl->ftype == function_event )
+    fprintf(out, "event ");
+  if( ddecl->ftype == function_command )
+    fprintf(out, "command ");
+
   if (is_function_decl(ddecl->ast))
     {
       function_decl d = CAST(function_decl, ddecl->ast);
@@ -62,14 +67,12 @@ static void print_ddecl(FILE *out, data_declaration ddecl)
   else 
     {
       variable_decl d = CAST(variable_decl, ddecl->ast);
-
+      
       prt_declarator(d->declarator, NULL, d->attributes, ddecl, opts);
     }
 
   set_unparse_outfile(temp);
 }
-
-
 
 
 //////////////////////////////////////////////////////////////////////
@@ -175,6 +178,38 @@ typedef enum {
 
 
 
+/**
+ * return a string, showing the function call contexts
+ **/
+static char* context_str(enum contexts context) 
+{
+  static char str[100];
+  int len;
+
+  str[0] = '\0';
+  
+
+  if(context & c_atomic_task)
+    strcat(str, "a_task ");
+  if(context & c_task)
+    strcat(str, "task ");
+  if(context & c_atomic_int)
+    strcat(str, "a_int ");
+  if(context & c_int)
+    strcat(str, "int ");
+  if(context & c_reentrant_atomic_int)
+    strcat(str, "r_a_int ");
+  if(context & c_reentrant_int)
+    strcat(str, "r_int ");
+
+  len = strlen(str);
+  if(len <= 0)
+    strcat(str,"none");
+  else
+    str[len-1] = '\0';
+
+  return str;
+}
 
 
 
@@ -206,11 +241,13 @@ static void print_called_functions(enum contexts context,
 
   // debugging output
   conc_debug("%*s", indent, "");
-  if (print_call_graph) 
-    {
-      print_ddecl(outfile, fn);
-      fprintf(outfile, "[%d]", fn->contexts);
-    }
+  if (print_call_graph) print_ddecl(outfile, fn);
+  conc_debug("[%s] %s %s %s", 
+             context_str(fn->contexts), 
+             fn->container ? fn->container->name : "null", 
+             fn->ast->location->filename, 
+             fn->definition ? fn->definition->location->filename : "null");
+
   if (!iscall)
     {
       conc_debug("  (ref only)");
@@ -239,7 +276,7 @@ static void print_called_functions(enum contexts context,
       /* We've already seen this node in this context. Ignore it.
 	 (If not, we risk the infamous context-sensitive exponential
 	 blowup) */
-      conc_debug("--already seen in context %d\n", context);
+      conc_debug("--already seen in context %s\n", context_str(context));
       pop_f();
       return;
     }
@@ -301,6 +338,7 @@ static void print_call_errors(cgraph callgraph)
 
       // print called functions
       conc_debug("\n\n------------------------\n");
+      conc_debug("entry point: %s\n", context_str(fn->entrypoint));
       print_called_functions(fn->entrypoint, n, 0, TRUE);
       conc_debug("------------------------\n");
     }
@@ -383,11 +421,25 @@ static void mark_entry_points(cgraph callgraph)
       if (!fn->spontaneous && graph_first_edge_in(n) != NULL &&
 	 !type_task(fn->type))
         continue;
+      
+      // skip unreachable functions
+      // FIXME: add this back
+      //if( !fn->isused )
+      //  continue;
 
+      // FIXME: trap errors when ALLCODE is set.  I believe the
+      // previous check should take care of this.
+      //assert( getenv("ALLCODE") || is_function_decl(fn->ast) )
       
       // choose the entry point type
       context = c_task;
       nonreentrant = FALSE;
+
+      if( !is_function_decl(fn->ast) ) {
+        AST_print(fn->ast);
+        printf("\n\n");
+        exit(0);
+      }
 
       fd = CAST(function_decl, fn->ast);
       scan_attribute (a, fd->attributes)
@@ -528,6 +580,7 @@ void perform_concurrency_checks(cgraph callgraph)
 
   // for good measure - make sure output_loc is set correctly
   unparse_start(NULL);
+  enable_documentation_mode();
   set_function_separator(".");
   disable_line_directives();
 
