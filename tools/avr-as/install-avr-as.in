@@ -28,6 +28,6 @@ while (<GCCV>) {
 die "Could not determine avr-gcc version" if !defined($version);
 
 die "Could not install AVR assembler" if
-  system("mkdir -p $ncclibdir/avr/$version")
-  && system("install as $ncclibdir/avr/$version/as");
+  (system("mkdir -p $ncclibdir/avr/$version")
+   || system("install as $ncclibdir/avr/$version/as"));
 
