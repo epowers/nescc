@@ -46,8 +46,8 @@ static char* ddecl_name(data_declaration ddecl);
 
 
 typedef enum {
-  USE_READ = 1,
-  USE_WRITE = 2,
+  USE_WRITE = 1,
+  USE_READ = 2,
   USE_IN_ATOMIC = 4,
   USE_VIA_POINTER = 8
 } var_use_flags;
@@ -816,22 +816,22 @@ static char* ddecl_name(data_declaration ddecl)
 static char* get_atype(var_use u)
 {
   static char* atype[] = {
-    "aliased atomic rw",
-    "aliased atomic r",
-    "aliased atomic w",
-    "aliased atomic ??",
-    "aliased rw",
-    "aliased r",
-    "aliased w",
-    "aliased ??",
-    "atomic rw",
-    "atomic r",
-    "atomic w",
-    "atomic ??",
-    "rw",
+    "??",
     "r",
     "w",
-    "??"
+    "rw",
+    "atomic ??",
+    "atomic r",
+    "atomic w",
+    "atomic rw",
+    "aliased ??",
+    "aliased r",
+    "aliased w",
+    "aliased rw",
+    "aliased atomic ??",
+    "aliased atomic r",
+    "aliased atomic w",
+    "aliased atomic rw",
   };
   
   return atype[ u->flags & 0xF ];
