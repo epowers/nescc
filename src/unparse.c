@@ -1739,8 +1739,20 @@ void prt_empty_stmt(empty_stmt s)
 
 void prt_atomic_stmt(atomic_stmt s)
 {
+  struct location hack;
+
   set_location(s->location);
+  outputln("{ bool __nesc_inton = TOSH_interrupt_disable();");
+  indent();
   prt_statement(s->stmt);
+
+  /* The hack is to make debugging nicer: we make this new line appear 
+     to be part of the previous line */
+  hack = output_loc;
+  hack.lineno--;
+  set_location(&hack);
+  outputln("if (__nesc_inton) TOSH_interrupt_enable(); }");
+  unindent();
 }
 
 void prt_label(label l)
