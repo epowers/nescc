@@ -18,7 +18,7 @@ the TinyOS project.
 %setup -q
 
 %build
-./configure --prefix=/usr/local/galsc TOSDIR=/usr/local/src/tinyos-1.x/tos/
+./configure --prefix=/usr/local/galsc TOSDIR=/opt/tinyos-1.x/tos/
 make 
 
 %install
