@@ -1,4 +1,4 @@
-// $Id: TagDefinition.java,v 1.3 2005/01/11 23:27:53 idgay Exp $
+// $Id: TagDefinition.java,v 1.4 2005/01/18 17:09:05 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -17,7 +17,7 @@ import java.util.*;
 
 public class TagDefinition extends CDefinition
 {
-    static protected DefinitionTable defs;
+    static protected DefinitionTable defs = new DefinitionTable();
 
     public String name; /* not globally unique, may be null */
     public String ref; /* globally unique */

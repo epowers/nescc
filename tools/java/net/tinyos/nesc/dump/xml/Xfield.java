@@ -1,4 +1,4 @@
-// $Id: Xfield.java,v 1.4 2005/01/17 22:57:27 idgay Exp $
+// $Id: Xfield.java,v 1.5 2005/01/18 17:09:05 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -17,7 +17,7 @@ import java.util.*;
 
 public class Xfield extends Definition
 {
-    static protected DefinitionTable defs;
+    static protected DefinitionTable defs = new DefinitionTable();
 
     public String name; /* not unique, even within the containing struct/... */
     public String ref; /* globally unique */

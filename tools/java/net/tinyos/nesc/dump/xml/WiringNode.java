@@ -1,4 +1,4 @@
-// $Id: WiringNode.java,v 1.2 2005/01/17 21:11:11 idgay Exp $
+// $Id: WiringNode.java,v 1.3 2005/01/18 17:09:05 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -15,6 +15,8 @@ import java.util.*;
 
 public class WiringNode
 {
+    static LinkedList empty = new LinkedList();
+
     LinkedList outgoing, incoming;
     public DataDefinition ep;
 
@@ -23,22 +25,35 @@ public class WiringNode
     }
 
     void addToEdge(WiringEdge e) {
+	//System.err.println("" + this + " TO " + e.to);
 	if (outgoing == null)
 	    outgoing = new LinkedList();
 	outgoing.add(e);
     }
 
     void addFromEdge(WiringEdge e) {
+	//System.err.println("" + this + " FROM " + e.from);
 	if (incoming == null)
 	    incoming = new LinkedList();
 	incoming.add(e);
     }
 
     public ListIterator outgoingEdges() {
-	return outgoing.listIterator();
+	if (outgoing == null)
+	    return empty.listIterator();
+	else
+	    return outgoing.listIterator();
     }
 
     public ListIterator incomingEdges() {
-	return incoming.listIterator();
+	if (incoming == null)
+	    return empty.listIterator();
+	else
+	    return incoming.listIterator();
+    }
+
+    public String toString() {
+	//return "(@" + super.toString() + ")node:" + ep;
+	return "node:" + ep;
     }
 }

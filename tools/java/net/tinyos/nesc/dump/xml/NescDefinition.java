@@ -1,4 +1,4 @@
-// $Id: NescDefinition.java,v 1.4 2005/01/17 21:11:10 idgay Exp $
+// $Id: NescDefinition.java,v 1.5 2005/01/18 17:09:05 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -17,7 +17,7 @@ import java.util.*;
 
 public class NescDefinition extends Definition
 {
-    static protected DefinitionTable defs;
+    static protected DefinitionTable defs = new DefinitionTable();
 
     public String qname; /* globally unique */
 
