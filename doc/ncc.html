@@ -15,6 +15,7 @@ ncc - nesC compiler for TinyOS
 ncc [<b>-target=pc|mica|mica2|mica2dot|...</b>]
 [<b>-tosdir=</b><u>dir</u>]
 [<b>-print-tosdir</b>]
+[<b>-print-platforms</b>]
 [<b>-nostdinc</b>]
 [<b>-board=micasb|basicsb|micawb|...</b>]
 [<b>-docdir=</b><u>dir</u>]
@@ -46,7 +47,11 @@ The additional options recognized by ncc over gcc are:
 for this compilation. If pc is specified, the compilation uses the tossim
 environment and produces a locally executable file. The default target is
 mica, the possible targets are set by the TinyOS distribution (see the 
-tos/platforms directory).</blockquote>
+tos/platforms directory). A platform that is not in the TinyOS distribution
+can be used if its directory is specified with an explicit -I directive
+(the platform name is taken from the directory's name, platform directories
+are recognised by the presence of a <code>.platform</code> file).
+</blockquote>
 
 <b>-tosdir=</b><u>dir</u><blockquote> specify the location of TinyOS. This
 location can also be specified with the `TOSDIR' environment variable. If the
@@ -58,6 +63,10 @@ ncc uses its compiled-in TinyOS directory.</blockquote>
 exit, taking into account the -tosdir option and `TOSDIR' environment
 variable. No compilation occurs when -print-tosdir is used.</blockquote>
 
+<b>-print-platforms</b><blockquote> print the valid TinyOS platforms,
+including those made available by explicit -I directives (see -target 
+discussion above).</blockquote>
+
 <b>-nostdinc</b><blockquote> do not automatically include the TinyOS
 directories in the search path. See the discussion of search paths below
 for more details.</blockquote>
@@ -65,7 +74,9 @@ for more details.</blockquote>
 <b>-board=Y</b><blockquote> specify one (or more) sensor boards. This
 effects the search path and preprocessor symbols. The set of boards is set
 by the TinyOS distribution (see the tos/sensorboards
-directory).</blockquote>
+directory). As with targets, a sensorboard directory can be made
+available via an explicit -I directive (sensorboard directories are
+recognised by the presence of a <code>.sensor</code> file).</blockquote>
 
 <b>-docdir=</b><u>dir</u><blockquote> generate documentation for the
 compiled component in directory <u>dir</u>.</blockquote>
@@ -151,8 +162,10 @@ as follows, where <u>tosdir</u> is the TinyOS directory requested and
 <li>./
 <li><b>-I</b> directives (in option order)
 <li>%T/sensorboards/<u>boardname</u>, for each
-<b>-board=</b><u>boardname</u> option specified (in option order)
-<li>%T/platform/%p
+<b>-board=</b><u>boardname</u> option specified (in option order) -
+except if the sensorboard was found via an explicit -I directive
+<li>%T/platform/%p  - except if the platform was found via an
+explicit -I directive
 <li>Additional directories requested by the selected target (e.g.,
 %T/platform/avrmote for the mica target)
 <li>%T/interfaces
