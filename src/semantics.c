@@ -2991,6 +2991,7 @@ type_element finish_struct(type_element t, declaration fields,
 	{
 	  field_declaration fdecl = NULL;
 
+	  bitwidth = -1;
 	  if (anon_member)
 	    anon_member = FALSE;
 	  else
@@ -3046,7 +3047,6 @@ type_element finish_struct(type_element t, declaration fields,
 	      handle_field_dd_attributes(extra_attr, fdecl);
 	      field_type = fdecl->type; /* attributes might change type */
 
-	      bitwidth = -1;
 	      if (field->arg1 && field->arg1->cst)
 		{
 		  known_cst cwidth = field->arg1->cst;
