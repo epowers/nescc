@@ -26,7 +26,7 @@ Changes in nesC 1.1.1
   are interrupt entry points (hwevent: interrupt entry point, invoked
   with interrupts enabled; atomic_hwevent: interrupt entry point, invoked
   with interrupts disabled) - these should ease porting to new platforms
-- new keywords (future use): abstract, new
+- new keywords (future use): abstract, component, extends, generic, new
 - A few small bug fixes
 
 Changes in nesC 1.1
