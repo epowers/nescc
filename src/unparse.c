@@ -372,6 +372,12 @@ void set_function_separator(char *sep) {
   function_separator = sep;
 }
 
+FILE* set_unparse_outfile(FILE *newout) {
+  FILE *temp = of;
+  of = newout;
+  return temp;
+}
+
 void enable_documentation_mode(void) 
 {
   documentation_mode = TRUE;
