@@ -129,13 +129,12 @@ void init_data_declaration(data_declaration dd, declaration ast,
   dd->interface = NULL;
   dd->Cname = FALSE;
   dd->uses = NULL;
+  dd->calls = NULL;
   dd->connections = NULL;
   dd->spontaneous = FALSE;
-  dd->is_function_call = FALSE;
   dd->task_context = FALSE;
   dd->reentrant_interrupt_context = FALSE;
   dd->atomic_interrupt_context = FALSE;
-  dd->already_seen = FALSE;
   dd->task_only = FALSE;
   dd->uninterruptable = FALSE;
   dd->magic_reduce = NULL;
@@ -1768,6 +1767,7 @@ void check_function(data_declaration dd, declaration fd, int class,
   init_data_declaration(dd, fd, name, function_type);
   dd->kind = decl_function;
   dd->uses = dd_new_list(parse_region);
+  dd->calls = dd_new_list(parse_region);
   dd->isexternalscope = FALSE;
   if (nested)
     dd->ftype = function_nested;
@@ -1867,7 +1867,10 @@ static data_declaration declare_builtin(const char *name, data_kind kind, type t
   tempdecl.in_system_header = TRUE;
   tempdecl.vtype = variable_static;
   if (kind == decl_function)
-    tempdecl.uses = dd_new_list(parse_region);
+    {
+      tempdecl.uses = dd_new_list(parse_region);
+      tempdecl.calls = dd_new_list(parse_region);
+    }
 
   return declare(global_env, &tempdecl, TRUE);
 }
@@ -2198,6 +2201,7 @@ data_declaration implicitly_declare(identifier fnid)
 			fnid->cstring.data, implicit_function_type);
   tempdecl.kind = decl_function;
   tempdecl.uses = dd_new_list(parse_region);
+  tempdecl.calls = dd_new_list(parse_region);
   tempdecl.isexternalscope = TRUE;
   tempdecl.isfilescoperef = TRUE;
   tempdecl.ftype = function_implicit;
@@ -3587,14 +3591,17 @@ void split_type_elements(type_element tlist, type_element *odeclspecs,
   *oattributes = attributes;
 }
 
-void note_identifier_use(data_declaration ddecl)
+void note_identifier_use(data_declaration ddecl, bool iscall)
 /* Effects: an identifier expression has just been built for ddecl
      Collects usage information in current.function_decl->ddecl->uses
      Uses in a global_context go to global_uses
  */
 {
   if (current.function_decl)
-    dd_add_last(parse_region, current.function_decl->ddecl->uses, ddecl);
+    {
+      dd_add_last(parse_region, current.function_decl->ddecl->uses, ddecl);
+      dd_add_last(parse_region, current.function_decl->ddecl->calls, ddecl);
+    }
   else
     dd_add_last(parse_region, global_uses, ddecl);
 }

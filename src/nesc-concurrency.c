@@ -193,7 +193,8 @@ static void check_variable_refs(data_declaration fn, entry_point_type type)
  * recurse down the call tree from a particular function, marking
  * called functions with the given type.q
  **/
-static int mark_functions(gnode parent, entry_point_type type, int indent)
+static int mark_functions(gnode parent, entry_point_type type, int indent,
+			  bool iscall)
 {
   int subtotal;
   endp ep = NODE_GET(endp, parent);
@@ -222,7 +223,7 @@ static int mark_functions(gnode parent, entry_point_type type, int indent)
     return 0;
   }
   fprintf(outfile," --- %s", fn->container ? fn->container->name : "null");
-  if( !fn->is_function_call ) {
+  if( !iscall ) {
     fprintf(outfile, "  (ref only)");
     if( fn->definition ) {
       fprintf(outfile, " def not null\n");
@@ -236,7 +237,7 @@ static int mark_functions(gnode parent, entry_point_type type, int indent)
   
 
   // error, if this node has already been seen
-  if( fn->already_seen ) {
+  if( graph_node_markedp(parent) ) {
     if( type == ENTRY_TASK ) {
       fprintf(outfile,"LOOP d' LOOP (task context)\n");
     } else {
@@ -277,20 +278,19 @@ static int mark_functions(gnode parent, entry_point_type type, int indent)
 
 
   // mark that this function has been seen, before we recurse
-  fn->already_seen = TRUE;
+  graph_mark_node(parent);
 
   // recurse
   subtotal = 1; // current function
   graph_scan_out(edge,parent) {
     child = graph_edge_to(edge);
-    subtotal += mark_functions(child, type, indent+2);
+    subtotal += mark_functions(child, type, indent+2,
+			       EDGE_GET(void *, edge) != NULL);
   }
   
-
   // clear the seen flag
-  fn->already_seen = FALSE;
+  graph_unmark_node(parent);
 
-  
   return subtotal;
 } 
 
@@ -312,6 +312,7 @@ static void mark_entry_points(cgraph callgraph)
   bzero(totals, sizeof(totals));
   
   // find entry points
+  graph_clear_all_marks(cg);
   graph_scan_nodes (n, cg)
     {
       data_declaration fn = NODE_GET(endp, n)->function;
@@ -321,9 +322,6 @@ static void mark_entry_points(cgraph callgraph)
         continue;
 
       
-      // FIXME: will this cause false loops?
-      fn->is_function_call = TRUE;
-
       // choose the entry point type
       type = ENTRY_TASK;
       {
@@ -342,7 +340,7 @@ static void mark_entry_points(cgraph callgraph)
 
       // recursively mark all called functions, according to type
       fprintf(outfile,"\n\n------------------------\n");
-      totals[type] += mark_functions(n,type,0);
+      totals[type] += mark_functions(n,type,0, TRUE);
       fprintf(outfile,"------------------------\n");
     }
 

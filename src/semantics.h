@@ -161,7 +161,7 @@ void init_data_declaration(data_declaration dd, declaration ast,
 data_declaration declare(environment env, data_declaration from,
 			 bool ignore_shadow);
 
-void note_identifier_use(data_declaration ddecl);
+void note_identifier_use(data_declaration ddecl, bool iscall);
 /* Effects: an identifier expression has just been built for ddecl
      Collects usage information in current.function_decl->ddecl->uses
      Uses in a global_context go to global_uses

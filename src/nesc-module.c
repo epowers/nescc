@@ -64,7 +64,8 @@ expression make_interface_deref(location loc, expression object, cstring field)
   else
     {
       result->type = fdecl->type;
-      note_identifier_use(fdecl);
+      /* All interface field uses must be calls */
+      note_identifier_use(fdecl, TRUE);
     }
 
   return CAST(expression, result);

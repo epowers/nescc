@@ -117,14 +117,11 @@ typedef struct data_declaration {
   bool spontaneous;		/* TRUE if called by environment (main,
 				   interrupt handlers, e.g.). Set by the 
 				   `spontaneous' attribute */
-  bool is_function_call;        /* TRUE if this is a function call, rather than a function reference */
-
   /* used for functions.  describes the types of entry points from
      which the function is called. */
   bool task_context;
   bool reentrant_interrupt_context;
   bool atomic_interrupt_context;
-  bool already_seen;
 
   /* keywords for specifying concurrency information about a function */
   bool task_only;
@@ -144,6 +141,8 @@ typedef struct data_declaration {
   struct data_declaration *interface;	/* nesC: interface this cmd/event belongs to */
   typelist oldstyle_args; /* Type of arguments from old-style declaration */
   dd_list uses;			/* list of declarations of identifiers used */
+  dd_list calls;		/* list of declarations of (known) functions
+				   called */
   struct connections *connections; /* See nesc-generate.c: what this command
 				      or event is connected to. */
   /* reduction function for magic functions */

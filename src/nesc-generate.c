@@ -533,7 +533,8 @@ void find_connections(cgraph cg, nesc_declaration mod)
 
 static void mark_reachable_function(cgraph cg,
 				    data_declaration caller,
-				    data_declaration ddecl);
+				    data_declaration ddecl,
+				    bool force_call);
 
 static void mark_connected_function_list(cgraph cg,
 					 data_declaration caller,
@@ -545,17 +546,28 @@ static void mark_connected_function_list(cgraph cg,
     {
       full_connection conn = DD_GET(full_connection, connected);
 
-      conn->ep->function->is_function_call = TRUE;
-      mark_reachable_function(cg, caller, conn->ep->function);
+      mark_reachable_function(cg, caller, conn->ep->function, TRUE);
     }
 }
+
 static void mark_reachable_function(cgraph cg,
 				    data_declaration caller,
-				    data_declaration ddecl)
+				    data_declaration ddecl,
+				    bool force_call)
 {
   dd_list_pos use;
+
   if (caller && ddecl->kind == decl_function)
-    graph_add_edge(fn_lookup(cg, caller), fn_lookup(cg, ddecl), NULL);
+    {
+      static int notnull;
+      void *iscall = NULL;
+
+      /* FIXME: gratuitous n^2 behaviour */
+      if (force_call || dd_find(caller->calls, ddecl))
+	iscall = &notnull;
+
+      graph_add_edge(fn_lookup(cg, caller), fn_lookup(cg, ddecl), iscall);
+    }
 
   if (ddecl->isused)
     return;
@@ -585,7 +597,7 @@ static void mark_reachable_function(cgraph cg,
   fn_lookup(cg, ddecl);
 
   dd_scan (use, ddecl->uses)
-    mark_reachable_function(cg, ddecl, DD_GET(data_declaration, use));
+    mark_reachable_function(cg, ddecl, DD_GET(data_declaration, use), FALSE);
 }
 
 static cgraph mark_reachable_code(void)
@@ -596,9 +608,9 @@ static cgraph mark_reachable_code(void)
   /* We use the connection graph type to represent our call graph */
 
   dd_scan (used, spontaneous_calls)
-    mark_reachable_function(cg, NULL, DD_GET(data_declaration, used));
+    mark_reachable_function(cg, NULL, DD_GET(data_declaration, used), FALSE);
   dd_scan (used, global_uses)
-    mark_reachable_function(cg, NULL, DD_GET(data_declaration, used));
+    mark_reachable_function(cg, NULL, DD_GET(data_declaration, used), FALSE);
 
   return cg;
 }

@@ -760,6 +760,11 @@ unary_expr:
 		      fc->type = unsigned_char_type;
 		      break;
 		    }
+		  /* FIXME: The whole calls thing is yucky */
+		  if (is_identifier(fc->arg1) &&
+		      $1.i != post_task)
+		    note_identifier_use(CAST(identifier, fc->arg1)->ddecl,
+					TRUE);
 		}
 	| '*' cast_expr
 		{ $$ = make_dereference($1.location, $2); }

@@ -1225,7 +1225,7 @@ expression make_identifier(location loc, cstring id, bool maybe_implicit)
   /* Expressions at the parameter level don't count as uses (they are
      declarations of array sizes) */
   if (!current.env->parm_level)
-    note_identifier_use(decl);
+    note_identifier_use(decl, FALSE);
 
   return CAST(expression, result);
 }
@@ -1378,7 +1378,6 @@ expression make_function_call(location loc, expression fn, expression arglist)
         
         assert(p);
       }
-      fnid->ddecl->is_function_call = TRUE;
 
       if (fnid->ddecl->kind == decl_function)
 	{
