@@ -2,6 +2,7 @@
 #include "attributes.h"
 #include "semantics.h"
 #include "nesc-semantics.h"
+#include "machine.h"
 
 /* Provide warnings about ignored attributes and attribute lists */
 
@@ -79,21 +80,10 @@ void handle_decl_attribute(attribute attr, data_declaration ddecl)
       else
 	error_with_location(attr->location, "`spontaneous' attribute is for external functions only");
     }
-  /* XXX: signal, interrupt are avr-specific, should be elsewhere */
-  else if (!strcmp(name, "signal"))
-    {
-      ddecl->async = TRUE;
-      ddecl->spontaneous = c_call_atomic;
-    }
-  else if (!strcmp(name, "interrupt"))
-    {
-      ddecl->async = TRUE;
-      ddecl->spontaneous = c_call_nonatomic;
-    }
-  else
-    handle_type_attribute(attr, &ddecl->type);
-  /*else
-    ignored_attribute(attr);*/
+  else if (!(target->decl_attribute &&
+	     target->decl_attribute(attr, ddecl)) &&
+	   !handle_type_attribute(attr, &ddecl->type))
+    /*ignored_attribute(attr)*/;
 }
 
 /* Note: fdecl->bitwidth is not yet set when this is called */
@@ -103,8 +93,9 @@ void handle_field_attribute(attribute attr, field_declaration fdecl)
 
   if (!strcmp(name, "packed") || !strcmp(name, "__packed__"))
     fdecl->packed = TRUE;
-  /*else
-    ignored_attribute(attr);*/
+  else if (!(target->field_attribute &&
+	     target->field_attribute(attr, fdecl)))
+    /*ignored_attribute(attr)*/;
 }
 
 void handle_tag_attribute(attribute attr, tag_declaration tdecl)
@@ -127,8 +118,9 @@ void handle_tag_attribute(attribute attr, tag_declaration tdecl)
     }
   else if (!strcmp(name, "packed") || !strcmp(name, "__packed__"))
     tdecl->packed = TRUE;
-  /*else
-    ignored_attribute(attr);*/
+  else if (!(target->tag_attribute &&
+	     target->tag_attribute(attr, tdecl)))
+    /*ignored_attribute(attr)*/;
 }
 
 bool handle_type_attribute(attribute attr, type *t)
@@ -143,7 +135,8 @@ bool handle_type_attribute(attribute attr, type *t)
 	handle_combine_attribute(attr->location, attr->word2->cstring.data, t);
       return TRUE;
     }
-  return FALSE;
+  else 
+    return target->type_attribute && target->type_attribute(attr, t);
 }
 
 /* Functions to handle regular and dd list of attributes */

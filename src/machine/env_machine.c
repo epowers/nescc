@@ -15,7 +15,7 @@ along with nesC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
 Boston, MA 02111-1307, USA.  */
 
-//$Id: env_machine.c,v 1.1.2.1 2004/02/11 21:36:44 idgay Exp $
+//$Id: env_machine.c,v 1.1.2.2 2004/02/24 00:32:24 idgay Exp $
 //@author Cory Sharp <cssharp@eecs.berkeley.edu>
 
 /* Basic pointer sizes and alignments for a machine set in the environment
@@ -44,7 +44,9 @@ static machine_spec env_machine = {
   1, 1, 1, 1,		/* int1248_align */
   2, 2,			/* wchar_size_size */
   TRUE, TRUE,		/* char_wchar_signed */
-  "gcc"			/* gcc */
+  "gcc",		/* gcc */
+
+  NULL, NULL, NULL, NULL	/* Attributes: need some way to specify this */
 };
 
 static const char *find_char(const char *str, const char *strend, char ch)
