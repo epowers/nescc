@@ -331,6 +331,8 @@ void prt_default_label(default_label l);
 
 void prt_regionof(expression e);
 
+static region unparse_region;
+
 void unparse_start(FILE *to)
 {
   of = to;
@@ -340,10 +342,12 @@ void unparse_start(FILE *to)
   documentation_mode = FALSE;
   indent_level = 0;
   function_separator = "$";
+  unparse_region = newregion();
 }
 
 void unparse_end(void) 
 {
+  deleteregion_ptr(&unparse_region);
 }
 
 void unparse(FILE *to, declaration program) 
@@ -553,6 +557,15 @@ void prt_variable_decl(variable_decl d)
 
   if (d->asm_stmt)
     prt_asm_stmt_plain(d->asm_stmt);
+
+#if 0
+  if (d->ddecl)
+    {
+      output("/*T:");
+      output(type_name(unparse_region, d->ddecl->type));
+      output("*/");
+    }
+#endif
 
   if (d->arg1)
     {
