@@ -2350,6 +2350,26 @@ dd_list check_parameter(data_declaration dd,
   return extra_attr;
 }
 
+static bool error_signature(type fntype)
+/* Returns: TRUE if fntype is the "error in function declaration"
+     type signature (varargs with one argument of type error_type)
+*/
+{
+  typelist tl;
+  typelist_scanner stl;
+
+  if (!type_function_varargs(fntype))
+    return FALSE;
+
+  tl = type_function_arguments(fntype);
+
+  if (!tl || empty_typelist(tl))
+    return FALSE;
+
+  typelist_scan(tl, &stl);
+  return typelist_next(&stl) == error_type && !typelist_next(&stl);
+}
+
 /* Start definition of variable 'elements d' with attributes attributes, 
    asm specification astmt.
    If initialised is true, the variable has an initialiser.
@@ -2537,7 +2557,7 @@ declaration start_decl(declarator d, asm_stmt astmt, type_element elements,
 	    }
 
 	  if ((type_command(var_type) || type_event(var_type)) &&
-	      type_function_varargs(var_type))
+	      type_function_varargs(var_type) && !error_signature(var_type))
 	    error("varargs commands and events are not supported");
 
 	  check_function(&tempdecl, CAST(declaration, vd), class, scf,
@@ -2673,6 +2693,34 @@ declaration finish_decl(declaration decl, expression init)
 	     (this is set correctly for both strings and init_lists) */
 	  if (!type_array_size(dd->type))
 	    dd->type = init->type;
+	}
+    }
+  /* Check for a size */
+  if (type_array(dd->type))
+    {
+      /* Don't you love gcc code? */
+      int do_default
+	= (dd->needsmemory
+	   /* Even if pedantic, an external linkage array
+	      may have incomplete type at first.  */
+	   ? pedantic && !dd->isexternalscope
+	   : !dd->isfilescoperef);
+
+      if (!type_array_size(dd->type))
+	{
+	  if (do_default)
+	    error_with_decl(decl, "array size missing in `%s'",
+			    decl_printname(dd));
+	  /* This is what gcc has to say about the next line
+	     (see comment/question above):
+	     If a `static' var's size isn't known,
+	     make it extern as well as static, so it does not get
+	     allocated.
+	     If it is not `static', then do not mark extern;
+	     finish_incomplete_decl will give it a default size
+	     and it will get allocated.  */
+	  else if (!pedantic && dd->needsmemory && !dd->isexternalscope)
+	    dd->isfilescoperef = 1;
 	}
     }
 

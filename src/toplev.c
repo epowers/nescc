@@ -25,6 +25,8 @@ Boston, MA 02111-1307, USA. */
 
 #include <signal.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <sys/poll.h>
 
 #include "parser.h"
 #include "input.h"
@@ -370,6 +372,19 @@ int region_main(int argc, char **argv) deletes
   char *target = 0;
   int version_flag = 0;
   char *p;
+  char* waitforgdb;
+
+  /*
+   * Check for an environment variable NCCGDB, and if set, block
+   * calling poll(). When gdb attaches, it sends us a signal which
+   * causes poll to return with EINTR, and we continue on our merry
+   * way.
+   */
+  waitforgdb = getenv("NCCGDB");
+  if (waitforgdb) {
+    fprintf(stderr, "ncc pid %d waiting for gdb attach\n", getpid());
+    poll(0, 0, -1); // should return with EINTR
+  }
 
   signal(SIGABRT, rcc_aborting);
   signal(SIGSEGV, rcc_aborting);

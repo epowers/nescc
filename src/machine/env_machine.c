@@ -15,7 +15,7 @@ along with nesC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
 Boston, MA 02111-1307, USA.  */
 
-//$Id: env_machine.c,v 1.1.2.2 2004/02/24 00:32:24 idgay Exp $
+//$Id: env_machine.c,v 1.1.4.1 2004/03/31 23:29:08 celaine Exp $
 //@author Cory Sharp <cssharp@eecs.berkeley.edu>
 
 /* Basic pointer sizes and alignments for a machine set in the environment

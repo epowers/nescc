@@ -239,6 +239,8 @@ void yyerror();
 %token <u.itoken> ATOMIC USES INTERFACE COMPONENTS PROVIDES MODULE 
 %token <u.itoken> INCLUDES CONFIGURATION AS TASTNIOP IMPLEMENTATION CALL 
 %token <u.itoken> SIGNAL POST
+/* words reserved for nesC's future. Some may never be used... */
+%token <u.itoken> ABSTRACT COMPONENT DELETE EXTENDS GENERIC NEW
 
 /* nesC non-terminal types */
 %type <u.itoken> callkind
@@ -344,7 +346,9 @@ static void push_declspec_stack(void)
   pstate.declspec_stack = news;
 }
 
-void parse(void) deletes
+static nesc_decl parsed_nesc_decl;
+
+nesc_decl parse(void) deletes
 {
   int result, old_errorcount = errorcount;
   struct parse_state old_pstate = pstate;
@@ -365,6 +369,8 @@ void parse(void) deletes
     fprintf(stderr, "Errors detected in input file (your bison.simple is out of date)");
 
   pstate = old_pstate;
+
+  return parsed_nesc_decl;
 }
 
 void refuse_asm(asm_stmt s)
@@ -1202,7 +1208,7 @@ primary:
 	| CONSTANT { $$ = CAST(expression, $1); }
 	| string { $$ = CAST(expression, $1); }
 	| '(' expr ')'
-		{ $$ = $2; }
+		{ $$ = $2; $$->parens = TRUE; }
 	| '(' error ')'
 		{ $$ = make_error_expr(last_location); }
 	| '('
