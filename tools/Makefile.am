@@ -25,7 +25,7 @@ emacsdir=$(editordir)/emacs
 vimdir=$(editordir)/vim
 kdedir=$(editordir)/kde
 
-bin_SCRIPTS = mig ncg ncc nescc nesdoc
+bin_SCRIPTS = mig ncg ncc nescc nesdoc nc2momllib
 
 ncclib_DATA = genjava.pm gencstjava.pm migdecode.pm
 emacs_DATA =					\

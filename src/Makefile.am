@@ -90,6 +90,10 @@ libparser_a_SOURCES =				\
 	input.h					\
 	machine.c				\
 	machine.h				\
+	moml-generate.c				\
+	moml-generate.h				\
+	moml-paths.c				\
+	moml-paths.h				\
 	nesc-c.c				\
 	nesc-c.h				\
 	nesc-cg.c				\
@@ -187,6 +191,10 @@ BISON = bison
 EMACS = emacs
 M4 = m4
 GPERF = gperf
+
+# Define MOML to pass to C pre-processor.
+# See: http://www.gnu.org/software/automake/manual/html_mono/automake.html#Program%20variables
+AM_CPPFLAGS = -DMOML
 
 $(srcdir)/c-parse.tab.c $(srcdir)/c-parse.tab.h: c-parse.y
 	$(BISON) $(BISONFLAGS) -dv $<

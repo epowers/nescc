@@ -38,6 +38,13 @@ Boston, MA 02111-1307, USA.  */
 #include "edit.h"
 #include "machine.h"
 
+#ifdef MOML
+#include <sys/types.h>
+#include <dirent.h>
+#include "moml-paths.h"
+#include "moml-generate.h"
+#endif
+
 /* The set of C files to require before loading the main component */
 struct ilist
 {
@@ -190,6 +197,19 @@ bool nesc_option(char *p)
     {
       doc_use_graphviz(TRUE);
     }
+#ifdef MOML
+  // Specifies MoML output directory.
+  else if (!strncmp(p, "fmomldir=", strlen("fmomldir=")))
+      {
+          moml_set_outdir(p + strlen("fmomldir="));
+      }
+  // Specifies that we should generate a MoML library file for the .nc
+  // components file in the input directory.
+  else if (!strncmp(p, "fmomllib", strlen("fmomllib")))
+      {
+          momllib_set();
+      }
+#endif
   else if (!strcmp (p, "Wnesc-docstring"))
     warn_unexpected_docstring = 1;
   else if (!strcmp (p, "Wno-nesc-docstring"))
@@ -267,7 +287,44 @@ void nesc_compile(const char *filename, const char *target_name)
   
   for (includes = includelist; includes; includes = includes->next)
     require_c(&toplevel, includes->name);
+  
+#ifdef MOML
+  // If -_fmomllib was specified on the command line, generate a MoML
+  // library file.
+  if (is_momllib_set()) {
+      const char *currentfile = NULL;
+      
+      // Initialize the input directory information using the
+      // directory specified in "filename".
+      DIR *nescdir = init_nesc_dir(newregion(), filename);
+ 
+      // List of nesccomponent_t, containing each .nc component in the
+      // input directory.
+      dd_list nesccomponents = dd_new_list(parse_region);
 
+      // Examine each file (regular file, not subdirectory) in the directory.
+      while ((currentfile = get_next_nesc_file_in_dir(nescdir))) {
+          printf("Parsed %s\n", currentfile);
+
+          // Only look at .nc files.
+          if (is_nesc_file(currentfile)) {
+              nesc_declaration program = load(l_component, &toplevel, currentfile, TRUE);
+              // Only save components (configurations + modules, not interfaces)
+              if (program->kind == l_component) {
+                  nesccomponent_t nesccomponent = ralloc(parse_region, struct momllib_nesccomponent_t);
+                  nesccomponent->component = program;
+                  nesccomponent->filename = currentfile;
+                  dd_add_last(regionof(nesccomponents), nesccomponents, nesccomponent);
+              }
+          }
+      }
+      
+      // Generate MoML output.
+      generate_momllib(nesccomponents, filename);
+      
+  } else
+#endif
+      
   if (nesc_filename(filename))
     {
       /* We need to assume some language - it will get fixed once we

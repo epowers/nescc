@@ -69,6 +69,9 @@ for ($i = 0; $i <= $#ARGV; $i++) {
 	elsif (/^-v$/) {
 	    $verbose = 1;
 	}
+        elsif (/^-fmomllib$/) {
+            $momllib = 1;
+        }
     } 
 
     push @new_args, $_ if !$strip;
@@ -125,10 +128,13 @@ if( defined($docdir) ) {
     }
 }
 
-
-unshift @new_args, "-specs=$NCDIR/tdspecs";
-unshift @new_args, $gcc;
-$ENV{NESC_GCC} = $gcc;
+if (!momllib) {
+  unshift @new_args, "-specs=$NCDIR/tdspecs";
+  unshift @new_args, $gcc;
+  $ENV{NESC_GCC} = $gcc;
+} else {
+  unshift @new_args, "$NCDIR/nesc1";
+}
 
 if ($mingw_gcc) {
     # Yuck. Convert unix paths to windows paths

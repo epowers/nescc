@@ -1,5 +1,6 @@
-/* This file is part of the nesC compiler.
-   Copyright (C) 2002 Intel Corporation
+/* This file is part of the nc2MoMLlib generator.
+
+   Copyright (C) 2004 Elaine Cheong
 
 The attached "nesC" software is provided to you under the terms and
 conditions of the GNU General Public License Version 2 as published by the
@@ -15,22 +16,21 @@ along with nesC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
 Boston, MA 02111-1307, USA.  */
 
-#ifndef NESC_PATHS_H
-#define NESC_PATHS_H
-/* Locate components/interfaces from their name */
+/*
+  Author: Elaine Cheong
+  Created: 12 March 2004
+  
+ */
 
-void init_nesc_paths_start(region r);
-void add_nesc_path(const char *path);
-void add_nesc_dir(const char *path);
-void init_nesc_paths_end(void);
 
-const char *find_nesc_file(region r, source_language l, const char *name);
+#ifndef MOML_PATHS_H
+#define MOML_PATHS_H
 
-extern char **path_argv;
-extern int path_argv_count;
+#include <sys/types.h>
+#include <dirent.h>
 
-#ifdef MOML
-char *canonicalise(region r, const char *path, int len);
-#endif
+DIR * init_nesc_dir(region r, const char *path);
+const char *get_next_nesc_file_in_dir(DIR *nescdir);
+bool is_nesc_file(const char *filename);
 
 #endif

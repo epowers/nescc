@@ -61,7 +61,11 @@ static void build_include_argv(void)
 
 }
 
+#ifdef MOML
+char *canonicalise(region r, const char *path, int len)
+#else
 static char *canonicalise(region r, const char *path, int len)
+#endif
 {
   int newlen = len + 1;
   char *cp;
