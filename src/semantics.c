@@ -116,6 +116,7 @@ void init_data_declaration(data_declaration dd, declaration ast,
   dd->in_system_header = ast->location->in_system_header;
   dd->ftype = 0;
   dd->isinline = FALSE;
+  dd->noinline = FALSE;
   dd->isexterninline = FALSE;
   dd->oldstyle_args = NULL;
   dd->vtype = 0;
@@ -1532,6 +1533,11 @@ static int duplicate_decls(data_declaration newdecl, data_declaration olddecl,
   if (newdecl->isinline && !olddecl->definition)
     olddecl->isinline = TRUE;
   newdecl->isinline = olddecl->isinline;
+
+  /* If either of the decls says noinline, make sure that none of the
+     declerations are made inline. */
+  if (newdecl->noinline || olddecl->noinline) 
+    newdecl->noinline = olddecl->noinline = TRUE;
 
   if (different_binding_level)
     {

@@ -103,6 +103,10 @@ void handle_decl_attribute(attribute attr, data_declaration ddecl)
 	  ddecl->spontaneous = c_call_nonatomic;
 	}
     }
+  else if (!strcmp(name, "noinline"))
+    {
+      ddecl->noinline = TRUE;
+    }
   else if (!(target->decl_attribute &&
 	     target->decl_attribute(attr, ddecl)) &&
 	   !handle_type_attribute(attr, &ddecl->type))
