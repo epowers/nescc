@@ -1,4 +1,15 @@
 
+/*
+
+AST_field_ref           foo.bar
+AST_binary: array_ref   foo[i]
+AST_unary: dereference  *
+
+foo->bar   =>   *foo.bar
+
+*/
+
+
 #include "parser.h"
 #include "dhash.h"
 #include "c-parse.h"
@@ -8,10 +19,12 @@
 
 #include "nesc-findvars.h"
 
+#include <limits.h>
+#include <stdlib.h>
 
 static void add_ref(expression e, bool is_write);
-
-
+static void add_pointer_use(expression e, bool is_write);
+static char path_buf[PATH_MAX+1];
 
 // Track the uses of a variable within a specific function
 typedef struct var_use {
@@ -65,21 +78,19 @@ bool in_atomic = FALSE;
 //////////////////////////////////////////////////////////////////////
 
 static void find_statement_vars(statement stmt);
-static void find_expression_vars(expression expr);
+static void find_expression_vars(expression expr, bool in_update);
 
-static void find_elist_vars(expression elist, bool add_elements)
+static void find_elist_vars(expression elist)
 {
   expression e;
 
   scan_expression (e, elist) {
-    if(add_elements)
-      add_ref(e, FALSE);
-    find_expression_vars(e);
+    find_expression_vars(e, FALSE);
   }
 }
 
 
-static void find_expression_vars(expression expr)
+static void find_expression_vars(expression expr, bool in_update)
 {
   if (!expr)
     return;
@@ -89,35 +100,36 @@ static void find_expression_vars(expression expr)
 
   switch (expr->kind)
     {
-      // ignore bare identifiers.  all actual accesses are added in the parent statements
-    case kind_identifier: 
+    case kind_identifier:
+      // default for identifiers: read access to the specified variable
+      add_ref(expr,FALSE);
       break;
 
     case kind_interface_deref:
       break;
 
     case kind_comma:
-      find_elist_vars(CAST(comma, expr)->arg1, FALSE);
+      find_elist_vars(CAST(comma, expr)->arg1);
       break;
 
     case kind_cast_list: {
-      find_expression_vars(CAST(cast_list, expr)->init_expr);
+      find_expression_vars(CAST(cast_list, expr)->init_expr, FALSE);
       break;
     }
     case kind_init_index: {
       init_index init = CAST(init_index, expr);
-
-      find_expression_vars(init->init_expr);
+      
+      find_expression_vars(init->init_expr, FALSE);
       break;
     }
     case kind_init_field: {
       init_field init = CAST(init_field, expr);
 
-      find_expression_vars(init->init_expr);
+      find_expression_vars(init->init_expr, FALSE);
       break;
     }
     case kind_init_list: {
-      find_elist_vars(CAST(init_list, expr)->args, FALSE);
+      find_elist_vars(CAST(init_list, expr)->args);
       break;
     }
     case kind_conditional: {
@@ -126,15 +138,15 @@ static void find_expression_vars(expression expr)
       if (ce->condition->cst)
 	{
 	  if (definite_zero(ce->condition))
-	    find_expression_vars(ce->arg2);
+	    find_expression_vars(ce->arg2, FALSE);
 	  else
-	    find_expression_vars(ce->arg1);
+	    find_expression_vars(ce->arg1, FALSE);
 	}
       else
 	{
-	  find_expression_vars(ce->condition);
-	  find_expression_vars(ce->arg1);
-	  find_expression_vars(ce->arg2);
+	  find_expression_vars(ce->condition, FALSE);
+	  find_expression_vars(ce->arg1, FALSE);
+	  find_expression_vars(ce->arg2, FALSE);
 	}
       break;
     }
@@ -145,54 +157,104 @@ static void find_expression_vars(expression expr)
     case kind_function_call: {
       function_call fce = CAST(function_call, expr);
 
-      find_expression_vars(fce->arg1);
-      find_elist_vars(fce->args, TRUE);
+      // don't follow identifiers
+      if( !is_identifier(fce->arg1) )
+        find_expression_vars(fce->arg1, FALSE);
+      find_elist_vars(fce->args);
       break;
     }
     case kind_generic_call: {
       generic_call fce = CAST(generic_call, expr);
 
-      find_expression_vars(fce->arg1);
-      find_elist_vars(fce->args, TRUE);
+      // don't follow identifiers
+      if( !is_identifier(fce->arg1) )
+        find_expression_vars(fce->arg1, FALSE);
+
+      find_elist_vars(fce->args);
       break;
     }
     case kind_extension_expr: {
-      find_expression_vars(CAST(unary, expr)->arg1);
+      find_expression_vars(CAST(unary, expr)->arg1, FALSE);
       break;
+    }
+    case kind_array_ref: {
+      array_ref are = CAST(array_ref, expr);
+
+      if( is_identifier(are->arg1) ) {
+        // simple array name.  Add directly, rather than via
+        // find_expression_vars, since array names end up as constant
+        // expressions.
+        add_ref(are->arg1, in_update);
+      } else {
+        // complicated array name.  trace down to the highest-level structure
+        find_expression_vars(are->arg1, in_update);
+      }
+
+      // add read refs for vars mentioned in the array index
+      find_expression_vars(are->arg2, FALSE);
+
+      break;
+    }
+    case kind_field_ref: {
+      field_ref fre = CAST(field_ref, expr);
+      find_expression_vars(fre->arg1, in_update);
+
+      // FIXME: possibly track specific fields seperately?  Something like this:
+      // add_ref(fre->cstring.data, in_update);
+      break;
+    }
+    case kind_dereference: {
+      dereference de = CAST(dereference, expr);
+      
+      if( is_identifier(de->arg1) ) {
+        add_pointer_use(de->arg1, in_update);
+      } else {
+        fprintf(stderr,"%s:%ld:  complicated pointer deref\n",
+                realpath(expr->location->filename,path_buf), expr->location->lineno);
+        find_expression_vars(de->arg1, in_update);
+      } 
     }
     // unary updates
     case kind_preincrement: case kind_postincrement: case kind_predecrement: case kind_postdecrement: {
       unary ue = CAST(unary, expr);
 
-      add_ref(ue->arg1,TRUE);
-      find_expression_vars(ue->arg1);
+      if( is_identifier(ue->arg1) )
+        add_ref(ue->arg1,TRUE);
+      else {
+        if( !is_field_ref(expr) && !is_dereference(expr) && !is_array_ref(expr) ) 
+          fprintf(stderr,"%s:%ld:  complicated lvalue in inc/dec\n",
+                  realpath(expr->location->filename,path_buf), expr->location->lineno);
+        find_expression_vars(ue->arg1, TRUE);
+      }
       break;
     }
     // binary updates
-    case kind_assign:  case kind_plus_assign:  case kind_minus_assign:  case kind_times_assign:  case kind_divide_assign:  case kind_modulo_assign:
-    case kind_lshift_assign:  case kind_rshift_assign:  case kind_bitand_assign:  case kind_bitor_assign:  case kind_bitxor_assign: {
+    case kind_assign:  case kind_plus_assign:  case kind_minus_assign:  case kind_times_assign:  
+    case kind_divide_assign:  case kind_modulo_assign:  case kind_lshift_assign:  case kind_rshift_assign:  
+    case kind_bitand_assign:  case kind_bitor_assign:  case kind_bitxor_assign: {
       binary be = CAST(binary, expr);
       
-      add_ref(be->arg1, TRUE);
-      add_ref(be->arg2, FALSE);
-      find_expression_vars(be->arg1);
-      find_expression_vars(be->arg2);
+      if( is_identifier(be->arg1) )
+        add_ref(be->arg1, TRUE);
+      else {
+        if( !is_field_ref(expr) && !is_dereference(expr) && !is_array_ref(expr) ) 
+          fprintf(stderr,"%s:%ld:  complicated lvalue in assignment\n",
+                  realpath(expr->location->filename,path_buf), expr->location->lineno);
+        find_expression_vars(be->arg1, TRUE);
+      }
+
+      find_expression_vars(be->arg2, FALSE);
       break;
     }
     default:
       if (is_unary(expr)) {
         unary ue = CAST(unary, expr);
-
-        add_ref(ue->arg1, FALSE);
-	find_expression_vars(ue->arg1);
+	find_expression_vars(ue->arg1, in_update);
       }
       else if (is_binary(expr)) {
         binary be = CAST(binary, expr);
-          
-        add_ref(be->arg1, FALSE);
-        add_ref(be->arg2, FALSE);
-        find_expression_vars(be->arg1);
-        find_expression_vars(be->arg2);
+        find_expression_vars(be->arg1, in_update);
+        find_expression_vars(be->arg2, in_update);
       }
       else 
 	assert(0);
@@ -226,11 +288,9 @@ static void find_statement_vars(statement stmt)
 	    variable_decl vd;
 
 	    // Include size of initialisers of non-static variables
-	    scan_variable_decl (vd, CAST(variable_decl,
-					 CAST(data_decl, d)->decls))
-	      if (vd->ddecl->kind == decl_variable &&
-		  vd->ddecl->vtype != variable_static)
-		find_expression_vars(vd->arg1);
+	    scan_variable_decl (vd, CAST(variable_decl, CAST(data_decl, d)->decls))
+	      if (vd->ddecl->kind == decl_variable && vd->ddecl->vtype != variable_static)
+		find_expression_vars(vd->arg1, FALSE);
 	  }
 
       scan_statement (s, cs->stmts)
@@ -252,7 +312,7 @@ static void find_statement_vars(statement stmt)
 	}
       else
 	{
-	  find_expression_vars(is->condition);
+	  find_expression_vars(is->condition, FALSE);
 	  find_statement_vars(is->stmt1);
 	  find_statement_vars(is->stmt2);
 	}
@@ -267,7 +327,7 @@ static void find_statement_vars(statement stmt)
     case kind_expression_stmt: {
       expression_stmt es = CAST(expression_stmt, stmt);
 
-      find_expression_vars(es->arg1);
+      find_expression_vars(es->arg1, FALSE);
       break;
     }
     case kind_while_stmt: case kind_dowhile_stmt: case kind_switch_stmt: {
@@ -282,7 +342,7 @@ static void find_statement_vars(statement stmt)
 	    find_statement_vars(cs->stmt);
 	  break;
 	}
-      find_expression_vars(cs->condition);
+      find_expression_vars(cs->condition, FALSE);
       find_statement_vars(cs->stmt);
       break;
     }
@@ -290,9 +350,9 @@ static void find_statement_vars(statement stmt)
       for_stmt fs = CAST(for_stmt, stmt);
 
       find_statement_vars(fs->stmt);
-      find_expression_vars(fs->arg1);
-      find_expression_vars(fs->arg2);
-      find_expression_vars(fs->arg3);
+      find_expression_vars(fs->arg1, FALSE);
+      find_expression_vars(fs->arg2, FALSE);
+      find_expression_vars(fs->arg3, FALSE);
       break;
     }
     case kind_break_stmt: case kind_continue_stmt: case kind_goto_stmt:
@@ -304,13 +364,12 @@ static void find_statement_vars(statement stmt)
     case kind_computed_goto_stmt: {
       computed_goto_stmt cgs = CAST(computed_goto_stmt, stmt);
 
-      find_expression_vars(cgs->arg1);
+      find_expression_vars(cgs->arg1, FALSE);
       break;
     }
     case kind_return_stmt: {
       return_stmt rs = CAST(return_stmt, stmt);
-
-      find_expression_vars(rs->arg1);
+      find_expression_vars(rs->arg1, FALSE);
       break;
     }
     case kind_atomic_stmt: {
@@ -386,21 +445,6 @@ static inline bool is_local_variable(identifier id)
   return FALSE;
 }
 
-// returns TRUE if the identifier is just a function name
-static inline bool is_function_name(expression e)
-{
-  // FIXME
-  return FALSE;
-}
-
-// returns TRUE if the access is a write access
-static inline bool check_write(expression e)
-{
-  // FIXME: 
-  return TRUE;
-}
-
-
 
 static var_list_entry new_table_entry(const char *module, const char *name)
 {
@@ -417,24 +461,31 @@ static var_list_entry new_table_entry(const char *module, const char *name)
 }
 
 
+static void add_pointer_use(expression e, bool is_write)
+{
+  // FIXME: do something here
+}
+
 static void add_ref(expression e, bool is_write)
 {
   var_list_entry v;
   var_use u;
   identifier id;
 
+  // ignore null expressions (as from empty return statements
+  if (!e)
+    return;
+
   // ignore things that aren't identifiers
   if( !is_identifier(e) )    
     return;
   id = CAST(identifier,e);
+  id->marked = TRUE;
 
   // ignore static values
-  if( id->cst )
-    return;
-
-  // ignore function calls
-  if( is_function_name(e) )  
-    return;
+  // actually don't - array names come out as static.....
+  //if( id->cst )
+  //return;
 
   // ignore local variables
   if(is_local_variable(id) ) {
@@ -502,22 +553,6 @@ static void add_ref(expression e, bool is_write)
 }
  
 
-
-/*
-typedef struct var_list_entry { 
-  char *module;
-  char *name;
-  
-  dhash_table vars;   // list of data declarations for the variables
-  dhash_table funcs;  // list of struct var_use, that define how the var is used in each function that uses it
-
-  bool read;
-  bool write;
-  bool read_in_atomic;
-  bool write_in_atomic;
-
-} *var_list_entry;
-*/
 bool accesses_only_in_tasks(var_list_entry v)
 {
   dhash_scan scanner;
