@@ -50,7 +50,6 @@ static char *function_separator;
 /* modify behavior of low-level functions when printing docs */
 static bool documentation_mode;
 
-static region tempregion;
 
 typedef struct prt_closure {
   void (*fn)(struct prt_closure *closure);
@@ -334,7 +333,6 @@ void prt_regionof(expression e);
 
 void unparse_start(FILE *to)
 {
-  tempregion = newregion();
   of = to;
   output_loc = *dummy_location;
   at_line_start = TRUE;
@@ -346,7 +344,6 @@ void unparse_start(FILE *to)
 
 void unparse_end(void) deletes
 {
-  deleteregion_ptr(&tempregion);
 }
 
 void unparse(FILE *to, declaration program) deletes
