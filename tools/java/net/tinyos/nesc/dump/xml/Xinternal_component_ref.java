@@ -1,4 +1,4 @@
-// $Id: Xinterfacedef.java,v 1.2 2005/01/07 22:17:51 idgay Exp $
+// $Id: Xinternal_component_ref.java,v 1.1 2005/01/07 22:17:51 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,12 +13,9 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
-public class Xinterfacedef extends NescDefinition
+public class Xinternal_component_ref extends NDElement
 {
-    public Xparameters parameters;
-
-    public void child(NDElement subElement) {
-	if (subElement instanceof Xparameters)
-	    parameters = (Xparameters)subElement;
+    public NDElement start(NDReader reader, Attributes attrs) {
+	return DataDefinition.lookup(reader, attrs, "internal-component");
     }
 }

@@ -1,4 +1,4 @@
-// $Id: Xinterfacedef.java,v 1.2 2005/01/07 22:17:51 idgay Exp $
+// $Id: Xwire.java,v 1.1 2005/01/07 22:17:51 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,12 +13,16 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
-public class Xinterfacedef extends NescDefinition
+public class Xwire extends NDElement
 {
-    public Xparameters parameters;
+    public Endpoint from, to;
 
     public void child(NDElement subElement) {
-	if (subElement instanceof Xparameters)
-	    parameters = (Xparameters)subElement;
+	super.child(subElement);
+	if (subElement instanceof Xfrom)
+	    from = (Xfrom)subElement;
+	if (subElement instanceof Xto)
+	    to = (Xto)subElement;
     }
+    
 }

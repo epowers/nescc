@@ -1,4 +1,4 @@
-// $Id: Xcomponent.java,v 1.2 2005/01/07 18:29:17 idgay Exp $
+// $Id: Xcomponent.java,v 1.3 2005/01/07 22:17:50 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,23 +13,19 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
-public class Xcomponent extends NescDefinition
+public class Xcomponent extends NescDefinition implements Container
 {
-    public Xinstance instance;
-    public Xparameters parameters;
-    public Ximplementation implementation;
-
-    public NDElement start(Attributes attrs) {
-	return define(attrs);
-    }
+    public Xinstance instance; /* optional */
+    public Xparameters parameters; /* present iff component is generic */
+    public Implementation implementation;
 
     public void child(NDElement subElement) {
 	if (subElement instanceof Xinstance)
 	    instance = (Xinstance)subElement;
 	if (subElement instanceof Xparameters)
 	    parameters = (Xparameters)subElement;
-	if (subElement instanceof Ximplementation)
-	    implementation = (Ximplementation)subElement;
+	if (subElement instanceof Implementation)
+	    implementation = (Implementation)subElement;
     }
 
 }

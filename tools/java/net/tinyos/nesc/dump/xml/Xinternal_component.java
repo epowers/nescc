@@ -1,4 +1,4 @@
-// $Id: Xinterfacedef.java,v 1.2 2005/01/07 22:17:51 idgay Exp $
+// $Id: Xinternal_component.java,v 1.1 2005/01/07 22:17:51 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,12 +13,7 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
-public class Xinterfacedef extends NescDefinition
+/* Component declaration inside a configuration */
+public class Xinternal_component extends DataDefinitionb
 {
-    public Xparameters parameters;
-
-    public void child(NDElement subElement) {
-	if (subElement instanceof Xparameters)
-	    parameters = (Xparameters)subElement;
-    }
 }

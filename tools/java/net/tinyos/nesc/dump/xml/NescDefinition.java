@@ -1,4 +1,4 @@
-// $Id: NescDefinition.java,v 1.1 2004/12/24 00:49:06 idgay Exp $
+// $Id: NescDefinition.java,v 1.2 2005/01/07 22:17:50 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -24,7 +24,7 @@ public class NescDefinition extends Definition
 	qname = attrs.getValue("qname");
     }
 
-    synchronized Definition define(Attribute attrs) {
+    public synchronized NDElement start(Attribute attrs) {
 	return defs.define(attrs.getValue("qname"), attrs, this);
     }
 

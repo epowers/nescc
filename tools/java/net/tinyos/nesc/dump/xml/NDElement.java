@@ -1,4 +1,4 @@
-// $Id: NDElement.java,v 1.3 2005/01/07 18:29:16 idgay Exp $
+// $Id: NDElement.java,v 1.4 2005/01/07 22:17:50 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -24,8 +24,16 @@ abstract public class NDElement {
     public void child(NDElement subElement) {
     }
 
+    public void child(NDReader reader, NDElement subElement) {
+	return child(subElement);
+    }
+
     public NDElement end() {
 	return this;
+    }
+
+    public NDElement end(NDReader reader) {
+	return end();
     }
 
     public void characters(char[] ch, int start, int length) {

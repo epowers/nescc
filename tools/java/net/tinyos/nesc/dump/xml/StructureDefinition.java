@@ -1,4 +1,4 @@
-// $Id: StructureDefinition.java,v 1.1 2005/01/07 18:29:16 idgay Exp $
+// $Id: StructureDefinition.java,v 1.2 2005/01/07 22:17:50 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -15,4 +15,11 @@ import org.xml.sax.*;
 
 public class StructureDefinition extends TagDefinition
 {
+    public LinkedList fields = new LinkedList();
+
+    public void child(NDElement subElement) {
+	super.child(subElement);
+	if (subElement instanceof Xfield)
+	    fields.add(subElement);
+    }
 }

@@ -1,4 +1,4 @@
-// $Id: Xinterfacedef.java,v 1.2 2005/01/07 22:17:51 idgay Exp $
+// $Id: NDList.java,v 1.1 2005/01/07 22:17:50 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -12,13 +12,13 @@
 package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
+import java.util.*;
 
-public class Xinterfacedef extends NescDefinition
+public class NDList extends NDElement
 {
-    public Xparameters parameters;
+    LinkedList l = new LinkedList();
 
     public void child(NDElement subElement) {
-	if (subElement instanceof Xparameters)
-	    parameters = (Xparameters)subElement;
+	l.add(subElement);
     }
 }

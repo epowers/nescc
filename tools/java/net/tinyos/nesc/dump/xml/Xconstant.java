@@ -1,4 +1,4 @@
-// $Id: Xconstant.java,v 1.1 2004/12/23 00:14:59 idgay Exp $
+// $Id: Xconstant.java,v 1.2 2005/01/07 22:17:50 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -15,4 +15,11 @@ import org.xml.sax.*;
 
 public class Xconstant extends DataDefinition
 {
+    public Constant value;
+
+    public NDElement start(Attributes attrs) {
+	Xconstant me = (Xconstant)super.start(attrs);
+	me.value = Constant.decode(attrs.getValue("cst"));
+	return me;
+    }
 }

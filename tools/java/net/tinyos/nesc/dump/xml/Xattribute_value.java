@@ -1,4 +1,4 @@
-// $Id: Xinterfacedef.java,v 1.2 2005/01/07 22:17:51 idgay Exp $
+// $Id: Xattribute_value.java,v 1.1 2005/01/07 22:17:50 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,12 +13,15 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
-public class Xinterfacedef extends NescDefinition
+public class Xattribute_value extends NDElement
 {
-    public Xparameters parameters;
+    public Xattribute attribute;
+    public Value value;
 
     public void child(NDElement subElement) {
-	if (subElement instanceof Xparameters)
-	    parameters = (Xparameters)subElement;
+	if (subElement instanceof Xattribute)
+	    attribute = (Xattribute)subElement;
+	if (subElement instanceof Value)
+	    value = (Value)subElement;
     }
 }

@@ -1,4 +1,4 @@
-// $Id: Definition.java,v 1.2 2004/12/24 00:49:06 idgay Exp $
+// $Id: Definition.java,v 1.3 2005/01/07 22:17:50 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -17,6 +17,15 @@ import java.util.*;
 abstract public class Definition extends NDElement
 {
     public boolean definitionAvailable;
+    public LinkedList/*Xattribute_value*/ attributes;
 
     abstract public void init(Attributes attrs);
+
+    public void child(NDElement subElement) {
+	if (subElement instanceof Xattribute_value) {
+	    if (attributes == null)
+		attributes = new LinkedList();
+	    attributes.add(subElement);
+	}
+    }
 }

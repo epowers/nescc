@@ -1,4 +1,4 @@
-// $Id: Component.java,v 1.1 2004/12/23 00:14:59 idgay Exp $
+// $Id: Xtype_interface.java,v 1.1 2005/01/07 22:17:51 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,12 +13,12 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
-public class Component extends NDElement
+public class Xtype_interface extends Type
 {
-    String name;
+    public Xinterface interface;
 
-    public NDElement start(Attributes attrs) {
-	name = attrs.getValue("name");
-	return this;
+    public void child(NDElement subElement) {
+	if (subElement instanceof Xinterface)
+	    interface = (Xinterface)subElement;
     }
 }
