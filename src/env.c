@@ -24,6 +24,9 @@ Boston, MA 02111-1307, USA. */
 #include "dhash.h"
 #include "utils.h"
 
+void env_print(env e, env stop);
+
+
 #define DEFAULT_ENV_SIZE 16
 
 struct entry
@@ -51,7 +54,7 @@ static unsigned long env_hash(void *entry)
   struct entry *e = entry;
 
   if (!e->name) /* Special hash for unnamed functions. Use pointer address */
-    return hashPtr(entry);
+      return hashPtr(entry);
 
   return hashStr(e->name);
 }
@@ -100,6 +103,31 @@ void *env_lookup(env e, const char *s, bool this_level_only)
     }
 }
 
+/* Find entry s in in environment e. If not found, check ancestors
+   up to but not including stop_env.  
+   Returns entry's value if s is found, NULL otherwise */
+void *env_lookup_stop(env e, const char *s, env stop_env) 
+{
+  struct entry lookup, *found;
+
+#if 0
+  env_print(e, stop_env);
+#endif
+      
+  lookup.name = s;
+  for (;;)
+    {
+      if(!e || e==stop_env) 
+        return NULL;
+
+      found = dhlookup(e->table, &lookup);
+      if (found)
+	return found->value;
+      e = e->parent;
+    }
+}
+
+
 /* Add an entry for s, with value 'value' to environment e.
    Behaviour is undefined if e already contains an entry for s.
    Does not copy s. */
@@ -128,3 +156,23 @@ bool env_next(env_scanner *scanner, const char **name, void **value)
 
   return TRUE;
 }
+
+
+void env_print(env e, env stop)
+{
+  env_scanner s;
+  const char *name;
+  void *value;
+
+  while ( e && e != stop ) {
+    printf("   ------------- %p ------------\n", e);
+    env_scan(e, &s);
+    while( env_next(&s, &name, &value) ) {
+      printf("   %s\n",name);
+    }
+    e = e->parent;
+  }
+  
+
+}
+

@@ -45,6 +45,14 @@ region env_region(env e);
    Returns entry's value if s is found, NULL otherwise */
 void *env_lookup(env e, const char *s, bool this_level_only);
 
+
+/* Find entry s in in environment e. If not found, check ancestors
+   up to but not including stop_env.  
+   Returns entry's value if s is found, NULL otherwise */
+void *env_lookup_stop(env e, const char *s, env stop_env);
+
+
+
 /* Add an entry for s, with value 'value' to environment e.
    If e already contains an entry for s, then the old entry is
    hidden (but will still be found by env_scan).
