@@ -134,6 +134,7 @@ typedef struct data_declaration {
   } contexts;
   /* For entrypoints: context of entry. For everything else: 0 */
   enum contexts entrypoint;
+  enum contexts checked_contexts;
   /* Functions which are called from two different nonreentrant
      entry points are not considered nonreentrant. These field
      helps track that. */

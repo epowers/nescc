@@ -135,6 +135,7 @@ void init_data_declaration(data_declaration dd, declaration ast,
   dd->connections = NULL;
   dd->spontaneous = FALSE;
   dd->contexts = 0;
+  dd->checked_contexts = 0;
   dd->entrypoint = 0;
   dd->nonreentrant_caller = NULL;
   dd->multiple_nonreentrant_callers = TRUE;
