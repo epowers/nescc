@@ -105,6 +105,8 @@ libparser_a_SOURCES =				\
 	nesc-inline.h				\
 	nesc-concurrency.c			\
 	nesc-concurrency.h			\
+	nesc-findvars.c				\
+	nesc-findvars.h				\
 	nesc-doc.c				\
 	nesc-doc.h				\
 	nesc-interface.c			\
