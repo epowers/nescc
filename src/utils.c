@@ -167,7 +167,7 @@ inline int comparePtr(void *entry1, void *entry2)
  **/
 inline unsigned long hashStr(const char *s) 
 {
-  register unsigned long code;
+  register unsigned long code = 0;
 
   if( !s ) 
     return 0x57954317;
