@@ -1,4 +1,4 @@
-// $Id: Xcomponent.java,v 1.3 2005/01/07 22:17:50 idgay Exp $
+// $Id: Xcomponent.java,v 1.4 2005/01/27 21:33:55 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,10 +13,27 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
+/**
+ * A nesC component.
+ */
 public class Xcomponent extends NescDefinition implements Container
 {
-    public Xinstance instance; /* optional */
+    /**
+     * (definition only) For instances of generic components: what
+     * component this is an instance of, along with the instantiation
+     * arguments.  Null for non-instance components.
+    */
+    public Xinstance instance; 
+
+    /**
+     * (definition only) For generic components: the parameters for
+     * this generic component. Null for non-generic components.
+     */
     public Xparameters parameters; /* present iff component is generic */
+
+    /**
+     * (definition only) Implementation of this component. 
+     */
     public Implementation implementation;
 
     public void child(NDElement subElement) {

@@ -1,4 +1,4 @@
-// $Id: DataDefinition.java,v 1.8 2005/01/19 23:00:23 idgay Exp $
+// $Id: DataDefinition.java,v 1.9 2005/01/27 21:33:55 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -15,12 +15,27 @@ import net.tinyos.nesc.dump.*;
 import org.xml.sax.*;
 import java.util.*;
 
-public class DataDefinition extends CDefinition
+/**
+ * Base class for definitions of C objects (typedefs, variables, functions, 
+ * constants, interfaces, and internal-components (component references in
+ * configurations). These are uniquely identified by their 'ref' attribute.
+ */
+abstract public class DataDefinition extends CDefinition
 {
     static protected DefinitionTable defs = new DefinitionTable();
 
-    public String name; /* not globally unique */
-    public String ref; /* globally unique */
+    /**
+     * Name of this object. Not globally unique.
+     */
+    public String name; 
+    /**
+     * Unique identifier for this object.
+     */
+    public String ref;
+
+    /**
+     * (definition only) Type of this object.
+     */
     public Type type;
 
     /* for reference handling */

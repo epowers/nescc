@@ -1,4 +1,4 @@
-// $Id: Xarray_element.java,v 1.1 2005/01/07 18:29:16 idgay Exp $
+// $Id: Xarray_element.java,v 1.2 2005/01/27 21:33:55 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,9 +13,25 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
+/**
+ * Elements of an array initialiser (Xvalue_array)
+ * @see net.tinyos.nesc.dump.xml.Xvalue_array
+ */
 public class Xarray_element extends NDElement
 {
-    public long from, to;
+    /**
+     * First array element initialised with this value 
+     */
+    public long from;
+
+    /**
+     * Last array element initialised with this value 
+     */
+    public long to;
+
+    /**
+     * Value placed in these array elements
+     */
     public Value value;
 
     public NDElement start(Attributes attrs) {

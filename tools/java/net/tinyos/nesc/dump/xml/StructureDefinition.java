@@ -1,4 +1,4 @@
-// $Id: StructureDefinition.java,v 1.3 2005/01/11 23:27:53 idgay Exp $
+// $Id: StructureDefinition.java,v 1.4 2005/01/27 21:33:55 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -14,9 +14,15 @@ package net.tinyos.nesc.dump.xml;
 import org.xml.sax.*;
 import java.util.*;
 
-public class StructureDefinition extends TagDefinition
+/**
+ * Base class for structure tags (struct, union, network versions thereof)
+ */
+abstract public class StructureDefinition extends TagDefinition
 {
-    public LinkedList fields = new LinkedList();
+    /**
+     * Fields of this structure.
+     */
+    public LinkedList/*Xfield*/ fields = new LinkedList();
 
     public void child(NDElement subElement) {
 	super.child(subElement);

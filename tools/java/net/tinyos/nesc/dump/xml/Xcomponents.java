@@ -1,4 +1,4 @@
-// $Id: Xcomponents.java,v 1.4 2005/01/17 21:11:11 idgay Exp $
+// $Id: Xcomponents.java,v 1.5 2005/01/27 21:33:55 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,9 +13,15 @@ package net.tinyos.nesc.dump.xml;
 
 import java.util.*;
 
+/**
+ * Top-level component list.
+ */
 public class Xcomponents extends NDList
 {
-    public static LinkedList list;
+    /**
+     * The list of all components in the dump.
+     */
+    public static LinkedList/*Xcomponent*/ list;
 
     public NDElement end() {
 	list = l;

@@ -1,4 +1,4 @@
-// $Id: Xinterface_parameters.java,v 1.1 2005/01/07 22:17:51 idgay Exp $
+// $Id: Xinterface_parameters.java,v 1.2 2005/01/27 21:33:55 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,6 +13,10 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
+/**
+ * Container for parameters of interfaces. Goes away.
+ * @see net.tinyos.nesc.dump.xml.Xinterface
+ */
 public class Xinterface_parameters extends NDList
 {
 }

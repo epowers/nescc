@@ -1,4 +1,4 @@
-// $Id: Xinstance.java,v 1.1 2005/01/07 18:29:17 idgay Exp $
+// $Id: Xinstance.java,v 1.2 2005/01/27 21:33:55 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,10 +13,27 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
-public class Xinstance extends NescDefinition
+/**
+ * Information on instances of interfaces and generic components.
+ */
+public class Xinstance extends NDElement
 {
+    /**
+     * For instances of generic components: a unique number identifying
+     * this particular instance. These numbers start consecutively at 0.
+     * -1 for instances of interface definitions.
+     */
     public long number;
+
+    /**
+     * Arguments for this instance. null for instances of non-generic
+     * interfaces.
+     */
     public Xarguments arguments;
+
+    /**
+     * What component or interface this is an instance of.
+     */
     public NescDefinition parent;
 
     public NDElement start(Attributes attrs) {

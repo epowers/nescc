@@ -1,4 +1,4 @@
-// $Id: NDList.java,v 1.1 2005/01/07 22:17:50 idgay Exp $
+// $Id: NDList.java,v 1.2 2005/01/27 21:33:55 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -14,9 +14,13 @@ package net.tinyos.nesc.dump.xml;
 import org.xml.sax.*;
 import java.util.*;
 
-public class NDList extends NDElement
+/**
+ * A generic list-of-element class.
+ */
+abstract public class NDList extends NDElement
 {
-    LinkedList l = new LinkedList();
+    /* The elements of this list, in order. */
+    public LinkedList/*NDElement*/ l = new LinkedList();
 
     public void child(NDElement subElement) {
 	l.add(subElement);

@@ -1,4 +1,4 @@
-// $Id: Xfunction.java,v 1.3 2005/01/18 21:48:59 idgay Exp $
+// $Id: Xfunction.java,v 1.4 2005/01/27 21:33:55 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,14 +13,27 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
+/**
+ * A function.
+ */
 public class Xfunction extends DataDefinition implements Container
 {
-    /* non-null for commands and events of interfaces of components (but
-       null for those representing the command and event definition in an
-       interfacedef) */
+    /**
+     * Non-null for commands and events of interfaces of components
+     * (but null for those representing the command and event
+     * definition in an interfacedef).
+     */
     public Xinterface intf;
 
-    public boolean command, event;
+    /**
+     * true for functions that are commands.
+     */
+    public boolean command;
+
+    /**
+     * true for functions that are events.
+     */
+    public boolean event;
 
     public NDElement start(Attributes attrs) {
 	Xfunction me = (Xfunction)super.start(attrs);

@@ -1,4 +1,4 @@
-// $Id: FloatConstant.java,v 1.2 2005/01/17 22:57:26 idgay Exp $
+// $Id: FloatConstant.java,v 1.3 2005/01/27 21:33:55 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -11,8 +11,14 @@
 
 package net.tinyos.nesc.dump.xml;
 
+/**
+ * Class representing floating point constants
+ */
 public class FloatConstant extends KnownConstant
 {
+    /**
+     * Value of this floating point constant
+     */
     public double value;
 
     public FloatConstant(String s) {

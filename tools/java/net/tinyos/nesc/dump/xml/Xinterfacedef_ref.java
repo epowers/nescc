@@ -1,4 +1,4 @@
-// $Id: Xinterfacedef_ref.java,v 1.4 2005/01/17 21:11:11 idgay Exp $
+// $Id: Xinterfacedef_ref.java,v 1.5 2005/01/27 21:33:55 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -14,6 +14,12 @@ package net.tinyos.nesc.dump.xml;
 import net.tinyos.nesc.dump.*;
 import org.xml.sax.*;
 
+/**
+ * Class for interface definition references. These objects go away,
+ * replaced by the Xinterfacedef object representing the definition.
+ * @see net.tinyos.nesc.dump.xml.Xinterfacedef
+ * @see net.tinyos.nesc.dump.xml.Definition
+ */
 public class Xinterfacedef_ref extends NDElement
 {
     public NDElement start(NDReader reader, Attributes attrs) {

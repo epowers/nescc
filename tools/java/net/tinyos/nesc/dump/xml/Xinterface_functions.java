@@ -1,4 +1,4 @@
-// $Id: Xinterface_functions.java,v 1.1 2005/01/18 21:48:59 idgay Exp $
+// $Id: Xinterface_functions.java,v 1.2 2005/01/27 21:33:55 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,6 +13,10 @@ package net.tinyos.nesc.dump.xml;
 
 import java.util.*;
 
+/**
+ * Container for functions of interface. Goes away.
+ * @see net.tinyos.nesc.dump.xml.Xinterface
+ */
 public class Xinterface_functions extends NDList
 {
 }

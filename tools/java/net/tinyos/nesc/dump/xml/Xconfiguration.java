@@ -1,4 +1,4 @@
-// $Id: Xconfiguration.java,v 1.2 2005/01/07 22:17:50 idgay Exp $
+// $Id: Xconfiguration.java,v 1.3 2005/01/27 21:33:55 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,6 +13,9 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
+/**
+ * Configuration implementation.
+ */
 public class Xconfiguration extends Implementation
 {
 }

@@ -1,4 +1,4 @@
-// $Id: Container.java,v 1.1 2005/01/07 22:17:50 idgay Exp $
+// $Id: Container.java,v 1.2 2005/01/27 21:33:55 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,6 +13,11 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
+/**
+ * Interface implemented by elements that represent containers for C symbols
+ * (typedefs, tags, variables, etc). See classes inheriting from CDefinition.
+ * @see net.tintyos.nesc.dump.xml.CDefinition
+ */
 public interface Container
 {
 }

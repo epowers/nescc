@@ -1,4 +1,4 @@
-// $Id: NescDefinition.java,v 1.7 2005/01/19 23:00:23 idgay Exp $
+// $Id: NescDefinition.java,v 1.8 2005/01/27 21:33:55 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -15,11 +15,19 @@ import net.tinyos.nesc.dump.*;
 import org.xml.sax.*;
 import java.util.*;
 
-public class NescDefinition extends Definition
+/**
+ * Base class for nesC definitions (components, interface definitions)
+ */
+abstract public class NescDefinition extends Definition
 {
     static protected DefinitionTable defs = new DefinitionTable();
 
-    public String qname; /* globally unique */
+    /**
+     * Name of this nesC component or interface definition. For instances
+     * of generic components, this is the full instantiation path. Globally
+     * unique.
+     */
+    public String qname;
 
     public void init(Attributes attrs) {
 	super.init(attrs);

@@ -1,4 +1,4 @@
-// $Id: CDefinition.java,v 1.2 2005/01/11 23:27:53 idgay Exp $
+// $Id: CDefinition.java,v 1.3 2005/01/27 21:33:55 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -14,8 +14,16 @@ package net.tinyos.nesc.dump.xml;
 import org.xml.sax.*;
 import java.util.*;
 
+/**
+ * Base class for definitions of C symbols (tags, variables, etc). These all
+ * have a container (null for globals).
+ */
 abstract public class CDefinition extends Definition
 {
+    /**
+     * (definition only) What contains this definition. Null for symbols from
+     * the global scope. 
+     */
     public Container container;
 
     public void child(NDElement subElement) {

@@ -1,4 +1,4 @@
-// $Id: Xinterface.java,v 1.5 2005/01/18 21:48:59 idgay Exp $
+// $Id: Xinterface.java,v 1.6 2005/01/27 21:33:55 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -14,11 +14,31 @@ package net.tinyos.nesc.dump.xml;
 import java.util.*;
 import org.xml.sax.*;
 
+/**
+ * An interface used or provided by some component.
+ */
 public class Xinterface extends DataDefinition
 {
+    /**
+     * (definition only) true if the interface is provided.
+     */
     public boolean provided;
+
+    /**
+     * (definition only) What interface definition this interface is
+     * an instance of.
+     */
     public Xinstance instance;
-    public LinkedList/*Type*/ parameters; /* null for non-parameterised interfaces */
+
+    /**
+     * (definition only) Parameters for paramterised interfaces. Null
+     * otherwise.
+     */
+    public LinkedList/*Type*/ parameters;
+
+    /**
+     * (definition only) Functions of this interface.
+     */
     public LinkedList/*Xfunction*/ functions;
 
     public NDElement start(Attributes attrs) {

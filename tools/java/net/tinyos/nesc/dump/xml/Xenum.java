@@ -1,4 +1,4 @@
-// $Id: Xenum.java,v 1.2 2005/01/07 22:17:50 idgay Exp $
+// $Id: Xenum.java,v 1.3 2005/01/27 21:33:55 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,8 +13,15 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
+/**
+ * An enum definition.
+ */
 public class Xenum extends TagDefinition
 {
+    /**
+     * (definition only) The base C type (int, etc) used as the
+     * underlying representation of this enum.
+     */
     public Type repType;
 
     public void child(NDElement subElement) {

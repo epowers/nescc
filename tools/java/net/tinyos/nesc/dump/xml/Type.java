@@ -1,4 +1,4 @@
-// $Id: Type.java,v 1.1 2005/01/07 18:29:16 idgay Exp $
+// $Id: Type.java,v 1.2 2005/01/27 21:33:55 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,9 +13,22 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
-public class Type extends NDElement
+/**
+ * Base class for all elements representing types.
+ * <p>
+ * equals() is defined on all Type objects and represents C type equality.
+ */
+abstract public class Type extends NDElement
 {
-    public Constant size, alignment;
+    /**
+     * Size of this type in bytes. May be a non or unknown constant.
+     */
+    public Constant size;
+
+    /**
+     * Alignment for this type in bytes. May be a non or unknown constant.
+     */
+    public Constant alignment;
 
     public NDElement start(Attributes attrs) {
 	size = Constant.decode(attrs.getValue("size"));
