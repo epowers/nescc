@@ -133,8 +133,8 @@ static void check_variable_refs(data_declaration fn, entry_point_type type)
  * recurse down the call tree from a particular function, marking
  * called functions with the given type.q
  **/
-static int mark_functions(gnode parent, entry_point_type type, int indent,
-			  bool iscall)
+static void mark_functions(gnode parent, entry_point_type type, int indent,
+			   bool iscall)
 {
   int subtotal;
   endp ep = NODE_GET(endp, parent);
@@ -147,7 +147,7 @@ static int mark_functions(gnode parent, entry_point_type type, int indent,
   // FIXME: we'll need to be careful about these if we want to mark
   // long-running / blocking calls
   if( builtin_declaration(fn) )
-    return 0;
+    return;
   
 
   // debugging output
@@ -162,7 +162,7 @@ static int mark_functions(gnode parent, entry_point_type type, int indent,
       fprintf(outfile, " def not null\n");
       fprintf(outfile, "LOCATION: %s:%ld\n",fn->ast->location->filename, fn->ast->location->lineno);
       fprintf(outfile, "DEFINITION: %s:%ld\n",fn->definition->location->filename, fn->definition->location->lineno);
-      return 0;
+      return;
     }
   }
 
@@ -178,18 +178,18 @@ static int mark_functions(gnode parent, entry_point_type type, int indent,
       //error("loop the loop");
       fprintf(outfile,"LOOP d' LOOP (interrupt context)\n");
     }
-    return 0;
+    return;
   }
 
   // set the flags for the current function
   if(type == ENTRY_TASK) {
-    if(fn->task_context) return 0;  // bottom out, already counted
+    if(fn->task_context) return;  // bottom out, already counted
     fn->task_context = TRUE;
     if( fn->uninterruptable ) 
       warning("uninterruptable function `%s' called from task context",fn->name);
   } 
   else if(type == ENTRY_REENTRANT_INTERRUPT) {
-    if( fn->reentrant_interrupt_context ) return 0; // bottom out, already counted
+    if( fn->reentrant_interrupt_context ) return; // bottom out, already counted
     fn->reentrant_interrupt_context = TRUE;
     if( fn->uninterruptable ) 
       warning("uninterruptable function `%s' called from reentrant interrupt context",fn->name);
@@ -197,7 +197,7 @@ static int mark_functions(gnode parent, entry_point_type type, int indent,
       warning("task_only function `%s' called from reentrant interrupt context",fn->name);
   }
   else if(type == ENTRY_ATOMIC_INTERRUPT) {
-    if( fn->atomic_interrupt_context ) return 0; // bottom out, already counted
+    if( fn->atomic_interrupt_context ) return; // bottom out, already counted
     fn->atomic_interrupt_context = TRUE;
     if( fn->task_only ) 
       warning("task_only function `%s' called from atomic interrupt context",fn->name);
@@ -217,14 +217,11 @@ static int mark_functions(gnode parent, entry_point_type type, int indent,
   subtotal = 1; // current function
   graph_scan_out(edge,parent) {
     child = graph_edge_to(edge);
-    subtotal += mark_functions(child, type, indent+2,
-			       EDGE_GET(void *, edge) != NULL);
+    mark_functions(child, type, indent+2, EDGE_GET(void *, edge) != NULL);
   }
   
   // clear the seen flag
   graph_unmark_node(parent);
-
-  return subtotal;
 } 
 
 
@@ -273,10 +270,25 @@ static void mark_entry_points(cgraph callgraph)
 
       // recursively mark all called functions, according to type
       fprintf(outfile,"\n\n------------------------\n");
-      totals[type] += mark_functions(n,type,0, TRUE);
+      mark_functions(n,type,0, TRUE);
       fprintf(outfile,"------------------------\n");
     }
 
+  graph_scan_nodes (n, cg)
+    {
+      data_declaration fn = NODE_GET(endp, n)->function;
+
+      if (fn->reentrant_interrupt_context)
+	totals[ENTRY_REENTRANT_INTERRUPT]++;
+      else if (fn->task_context && !fn->atomic_interrupt_context)
+	totals[ENTRY_TASK]++;
+      else if (!fn->task_context && fn->atomic_interrupt_context)
+	totals[ENTRY_ATOMIC_INTERRUPT]++;
+      else
+	/* This is task & atomic interrupt. The reentrant interrupt is a
+	   slight misnomer */
+	totals[ENTRY_REENTRANT_INTERRUPT]++;
+    }
 
   fprintf(outfile,"function type totals:\n");
   fprintf(outfile,"    task           %d\n",totals[ENTRY_TASK]);
