@@ -15,6 +15,7 @@ along with nesC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
 Boston, MA 02111-1307, USA.  */
 
+#include <fcntl.h>
 #include <errno.h>
 
 #include "parser.h"
@@ -223,12 +224,15 @@ static void destroy_target(const char *name)
     {
       /* unlink would be nicer, but would have nasty consequences for
 	 -o /dev/null when run by root... */
-      /* Note: truncate returns EINVAL for /dev/null */
-      if (truncate(name, 0) < 0 && errno != EINVAL)
+      int fd = creat(name, 0666);
+
+      if (fd < 0)
 	{
 	  fprintf(stderr, "%s: ", name);
 	  perror("failed to truncate target");
 	}
+      else
+	close(fd);
     }
 
 }

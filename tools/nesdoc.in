@@ -1,5 +1,8 @@
+#!@pathperl@
+# -*- perl -*-
+
 # This file is part of the nesC compiler.
-#    Copyright (C) 2002 Intel Corporation
+#    Copyright (C) 2003 Intel Corporation
 # 
 # The attached "nesC" software is provided to you under the terms and
 # conditions of the GNU General Public License Version 2 as published by the
@@ -15,17 +18,22 @@
 # the Free Software Foundation, 59 Temple Place - Suite 330,
 # Boston, MA 02111-1307, USA.
 
-AUTOMAKE_OPTIONS = foreign
+if ($#ARGV < 1) {
+    &fail("Usage: nesdoc <documentation directory> <options and nesC files>");
+}
 
-SUBDIRS = avr-as
+$docdir = shift @ARGV;
 
-ncclibdir=$(libdir)/ncc
+unshift @ARGV, "-docdir=$docdir";
+unshift @ARGV, "-fsyntax-only";
+unshift @ARGV, "ncc";
 
-bin_SCRIPTS = mig ncg ncc nescc nesdoc set-mote-id
+exec @ARGV;
+print STDERR "Couldn't execute ncc\n";
+exit 2;
 
-ncclib_DATA = genjava.pm gencstjava.pm migdecode.pm
+sub fail {
+    print STDERR "$_[0]\n";
+    exit 2;
+}
 
-EXTRA_DIST =					\
-	genjava.pm				\
-	gencstjava.pm				\
-	migdecode.pm

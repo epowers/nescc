@@ -73,6 +73,7 @@ AC_OUTPUT(
 	tools/ncg
 	tools/ncc
 	tools/nescc
+	tools/nesdoc
 	tools/set-mote-id
 	tools/avr-as/Makefile
 	tools/avr-as/make-avr-as
