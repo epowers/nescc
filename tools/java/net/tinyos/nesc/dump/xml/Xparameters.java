@@ -1,4 +1,4 @@
-// $Id: Xparameters.java,v 1.1 2005/01/07 22:17:51 idgay Exp $
+// $Id: Xparameters.java,v 1.2 2005/02/03 20:15:21 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,8 +13,15 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
+/**
+ * A function, interface or component parameter list specfication.
+ */
 public class Xparameters extends NDList
 {
+    /**
+     * (valid for functions only) true if the function is a variable-argument
+     * list function (e.g., printf)
+     */
     public boolean varargs;
 
     public void child(NDElement subElement) {

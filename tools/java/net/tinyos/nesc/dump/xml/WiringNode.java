@@ -1,4 +1,4 @@
-// $Id: WiringNode.java,v 1.5 2005/01/27 21:33:55 idgay Exp $
+// $Id: WiringNode.java,v 1.6 2005/02/03 20:15:21 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -21,7 +21,7 @@ import java.util.*;
  */
 public class WiringNode
 {
-    static LinkedList empty = new LinkedList();
+    static LinkedList/*Xwire*/ empty = new LinkedList();
 
     LinkedList/*Xwire*/ outgoing, incoming;
 

@@ -1,4 +1,4 @@
-// $Id: Xinterfaces.java,v 1.4 2005/01/26 23:19:50 idgay Exp $
+// $Id: Xinterfaces.java,v 1.5 2005/02/03 20:15:21 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -14,6 +14,9 @@ package net.tinyos.nesc.dump.xml;
 import org.xml.sax.*;
 import java.util.*;
 
+/**
+ * Top-level interface list.
+ */
 public class Xinterfaces extends NDList
 {
     public static LinkedList/*Xinterface*/ list;

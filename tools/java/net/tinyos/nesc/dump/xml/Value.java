@@ -1,4 +1,4 @@
-// $Id: Value.java,v 1.2 2005/01/27 21:33:55 idgay Exp $
+// $Id: Value.java,v 1.3 2005/02/03 20:15:21 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -17,6 +17,8 @@ import org.xml.sax.*;
  * Base class for elements representing C initialisers (the {} stuff in
  *  struct foo x = { ... }
  * Attributes use these initialisers too.
+ * <p>
+ * equals() is defined only for initialisers representing C constants.
  */
 abstract public class Value extends NDElement
 {

@@ -1,4 +1,4 @@
-// $Id: NDReader.java,v 1.6 2005/01/27 21:33:41 idgay Exp $
+// $Id: NDReader.java,v 1.7 2005/02/03 20:14:49 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -81,10 +81,10 @@ public class NDReader extends DefaultHandler
     public boolean parse(InputSource source) throws IOException {
 	try {
 	    parser.parse(source);
-	    return TRUE;
+	    return true;
 	}
 	catch (SAXException e) {
-	    return FALSE;
+	    return false;
 	}
     }
 
@@ -187,8 +187,10 @@ public class NDReader extends DefaultHandler
      */
     public static void main(String[] args) throws IOException {
 	try {
-	    NDElement t = new NDReader().parse(args[0]);
-	    System.out.println("" + t);
+	    if (new NDReader().parse(args[0]))
+		System.out.println("parse ok");
+	    else
+		System.out.println("parse exceptions occured");
 	}
 	catch (SAXException e) {
 	    System.err.println("no xml reader found");

@@ -1,4 +1,4 @@
-// $Id: Xtype_tag.java,v 1.2 2005/01/17 22:57:27 idgay Exp $
+// $Id: Xtype_tag.java,v 1.3 2005/02/03 20:15:21 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,8 +13,14 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
+/**
+ * A tagged (enum, struct, etc) type.
+ */
 public class Xtype_tag extends Type
 {
+    /**
+     * The tagged type's definition.
+     */
     public TagDefinition tag;
 
     public void child(NDElement subElement) {

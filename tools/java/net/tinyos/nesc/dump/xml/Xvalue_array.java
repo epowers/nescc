@@ -1,4 +1,4 @@
-// $Id: Xvalue_array.java,v 1.3 2005/01/17 22:57:28 idgay Exp $
+// $Id: Xvalue_array.java,v 1.4 2005/02/03 20:15:22 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -14,9 +14,15 @@ package net.tinyos.nesc.dump.xml;
 import org.xml.sax.*;
 import java.util.*;
 
+/**
+ * An initialiser for an array.
+ */
 public class Xvalue_array extends Value
 {
-    public LinkedList elements = new LinkedList();
+    /**
+     * The individual array element initialisers.
+     */
+    public LinkedList/*Xarray_element*/ elements = new LinkedList();
 
     public void child(NDElement subElement) {
 	super.child(subElement);

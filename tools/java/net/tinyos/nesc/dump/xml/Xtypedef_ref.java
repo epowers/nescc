@@ -1,4 +1,4 @@
-// $Id: Xtypedef_ref.java,v 1.5 2005/01/27 21:33:55 idgay Exp $
+// $Id: Xtypedef_ref.java,v 1.6 2005/02/03 20:15:22 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -15,9 +15,9 @@ import net.tinyos.nesc.dump.*;
 import org.xml.sax.*;
 
 /**
- * Class for attribute references. These objects go away, replaced by the
- * object representing the definition.
- * @see net.tinyos.nesc.dump.xml.Xattribute
+ * Class for C typedef references. These objects go away, replaced by the
+ * Xtypedef object representing the definition.
+ * @see net.tinyos.nesc.dump.xml.Xtypedef
  * @see net.tinyos.nesc.dump.xml.Definition
  */
 public class Xtypedef_ref extends NDElement

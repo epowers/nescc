@@ -1,4 +1,4 @@
-// $Id: Xtype_function.java,v 1.3 2005/01/17 22:57:27 idgay Exp $
+// $Id: Xtype_function.java,v 1.4 2005/02/03 20:15:21 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -14,11 +14,30 @@ package net.tinyos.nesc.dump.xml;
 import org.xml.sax.*;
 import java.util.*;
 
+/**
+ * A function type.
+ */
 public class Xtype_function extends Type
 {
-    public LinkedList/*Type*/ parameters; /* null for oldstyle */
+    /**
+     * Parameters of the function. null iff oldstyle is true.
+     */
+    public LinkedList/*Type*/ parameters;
+
+    /**
+     * Return type of this function.
+     */
     public Type returns;
-    public boolean varargs, oldstyle;
+
+    /**
+     * True for variable-argument functions (e.g., printf).
+     */
+    public boolean varargs;
+
+    /**
+     * True for old-style function types (no parameter types specified).
+     */
+    public boolean oldstyle;
 
     public NDElement start(Attributes attrs) {
 	super.start(attrs);

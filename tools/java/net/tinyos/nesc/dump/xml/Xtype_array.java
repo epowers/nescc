@@ -1,4 +1,4 @@
-// $Id: Xtype_array.java,v 1.2 2005/01/17 22:57:27 idgay Exp $
+// $Id: Xtype_array.java,v 1.3 2005/02/03 20:15:21 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,9 +13,20 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
+/**
+ * A C array type.
+ */
 public class Xtype_array extends Type
 {
+    /**
+     * Base type for the array.
+     */
     public Type subType;
+
+    /**
+     * Length of the array. Might be a non-constant for arrays of unspecified
+     * length.
+     */
     public Constant length;
 
     public NDElement start(Attributes attrs) {

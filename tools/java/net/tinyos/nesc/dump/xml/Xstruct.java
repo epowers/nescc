@@ -1,4 +1,4 @@
-// $Id: Xstruct.java,v 1.1 2005/01/07 18:29:17 idgay Exp $
+// $Id: Xstruct.java,v 1.2 2005/02/03 20:15:21 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,6 +13,9 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
+/**
+ * A C struct definition.
+ */
 public class Xstruct extends StructureDefinition
 {
 }

@@ -1,4 +1,4 @@
-// $Id: WiringEndpoint.java,v 1.2 2005/01/27 21:33:55 idgay Exp $
+// $Id: WiringEndpoint.java,v 1.3 2005/02/03 20:15:21 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -18,6 +18,7 @@ import org.xml.sax.*;
  *
  * @see net.tinyos.nesc.dump.xml.WiringGraph
  * @see net.tinyos.nesc.dump.xml.WiringNode
+ * @see net.tinyos.nesc.dump.xml.Xwire
  */
 public class WiringEndpoint extends NDElement
 {
@@ -29,7 +30,7 @@ public class WiringEndpoint extends NDElement
     /**
      * Arguments to the graph node for this endpoint. May be null.
      */
-    public Xarguments arguments; /* optional */
+    public Xarguments arguments;
 
     public void child(NDElement subElement) {
 	if (subElement instanceof DataDefinition)

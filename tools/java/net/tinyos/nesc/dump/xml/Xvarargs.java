@@ -1,4 +1,4 @@
-// $Id: Xvarargs.java,v 1.1 2005/01/17 21:11:11 idgay Exp $
+// $Id: Xvarargs.java,v 1.2 2005/02/03 20:15:22 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,6 +13,11 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
+/**
+ * Placeholder marking variable-argument functions in parameter lists.
+ * Goes away.
+ * @see net.tinyos.nesc.dump.xml.Xparameters
+ */
 public class Xvarargs extends NDElement
 {
 }

@@ -1,4 +1,4 @@
-// $Id: Xtypedef.java,v 1.1 2004/12/23 00:14:59 idgay Exp $
+// $Id: Xtypedef.java,v 1.2 2005/02/03 20:15:22 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,6 +13,9 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
+/**
+ * A C typedef.
+ */
 public class Xtypedef extends DataDefinition
 {
 }

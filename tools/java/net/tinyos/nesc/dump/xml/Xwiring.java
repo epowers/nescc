@@ -1,4 +1,4 @@
-// $Id: Xwiring.java,v 1.4 2005/01/19 23:00:23 idgay Exp $
+// $Id: Xwiring.java,v 1.5 2005/02/03 20:15:22 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,8 +13,14 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
+/**
+ * Top-level wiring graph.
+ */
 public class Xwiring extends NDElement
 {
+    /**
+     * The application's wiring graph
+     */
     public static WiringGraph wg = new WiringGraph();
 
     public void child(NDElement subElement) {

@@ -1,4 +1,4 @@
-// $Id: Xtype_interface.java,v 1.3 2005/01/17 22:57:27 idgay Exp $
+// $Id: Xtype_interface.java,v 1.4 2005/02/03 20:15:21 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,8 +13,16 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
+/**
+ * Type of interfaces in components. Each separate interface has its own
+ * separate (singleton) type (in particular, even if you, e.g., provide
+ * StdControl twice, the types for the two interfaces are different).
+ */
 public class Xtype_interface extends Type
 {
+    /**
+     * What interface this type is for.
+     */
     public Xinterface intf;
 
     public void child(NDElement subElement) {

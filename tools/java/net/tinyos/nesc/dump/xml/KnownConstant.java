@@ -1,4 +1,4 @@
-// $Id: KnownConstant.java,v 1.1 2005/01/17 22:57:26 idgay Exp $
+// $Id: KnownConstant.java,v 1.2 2005/02/03 20:15:21 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -11,6 +11,9 @@
 
 package net.tinyos.nesc.dump.xml;
 
+/**
+ * Class representing "known constants"
+ */
 abstract public class KnownConstant extends Constant
 {
     public boolean known() {

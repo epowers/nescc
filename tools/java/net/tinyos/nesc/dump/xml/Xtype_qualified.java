@@ -1,4 +1,4 @@
-// $Id: Xtype_qualified.java,v 1.2 2005/01/17 22:57:27 idgay Exp $
+// $Id: Xtype_qualified.java,v 1.3 2005/02/03 20:15:21 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,10 +13,30 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
+/**
+ * A qualfied (const, volatile, restrict) type.
+ */
 public class Xtype_qualified extends Type
 {
+    /**
+     * The type that is qualified.
+     */
     public Type subType;
-    public boolean qconst, qvolatile, qrestrict;
+
+    /**
+     * true if the subType is qualified with const.
+     */
+    public boolean qconst;
+    
+    /**
+     * true if the subType is qualified with volatile.
+     */
+    public boolean qvolatile;
+
+    /**
+     * true if the subType is qualified with restrict.
+     */
+    public boolean qrestrict;
 
     public NDElement start(Attributes attrs) {
 	super.start(attrs);

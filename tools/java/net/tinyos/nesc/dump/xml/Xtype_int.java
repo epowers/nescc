@@ -1,4 +1,4 @@
-// $Id: Xtype_int.java,v 1.1 2005/01/07 18:29:17 idgay Exp $
+// $Id: Xtype_int.java,v 1.2 2005/02/03 20:15:21 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,6 +13,19 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
+/**
+ * An integer type.
+ */
 public class Xtype_int extends SimpleType
 {
+    /**
+     * True if the integer type is unsigned.
+     */
+    public boolean unsignedType;
+
+    public NDElement start(Attributes attrs) {
+	super.start(attrs);
+	unsignedType = boolDecode("unsigned");
+	return this;
+    }
 }

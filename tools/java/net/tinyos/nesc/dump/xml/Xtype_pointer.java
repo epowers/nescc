@@ -1,4 +1,4 @@
-// $Id: Xtype_pointer.java,v 1.2 2005/01/17 22:57:27 idgay Exp $
+// $Id: Xtype_pointer.java,v 1.3 2005/02/03 20:15:21 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,8 +13,14 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
+/**
+ * A pointer type.
+ */
 public class Xtype_pointer extends Type
 {
+    /**
+     * The type pointed to.
+     */
     public Type subType;
 
     public void child(NDElement subElement) {

@@ -1,4 +1,4 @@
-// $Id: Xvalue_structured.java,v 1.3 2005/01/17 22:57:28 idgay Exp $
+// $Id: Xvalue_structured.java,v 1.4 2005/02/03 20:15:22 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -14,9 +14,16 @@ package net.tinyos.nesc.dump.xml;
 import org.xml.sax.*;
 import java.util.*;
 
+/**
+ * An initialiser for a structure.
+ */
 public class Xvalue_structured extends Value
 {
-    public LinkedList fields = new LinkedList();
+    /**
+     * The initialisers for the structure's fields. Note that not all
+     * fields need be initialised.
+     */
+    public LinkedList/*Xstructured_element*/ fields = new LinkedList();
 
     public void child(NDElement subElement) {
 	super.child(subElement);

@@ -1,4 +1,4 @@
-// $Id: Xinternal_component.java,v 1.2 2005/01/11 23:27:53 idgay Exp $
+// $Id: Xinternal_component.java,v 1.3 2005/02/03 20:15:21 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,7 +13,9 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
-/* Component declaration inside a configuration */
+/**
+ * Component declaration inside a configuration 
+ */
 public class Xinternal_component extends DataDefinition
 {
 }

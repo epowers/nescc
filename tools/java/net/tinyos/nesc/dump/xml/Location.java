@@ -1,4 +1,4 @@
-// $Id: Location.java,v 1.2 2005/01/27 21:33:55 idgay Exp $
+// $Id: Location.java,v 1.3 2005/02/03 20:15:21 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -84,10 +84,9 @@ public class Location
      * source code locations may or may not be represented by the same
      * Location object.
      */
-    public Location make(int lineno, String filename, String instance) {
-	this.lineno = lineno;
-	this.filename = filename;
-	this.instance = instance;
+    public static Location make(int lineno, String filename, String instance) {
+	/* For now, not trying to do any location sharing. */
+	return new Location(lineno, filename, instance);
     }
 
     public String toString() {

@@ -1,4 +1,4 @@
-// $Id: Xtype_var.java,v 1.2 2005/01/17 22:57:27 idgay Exp $
+// $Id: Xtype_var.java,v 1.3 2005/02/03 20:15:21 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,8 +13,14 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
+/**
+ * A type variable.
+ */
 public class Xtype_var extends Type
 {
+    /**
+     * A typedef object which uniquely identifies this type variable.
+     */
     public Xtypedef var;
 
     public void child(NDElement subElement) {

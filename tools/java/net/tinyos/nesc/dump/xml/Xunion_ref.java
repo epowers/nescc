@@ -1,4 +1,4 @@
-// $Id: Xunion_ref.java,v 1.3 2005/01/27 21:33:55 idgay Exp $
+// $Id: Xunion_ref.java,v 1.4 2005/02/03 20:15:22 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -15,9 +15,9 @@ import net.tinyos.nesc.dump.*;
 import org.xml.sax.*;
 
 /**
- * Class for attribute references. These objects go away, replaced by the
- * object representing the definition.
- * @see net.tinyos.nesc.dump.xml.Xattribute
+ * Class for C union references. These objects go away, replaced by the
+ * Xunion object representing the definition.
+ * @see net.tinyos.nesc.dump.xml.Xunion
  * @see net.tinyos.nesc.dump.xml.Definition
  */
 public class Xunion_ref extends NDElement
