@@ -202,6 +202,8 @@ void yyerror();
 %token <u.itoken> ATOMIC USES INTERFACE COMPONENTS PROVIDES MODULE 
 %token <u.itoken> INCLUDES CONFIGURATION AS TASTNIOP IMPLEMENTATION CALL 
 %token <u.itoken> SIGNAL POST
+/* words reserved for nesC's future */
+%token <u.itoken> ABSTRACT NEW
 
 %type <u.itoken> callkind
 %type <u.decl> datadef_list parameter_list parameter

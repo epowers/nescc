@@ -44,6 +44,15 @@ static void transparent_union_argument(data_declaration ddecl)
     (ddecl->type, type_qualifiers(ddecl->type) | transparent_qualifier);
 }
 
+static bool require_function(attribute attr, data_declaration ddecl)
+{
+  if (ddecl->kind == decl_function && ddecl->ftype == function_normal)
+    return TRUE;
+
+  error_with_location(attr->location, "`%s' attribute is for external functions only", attr->word1->cstring.data);
+  return FALSE;
+}
+
 void handle_decl_attribute(attribute attr, data_declaration ddecl)
 {
   const char *name = attr->word1->cstring.data;
@@ -71,14 +80,28 @@ void handle_decl_attribute(attribute attr, data_declaration ddecl)
     }
   else if (!strcmp(name, "spontaneous"))
     {
-      if (ddecl->kind == decl_function && ddecl->ftype == function_normal)
+      if (require_function(attr, ddecl))
 	{
-	  /* The test avoids overriding the effect of signal */
+	  /* The test avoids overriding the effect of atomic_hwevent */
 	  if (!ddecl->spontaneous)
 	    ddecl->spontaneous = c_call_nonatomic;
 	}
-      else
-	error_with_location(attr->location, "`spontaneous' attribute is for external functions only");
+    }
+  else if (!strcmp(name, "atomic_hwevent"))
+    {
+      if (require_function(attr, ddecl))
+	{
+	  ddecl->async = TRUE;
+	  ddecl->spontaneous = c_call_atomic;
+	}
+    }
+  else if (!strcmp(name, "hwevent"))
+    {
+      if (require_function(attr, ddecl))
+	{
+	  ddecl->async = TRUE;
+	  ddecl->spontaneous = c_call_nonatomic;
+	}
     }
   else if (!(target->decl_attribute &&
 	     target->decl_attribute(attr, ddecl)) &&
