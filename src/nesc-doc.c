@@ -467,6 +467,7 @@ typedef struct {
 static env ic_env;
 static implementor_list ic_empty_implementor_list;
 
+/*
 static void ic_print()
 {
   env_scanner scanner;
@@ -493,6 +494,7 @@ static void ic_print()
   }
   printf("\n\n");
 }
+*/
 
 static void ilist_add(implementor_list *list, char *name)
 {
