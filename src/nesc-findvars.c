@@ -17,14 +17,13 @@ foo->bar   =>   *foo.bar
 #include "semantics.h"
 #include "constants.h"
 
+#include "unparse.h"
+
 #include "nesc-findvars.h"
 
-#include <limits.h>
-#include <stdlib.h>
 
 static void add_ref(expression e, bool is_write);
 static void add_pointer_use(expression e, bool is_write);
-static char path_buf[PATH_MAX+1];
 
 // Track the uses of a variable within a specific function
 typedef struct var_use {
@@ -84,9 +83,8 @@ static void find_elist_vars(expression elist)
 {
   expression e;
 
-  scan_expression (e, elist) {
+  scan_expression (e, elist)
     find_expression_vars(e, FALSE);
-  }
 }
 
 
@@ -95,6 +93,12 @@ static void find_expression_vars(expression expr, bool in_update)
   if (!expr)
     return;
 
+#if 0
+  if (expr->cst && is_identifier(expr)) {
+    fprintf(stdout, "%s\n", CAST(identifier,expr)->cstring.data);
+  }
+#endif
+  
   if (expr->cst || is_string(expr))
     return;
 
@@ -204,15 +208,10 @@ static void find_expression_vars(expression expr, bool in_update)
       break;
     }
     case kind_dereference: {
-      dereference de = CAST(dereference, expr);
-      
-      if( is_identifier(de->arg1) ) {
-        add_pointer_use(de->arg1, in_update);
-      } else {
-        fprintf(stderr,"%s:%ld:  complicated pointer deref\n",
-                realpath(expr->location->filename,path_buf), expr->location->lineno);
-        find_expression_vars(de->arg1, in_update);
-      } 
+      expression arg = CAST(dereference, expr)->arg1;
+
+      add_pointer_use(arg, in_update);
+      break;
     }
     // unary updates
     case kind_preincrement: case kind_postincrement: case kind_predecrement: case kind_postdecrement: {
@@ -221,9 +220,12 @@ static void find_expression_vars(expression expr, bool in_update)
       if( is_identifier(ue->arg1) )
         add_ref(ue->arg1,TRUE);
       else {
-        if( !is_field_ref(expr) && !is_dereference(expr) && !is_array_ref(expr) ) 
-          fprintf(stderr,"%s:%ld:  complicated lvalue in inc/dec\n",
-                  realpath(expr->location->filename,path_buf), expr->location->lineno);
+        if( !is_field_ref(ue->arg1) && !is_dereference(ue->arg1) && !is_array_ref(ue->arg1) ) {
+          warning_with_location(ue->arg1->location, "complicated lvalue in inc/dec.  expr: ");
+          set_unparse_outfile(stderr);
+          prt_expression(ue->arg1,TRUE);
+          fprintf(stderr, "\n");
+        }
         find_expression_vars(ue->arg1, TRUE);
       }
       break;
@@ -237,9 +239,12 @@ static void find_expression_vars(expression expr, bool in_update)
       if( is_identifier(be->arg1) )
         add_ref(be->arg1, TRUE);
       else {
-        if( !is_field_ref(expr) && !is_dereference(expr) && !is_array_ref(expr) ) 
-          fprintf(stderr,"%s:%ld:  complicated lvalue in assignment\n",
-                  realpath(expr->location->filename,path_buf), expr->location->lineno);
+        if( !is_field_ref(be->arg1) && !is_dereference(be->arg1) && !is_array_ref(be->arg1) ) {
+          warning_with_location(be->arg1->location,"complicated lvalue in assignment.  expr: ");
+          set_unparse_outfile(stderr);
+          prt_expression(be->arg1,TRUE);
+          fprintf(stderr, "\n");
+        }
         find_expression_vars(be->arg1, TRUE);
       }
 
@@ -463,7 +468,75 @@ static var_list_entry new_table_entry(const char *module, const char *name)
 
 static void add_pointer_use(expression e, bool is_write)
 {
-  // FIXME: do something here
+  expression orig = e;
+  identifier id;
+
+  // find the top-level structure being referenced.  This should
+  // handle more complicated pointer expressions such as
+  //    arg->buffer.var->size  =>  *((*arg).buffer.var).size
+  //
+  // NOTE: this will not handle complicated expressions or casting
+  // inside pointer dereferences.
+
+  while( !is_identifier(e) ) {
+    switch (e->kind) 
+    {
+      // strip off increment/decrement operations, since they don't effect the type of the pointer.
+    case kind_preincrement: case kind_postincrement: case kind_predecrement: case kind_postdecrement: {
+        e = CAST(unary, e)->arg1;
+        break;
+    }
+    // deal with simple pointer addition.
+    case kind_plus:  case kind_minus: {
+      binary be = CAST(binary, e);
+
+      // *(ptr +- CONST) 
+      if( is_identifier(be->arg1) && be->arg2->cst )
+        e = be->arg1;
+
+      // *(CONST + ptr).    NOTE: don't handle subtraction, since it is probably a bug anyway.
+      else if( is_identifier(be->arg1) && be->arg2->cst && is_plus(e) ) 
+        e = be->arg2;
+
+      else {
+        warning_with_location(e->location,"complicated pointer arithmatic.\nCan't perform concurrency analysis on expr: ");
+        set_unparse_outfile(stderr);
+        prt_expression(orig,TRUE);
+        fprintf(stderr, "\n");
+        return;
+      }
+     
+      break;
+    }
+    // follow all dereferences
+    case kind_dereference: {
+      e = CAST(dereference, e)->arg1;
+      break;
+    }
+    // follow field refs up to the parent structure
+    case kind_field_ref: {
+      // FIXME: handle fields individually?
+      e = CAST(field_ref, e)->arg1;
+      break;
+    }
+    // default to a warning message
+    default: 
+      warning_with_location(e->location,"complicated pointer useage.\nCan't perform concurrency analysis on expr: ");
+      set_unparse_outfile(stderr);
+      prt_expression(orig,TRUE);
+      fprintf(stderr, "\n");
+      return;
+    }
+  }  
+  id = CAST(identifier, e);
+
+
+  // note the type of the entity
+
+
+  // add an entry for this
+  // FIXME: do this the right way
+
 }
 
 static void add_ref(expression e, bool is_write)
@@ -480,7 +553,6 @@ static void add_ref(expression e, bool is_write)
   if( !is_identifier(e) )    
     return;
   id = CAST(identifier,e);
-  id->marked = TRUE;
 
   // ignore static values
   // actually don't - array names come out as static.....
@@ -493,12 +565,6 @@ static void add_ref(expression e, bool is_write)
     return; 
   }
   
-#if 0
-  printf("    %c  %c   : %s.%s\n", 
-         is_write ? 'w' : ' ',
-         in_atomic ? 'a' : ' ',
-         current_module_name, id->cstring.data);
-#endif
 
   // look for an existing entry
   {
@@ -577,7 +643,9 @@ void print_conflict_error_message(var_list_entry v)
   dhash_scan scanner;
   var_use u;
   char *ftype;
+  char atype[20];
   data_declaration f;
+  location loc;
   
 
   error("Detected data conflict for %s%s%s.  List of accesses follow:",
@@ -590,34 +658,33 @@ void print_conflict_error_message(var_list_entry v)
   while( (u=dhnext(&scanner)) ) {
     f = u->function;
 
+    // function context
     ftype = NULL;
     if( !f->task_context ) 
-      ftype = "interrupt";
+      ftype = "intr";
     else if(f->reentrant_interrupt_context || f->atomic_interrupt_context)
-      ftype = "task/interrupt";
+      ftype = "task/intr";
     else 
       ftype = "task";
 
-    fprintf(stderr,"%s:%ld:\n    Access to %s%s%s in %s%s%s (%s, %s%s%s%s%s%s)\n", 
-            f->definition ? f->definition->location->filename : f->ast->location->filename,
-            f->definition ? f->definition->location->lineno : f->ast->location->lineno,
+    // access type
+    atype[0] = '\0';
+    if(u->read) strcat(atype, "r");
+    if(u->write) strcat(atype, "w");
+    if((u->read | u->write) && (u->read_in_atomic | u->write_in_atomic)) strcat(atype, ", ");
+    if(u->read_in_atomic | u->write_in_atomic) strcat(atype, "atomic ");
+    if(u->read_in_atomic) strcat(atype, "r");
+    if(u->write_in_atomic) strcat(atype, "w");
 
-            v->module ? v->module : "",
-            v->module ? "." : "",
-            v->name, 
+    // location
+    loc = f->ast->location;
+    if( f->definition ) 
+      loc = f->definition->location;
 
-            f->container ? f->container->name : "",
-            f->container ? "." : "",
-            f->name, 
-
-            ftype,
-            
-            u->read ? "r" : "",
-            u->write ? "w" : "",
-            (u->read | u->write) && (u->read_in_atomic | u->write_in_atomic) ? ", " : "",
-            (u->read_in_atomic | u->write_in_atomic) ? "atomic " : "",
-            u->read_in_atomic ? "r" : "",
-            u->write_in_atomic ? "w" : "");
+    fprintf(stderr,"%s:%ld   unsafe use of %s in %s.  context=%s, use=%s\n", 
+            loc->filename, loc->lineno,
+            v->name, f->name, 
+            ftype, atype);
   }
 
   fprintf(stderr, "\n");
@@ -639,13 +706,11 @@ void print_debug_summary(var_list_entry v, bool conflict)
          v->write_in_atomic ? 'w' : ' ',
          v->module ? v->module : "", v->module ? "." : "", v->name);
   
-  
-  
   s = dhscan(v->funcs);
   
   while( (u=dhnext(&s)) ) {
     f = u->function;
-    
+
     ftype = NULL;
     if( !f->task_context ) 
       ftype = "interrupt";
