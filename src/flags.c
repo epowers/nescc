@@ -258,4 +258,4 @@ int nesc_error;
 
 /* diff processing enabled if diff_output is not NULL 
    (diff_input is NULL for orignal program, non-NULL to reduce diff size) */\
-const char *diff_input, *diff_output;
+char *diff_input, *diff_output;
