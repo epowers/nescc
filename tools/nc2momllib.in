@@ -50,24 +50,21 @@ while ($temp = shift @ARGV) {
 # Copy the input arguments to another array.
 @myargs = @ARGV;
 
+use Cwd;
+$mycwd = getcwd;
+$topfile = "${mycwd}/${outputdir}/TOSIndex.xml";
+open(TOSINDEX, ">", $topfile)
+  or die "Can't open top level index file: $!";
+
+print TOSINDEX "<entity name=\"TOSIndex\" class=\"ptolemy.moml.EntityLibrary\">\n";
+
 while ($inputdir = shift @inputdirs) {
-  # Make another copy of the input arguments.
-  my @tempargs = @myargs;
-
-  unshift @tempargs, "-I$inputdir";
-  push @tempargs, "$inputdir";
-
-  unshift @tempargs, "-tosdir=$TOSDIR";
-  unshift @tempargs, "-fmoml-ptinyos-component=$PTINYOS_COMPONENT";
-  unshift @tempargs, "-fmoml-ptinyos-prefix=$PTINYOS_PREFIX";
-  unshift @tempargs, "-fmomldir=$outputdir";
-  unshift @tempargs, "-fmomllib";
-#unshift @tempargs, "-fsyntax-only";
-  unshift @tempargs, "$exec_prefix/bin/ncc";
-
-  system(@tempargs) == 0
-    or die "system @tempargs failed: $?";
+  openrecursive($inputdir);
 }
+
+print TOSINDEX "</entity>\n";
+
+close(TOSINDEX);
 
 #print STDERR "Couldn't execute ncc\n";
 #exit 2;
@@ -77,3 +74,47 @@ sub fail {
     exit 2;
 }
 
+sub openrecursive {
+  my $myinputdir = shift(@_);
+  my $fh;
+  opendir($fh, $myinputdir) or die "Could not open tinyos subdirectory: $!";
+
+  my $entitypath = $myinputdir;
+  @entitynameparts = split "\/", $entitypath;
+  my $entityname = pop @entitynameparts;
+
+  print TOSINDEX "<entity name=\"${entityname}\" class=\"ptolemy.moml.EntityLibrary\">\n";
+
+  my @allfiles = grep !/^\.\.\z/, readdir $fh;
+  foreach my $tempfile (@allfiles) {
+    if ($tempfile eq ".") {
+      # Make another copy of the input arguments.
+      my @tempargs = @myargs;
+
+      unshift @tempargs, "-I${myinputdir}";
+      push @tempargs, "${myinputdir}";
+
+      unshift @tempargs, "-tosdir=$TOSDIR";
+      unshift @tempargs, "-fmoml-ptinyos-component=$PTINYOS_COMPONENT";
+      unshift @tempargs, "-fmoml-ptinyos-prefix=$PTINYOS_PREFIX";
+      unshift @tempargs, "-fmomldir=$myinputdir";
+      unshift @tempargs, "-fmomllib";
+      #unshift @tempargs, "-fsyntax-only";
+      unshift @tempargs, "$exec_prefix/bin/ncc";
+
+      system(@tempargs) == 0
+        or warn "Warning: system(@tempargs) had errors: $!";
+
+      if (-e "${myinputdir}/index.xml") {
+        my $myprintpath = $myinputdir;
+        $myprintpath =~ s/${TOSDIR}/tos/;
+
+        print TOSINDEX "<input source=\"${myprintpath}/index.xml\"/>\n";
+      }
+
+    } elsif (-d "${myinputdir}/${tempfile}" and ($tempfile ne "CVS")) {
+      openrecursive("${myinputdir}/${tempfile}");
+    }
+  }
+  print TOSINDEX "</entity>\n";
+}

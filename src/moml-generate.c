@@ -172,6 +172,7 @@ static void prt_moml_component_ports(nesc_declaration c) {
           outputln("<port name=\"%s\" class=\"ptolemy.actor.IOPort\">", idecl->name);
           //iterator(idecl, data);
       }
+      outputln("<property name=\"_showName\" class=\"ptolemy.kernel.util.SingletonAttribute\"/>");
       outputln("</port>");
     }
 }
@@ -247,43 +248,48 @@ bool generate_momllib(dd_list nesccomponents, const char *inputpathname) {
 
     // Create a .xml that lists the .xml components created above.
     {
-        const char *shorttargetname = element_name(moml_region, inputpathname);
-        char *targetname = rarrayalloc(moml_region,
-                strlen(momldir) + strlen(shorttargetname) + 4 + 1, char);
-        sprintf(targetname, "%s%s.xml", momldir, shorttargetname);
-        
-        if (targetname) {
-            output = fopen(targetname, "w");
-            if (!output) {
-                perror("couldn't create output file");
-                exit(2);
+        if (!dd_is_empty(nesccomponents)) {
+            const char *shorttargetname = element_name(moml_region, inputpathname);
+            //char *targetname = rarrayalloc(moml_region,
+            //        strlen(momldir) + strlen(shorttargetname) + 4 + 1, char);
+            char *targetname = rarrayalloc(moml_region,
+                    strlen(momldir) + strlen("index") + 4 + 1, char);
+            //sprintf(targetname, "%s%s.xml", momldir, shorttargetname);
+            sprintf(targetname, "%s%s.xml", momldir, "index");
+            
+            if (targetname) {
+                output = fopen(targetname, "w");
+                if (!output) {
+                    perror("couldn't create output file");
+                    exit(2);
+                }
             }
-        }
-  
-        unparse_start(output ? output : stdout);
-        disable_line_directives();
-
-        dd_list_pos nesccomponents_element;
-
-        // Print the standard .xml header
-        prt_moml_header();
-  
-        prt_moml_begin_entitity(inputpathname);
-  
-        dd_scan(nesccomponents_element, nesccomponents) {
-            nesccomponent_t n = DD_GET(nesccomponent_t, nesccomponents_element);
-            nesc_declaration c = n->component;
-            const char *filename = n->filename;
-            prt_moml_entity(c, filename);
-        }
-
-        prt_moml_end_entitity();
-  
-        unparse_end();
+            
+            unparse_start(output ? output : stdout);
+            disable_line_directives();
+            
+            dd_list_pos nesccomponents_element;
         
-        if (output) {
-            fclose(output);
-            printf("Created %s\n", targetname);
+            // Print the standard .xml header
+            prt_moml_header();
+            
+            prt_moml_begin_entitity(inputpathname);
+            
+            dd_scan(nesccomponents_element, nesccomponents) {
+                nesccomponent_t n = DD_GET(nesccomponent_t, nesccomponents_element);
+                nesc_declaration c = n->component;
+                const char *filename = n->filename;
+                prt_moml_entity(c, filename);
+            }
+            
+            prt_moml_end_entitity();
+            
+            unparse_end();
+        
+            if (output) {
+                fclose(output);
+                printf("Created %s\n", targetname);
+            }
         }
     }
     
