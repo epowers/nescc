@@ -3600,7 +3600,8 @@ void note_identifier_use(data_declaration ddecl, bool iscall)
   if (current.function_decl)
     {
       dd_add_last(parse_region, current.function_decl->ddecl->uses, ddecl);
-      dd_add_last(parse_region, current.function_decl->ddecl->calls, ddecl);
+      if (iscall)
+	dd_add_last(parse_region, current.function_decl->ddecl->calls, ddecl);
     }
   else
     dd_add_last(parse_region, global_uses, ddecl);
