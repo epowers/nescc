@@ -128,12 +128,16 @@ if( defined($docdir) ) {
     }
 }
 
-if (!$momllib) {
+if ($momllib) {
+  # add top level dirs, to strip out of package names
+  foreach my $dir (@topdirs) {
+    push @new_args, "-fnesc-topdir=$dir";
+  }
+  unshift @new_args, "$NCDIR/nesc1";
+} else {
   unshift @new_args, "-specs=$NCDIR/tdspecs";
   unshift @new_args, $gcc;
   $ENV{NESC_GCC} = $gcc;
-} else {
-  unshift @new_args, "$NCDIR/nesc1";
 }
 
 if ($mingw_gcc) {

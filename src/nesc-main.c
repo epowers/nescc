@@ -215,6 +215,10 @@ bool nesc_option(char *p)
       {
           moml_ptinyos_component_set(p + strlen("fmoml-ptinyos-component="));
       }
+  else if (!strncmp(p, "fmoml-ptinyos-prefix=", strlen("fmoml-ptinyos-prefix=")))
+      {
+          moml_ptinyos_prefix_set(p + strlen("fmoml-ptinyos-prefix="));
+      }
 #endif
   else if (!strcmp (p, "Wnesc-docstring"))
     warn_unexpected_docstring = 1;

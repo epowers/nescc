@@ -39,6 +39,8 @@ void momllib_set();
 bool is_momllib_set();
 
 void moml_ptinyos_component_set(const char *classname);
+void moml_ptinyos_prefix_set(const char *classname);
+const char *moml_ptinyos_prefix_get();
 
 bool generate_momllib(dd_list nesccomponents, const char *inputpathname);
 

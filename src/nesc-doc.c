@@ -69,7 +69,10 @@ Boston, MA 02111-1307, USA.  */
 #include "unparse.h"
 #include "errors.h"
 
-
+#ifdef MOML
+#include "moml-paths.h"
+#include "moml-generate.h"
+#endif
 
 static region doc_region = NULL;
 
@@ -302,6 +305,125 @@ static char *doc_filename_with_ext(const char *orig_src_filename, const char *ex
 
   return ret;
 }
+
+#ifdef MOML
+// Generate a java path for the .nc file.  Canonicalizes filenames
+// based on the given top of the TinyOS source tree (strips this
+// prefix from the given filename).  All directory separators ("/")
+// are converted to "."
+//
+// Assumes that topdir was set during initialization.
+//
+// See doc_filename_with_ext() in nesc-doc.c
+char *moml_java_filename(const char *orig_src_filename)
+{
+  char buf[PATH_MAX+1];
+  char *src_filename;
+  char *pos;
+  char *ret;
+  int i;
+  int length;
+
+  if(realpath(orig_src_filename, buf) == NULL) {
+    perror("realpath");
+    fatal("error expanding path for '%s'\n", orig_src_filename);
+  }
+  
+  // Get rid of the file name suffix (.nc)
+  src_filename = element_pathandname(doc_region, buf);
+
+  // allocate max required space: src_filename
+  length = 
+    strlen(src_filename) + 
+    1; // for terminator
+  ret = rstralloc( doc_region, length );
+  assert(ret != NULL);
+
+  bzero(ret,length);
+
+  // file begins with the source prefix, so remove it.
+  for(i=0; i<num_topdirs; i++) {
+    if( !strncmp(topdir[i], src_filename, strlen(topdir[i])) ) {
+      src_filename += strlen(topdir[i]);
+      while(*src_filename == dirsep) 
+        src_filename++;
+      break;
+    }
+  }
+
+  // file is an absolute path, but not under a top dir
+  if( *src_filename == dirsep ) {
+    while(*src_filename == dirsep) 
+      src_filename++;
+  }
+
+  // add filename
+  strcat(ret,src_filename);
+
+  // convert dirsep to "."
+  pos = ret;
+  while( *pos != '\0' ) {
+    if( *pos == dirsep )
+      *pos = '.';
+    pos++;
+  }
+  
+  return ret;
+}
+
+// Generate the "source" value for the .nc file.  Replaces topdir (the
+// path to the top of the TinyOS source tree) with the given prefix,
+// which was passed in as a compiler flag (-fmoml-ptinyos_prefix).
+char *moml_source_filename(const char *orig_src_filename)
+{
+  char buf[PATH_MAX+1];
+  char *src_filename;
+  char *ret;
+  int i;
+  int length;
+
+  if(realpath(orig_src_filename, buf) == NULL) {
+    perror("realpath");
+    fatal("error expanding path for '%s'\n", orig_src_filename);
+  }
+  
+  src_filename = buf;
+
+  // allocate max required space: prefix/src_filename
+  length =
+      strlen(moml_ptinyos_prefix_get()) + 1 +
+      strlen(src_filename) + 
+      1; // for terminator
+  ret = rstralloc( doc_region, length );
+  assert(ret != NULL);
+
+  bzero(ret,length);
+
+  // file begins with the source prefix, so remove it.
+  for(i=0; i<num_topdirs; i++) {
+    if( !strncmp(topdir[i], src_filename, strlen(topdir[i])) ) {
+      src_filename += strlen(topdir[i]);
+      while(*src_filename == dirsep) 
+        src_filename++;
+      break;
+    }
+  }
+
+  // file is an absolute path, but not under a top dir
+  if( *src_filename == dirsep ) {
+    while(*src_filename == dirsep) 
+      src_filename++;
+  }
+
+  // add prefix, separator, and filename
+  strcat(ret, moml_ptinyos_prefix_get());
+  strcat(ret, dirsep_string);
+  strcat(ret,src_filename);
+
+  return ret;
+}
+
+#endif
 
 
 static char *doc_filename(const char *src_filename) 

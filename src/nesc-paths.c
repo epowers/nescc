@@ -19,6 +19,8 @@ Boston, MA 02111-1307, USA.  */
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "moml-paths.h"
+
 /* Locate components/interfaces from their name */
 
 struct path

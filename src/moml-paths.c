@@ -71,3 +71,33 @@ bool is_nesc_file(const char *filename) {
         return TRUE;
     return FALSE;
 }
+
+// See element_name() in nesc-semantics.c
+const char *element_pathandname(region r, const char *path)
+/* Returns: Return the "extended identifier part"
+     of path, i.e., remove any extension (but not directory)
+     The returned string is allocated in region r.
+*/
+{
+  const char *base, *dot;
+
+  //base = basename((char *)path);
+  base = path;
+  dot = strrchr(base, '.');
+
+  if (dot)
+    {
+      /* Extract id */
+      char *copy = rarrayalloc(r, dot - base + 1, char);
+
+      memcpy(copy, base, dot - base);
+      copy[dot - base] = '\0';
+
+      return copy;
+    }
+  else
+    return rstrdup(r, base);
+}
+
+   
+

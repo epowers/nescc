@@ -43,4 +43,9 @@ void doc_is_app(const bool val);
 void set_doc_string(data_declaration ddecl, char *shortd, char *longd,
 		    location l);
 
+#ifdef MOML
+char *moml_java_filename(const char *orig_src_filename);
+char *moml_source_filename(const char *orig_src_filename);
+#endif
+
 #endif

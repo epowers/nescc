@@ -22,8 +22,11 @@
 $prefix = "@prefix@";
 $exec_prefix = "@exec_prefix@";
 $NCDIR = "@libdir@/ncc";
+$TOSDIR = "@TOSDIR@";
+$TOSDIR = $ENV{"TOSDIR"} if defined($ENV{"TOSDIR"});
 
 $PTINYOS_COMPONENT = "ptolemy.domains.nc.lib.NCComponent";
+$PTINYOS_PREFIX = "\$CLASSPATH";
 
 if ($#ARGV < 1) {
     &fail("Usage: nc2momllib <output directory> <input directory for nesC files> <options>");
@@ -35,7 +38,9 @@ $inputdir = shift @ARGV;
 unshift @ARGV, "-I$inputdir";
 push @ARGV, "$inputdir";
 
+unshift @ARGV, "-tosdir=$TOSDIR";
 unshift @ARGV, "-fmoml-ptinyos-component=$PTINYOS_COMPONENT";
+unshift @ARGV, "-fmoml-ptinyos-prefix=$PTINYOS_PREFIX";
 unshift @ARGV, "-fmomldir=$outputdir";
 unshift @ARGV, "-fmomllib";
 #unshift @ARGV, "-fsyntax-only";
