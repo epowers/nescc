@@ -78,6 +78,9 @@ static var_use add_var_use(var_use *first, var_use *last, data_declaration funct
     *last = u;
   }
 
+  if( flags == 0 )
+    flags = 0;
+
   return u;
 }
 
@@ -533,7 +536,9 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write, e
 
       // FIXME: not sure if this is right.  Do this in addition?
       //if(pa_expr) note_pointer_assignment(arg);
-      find_expression_vars(arg, FALSE, FALSE, pa_expr);
+      if( !is_identifier(arg) )
+        find_expression_vars(arg, FALSE, FALSE, pa_expr);
+      break;
     }
 
     // UNARY OPERATORS
@@ -793,6 +798,7 @@ static char* get_atype(var_use u)
   static char atype[40];
 
   atype[0] = '\0';
+  if(u->flags & USE_VIA_POINTER) strcat(atype, "aliased ");
   if(u->flags & USE_IN_ATOMIC) strcat(atype, "atomic ");
   if(u->flags & USE_READ) strcat(atype, "r");
   if(u->flags & USE_WRITE) strcat(atype, "w");
