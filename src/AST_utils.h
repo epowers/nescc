@@ -60,4 +60,8 @@ wchar_t asm_rwmode(string s);
 declaration ignore_extensions(declaration d);
 /* Ignore extension_decls at d, returning the "real" declaration */
 
+const char *tagkind_name(int tagkind);
+
+conditional conditional_lvalue(expression e);
+
 #endif

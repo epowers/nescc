@@ -355,10 +355,7 @@ void shadow_tag_warned(type_element elements, int warned)
 
   scan_type_element (elem, elements)
     {
-      AST_kind code = elem->kind;
-
-      if (code == kind_struct_ref || code == kind_union_ref ||
-	  code == kind_enum_ref)
+      if (is_tag_ref(elem))
 	{
 	  tag_ref tag = CAST(tag_ref, elem);
 	  word name = tag->word1;
@@ -367,7 +364,7 @@ void shadow_tag_warned(type_element elements, int warned)
 
 	  if (name == 0)
 	    {
-	      if (warned != 1 && code != kind_enum_ref)
+	      if (warned != 1 && !is_enum_ref(elem))
 		/* Empty unnamed enum OK */
 		{
 		  pedwarn ("unnamed struct/union that defines no instances");
@@ -444,17 +441,6 @@ bool error_if_void_parms(declaration parms)
   if ((vp = is_void_parms(parms)))
     error("use (), not (void), for 0-argument functios");
   return vp;
-}
-
-const char *tagkind_name(int tagkind)
-{
-  switch (tagkind)
-    {
-    case kind_struct_ref: return "struct";
-    case kind_union_ref: return "union";
-    case kind_enum_ref: return "enum";
-    default: assert(0); return NULL;
-    }
 }
 
 /* At end of parameter list, warn about any struct, union or enum tags
@@ -756,6 +742,7 @@ void parse_declarator(type_element modifiers, declarator d, bool bitfield,
 	    }
 	  break;
 	case kind_struct_ref: case kind_union_ref: case kind_enum_ref:
+	case kind_nw_struct_ref: case kind_nw_union_ref:
 	  newtype = make_tagged_type(CAST(tag_ref, spec)->tdecl);
 	  break;
 	case kind_attribute:
@@ -1680,6 +1667,9 @@ void check_function(data_declaration dd, declaration fd, int class,
     type_function_return_type(function_type) : function_type;
   return_type = type_function_return_type(actual_function_type);
 
+  if (type_network_base_type(return_type))
+    error("network base type results are not yet supported");
+
   /* XXX: Does this volatile/const stuff actually work with my imp ? */
   if (pedantic && type_void(return_type) &&
       (type_const(return_type) || type_volatile(return_type)) &&
@@ -2340,6 +2330,9 @@ dd_list check_parameter(data_declaration dd,
 
   check_variable_scflags(scf, vd->location, "parameter", printname);
 
+  if (type_network_base_type(parm_type))
+    error("network base type parameters are not yet supported");
+
   /* A parameter declared as an array of T is really a pointer to T.
      One declared as a function is really a pointer to a function.  */
   if (type_array(parm_type))
@@ -2707,6 +2700,8 @@ declaration finish_decl(declaration decl, expression init)
 	  if (!type_array_size(dd->type))
 	    dd->type = init->type;
 	}
+      else if (type_network_base_type(dd->type))
+	error_with_decl(decl, "initialisation of network base types not yet supported");
     }
   /* Check for a size */
   if (type_array(dd->type))
@@ -2861,8 +2856,7 @@ type_element start_struct(location l, AST_kind skind, word tag)
     {
       if (tdecl->defined || tdecl->being_defined)
 	{
-	  error((skind == kind_union_ref ? "redefinition of `union %s'"
-		 : "redefinition of `struct %s'"),
+	  error("redefinition of `%s %s'", tagkind_name(tdecl->kind),
 		tag->cstring.data);
 	  tdecl = declare_tag(tref);
 	}
@@ -2938,20 +2932,16 @@ type_element finish_struct(type_element t, declaration fields,
   declaration fdecl;
   size_t offset = 0, alignment = BITSPERBYTE, size = 0;
   bool size_cc = TRUE;
-  bool isunion = tdecl->kind == kind_union_ref;
+  bool isnetwork =
+    tdecl->kind == kind_nw_struct_ref || tdecl->kind == kind_nw_union_ref;
+  bool isunion =
+    tdecl->kind == kind_union_ref || tdecl->kind == kind_nw_union_ref;
 
   s->fields = fields;
   s->attributes = attribs;
 
-  // NETWORK struct -- if attribute is provided, then 
-  // tdecl->network_struct would be TRUE             -kchang 040903
   handle_tag_attributes(attribs, tdecl);
   tdecl->fields = new_env(parse_region, NULL);
-
-#ifdef KDEBUG
-  dbg("finist_struct (tdecl->network_struct:%d)===>\n",
-      tdecl->network_struct);
-#endif
 
   scan_declaration (fdecl, fields)
     {
@@ -3047,11 +3037,11 @@ type_element finish_struct(type_element t, declaration fields,
 	      field_type = tmpft;
 
 #ifdef NETWORK
-              if (tdecl->network_struct)
+              if (isnetwork)
 		{
+#ifdef KDEBUG
 		  declarator d = field->declarator;
 
-#ifdef KDEBUG
 		  dbg("  struct:%s field:%s must be network type, type:%d\n",
 		      tdecl->name, name, type_network(field_type));
 
@@ -3060,7 +3050,7 @@ type_element finish_struct(type_element t, declaration fields,
 		    dbg("\td->kind:%d\n", d->kind);
 #endif
 		  if (!type_network(field_type))
-		    error_with_location(floc, "field `%s' should be a network type", name, tdecl->name);
+		    error_with_location(floc, "field `%s' must be a network type", name, tdecl->name);
 		}
 #endif
 
@@ -3099,7 +3089,9 @@ type_element finish_struct(type_element t, declaration fields,
 		{
 		  known_cst cwidth = field->arg1->cst;
 
-		  if (!type_integer(field_type))
+		  if (isnetwork)
+		    error_with_location(floc, "bit-fields not yet supported in network types");
+		  else if (!type_integer(field_type))
 		    error_with_location(floc, "bit-field `%s' has invalid type", printname);
 		  else if (!(type_integer(field->arg1->type) && constant_integral(cwidth)))
 		    error_with_location(floc, "bit-field `%s' width not an integer constant",
@@ -3181,11 +3173,9 @@ type_element finish_struct(type_element t, declaration fields,
 	      field = CAST(field_decl, field->next);
 	    }
 
-#ifdef NETWORK
           // force alignment to be 1 if it's network type
-          if (tdecl->network_struct) 
+          if (isnetwork) 
 	    falign = alignment = BITSPERBYTE;
-#endif
 	  if (bitwidth == 0)
 	    {
 	      offset = align_to(offset, falign);
@@ -3242,8 +3232,7 @@ type_element finish_struct(type_element t, declaration fields,
     }
 
   if (pedantic && !hasmembers)
-    pedwarn("%s has no %smembers",
-	    (s->kind == kind_union_ref ? "union" : "structure"),
+    pedwarn("%s has no %smembers", tagkind_name(s->kind),
 	    (fields ? "named " : ""));
 
   tdecl->defined = TRUE;
@@ -3272,7 +3261,7 @@ type_element finish_struct(type_element t, declaration fields,
           typename tname = CAST(typename, em);
           data_declaration tdecl2 = tname->ddecl;
 
-          if (tdecl->network_struct) {
+          if (isnetwork) {
               printf("typenameHere3:%s qualifiers:%d size:%d kind:X align:%d\n", 
                      tdecl2->name,
                      type_qualifiers(tdecl2->type),
@@ -3625,16 +3614,14 @@ static char *rid_name_int(int id)
     case RID_FLOAT: return "float";
     case RID_DOUBLE: return "double";
     case RID_VOID: return "void";
-#ifdef NETWORK
-    case RID_NINT1: return "n_int8_t";
-    case RID_NINT2: return "n_int16_t";
-    case RID_NINT4: return "n_int32_t";
-    case RID_NINT8: return "n_int64_t";
-    case RID_NUINT1: return "n_uint8_t";
-    case RID_NUINT2: return "n_uint16_t";
-    case RID_NUINT4: return "n_uint32_t";
-    case RID_NUINT8: return "n_uint64_t";
-#endif
+    case RID_NINT1: return "nw_int8_t";
+    case RID_NINT2: return "nw_int16_t";
+    case RID_NINT4: return "nw_int32_t";
+    case RID_NINT8: return "nw_int64_t";
+    case RID_NUINT1: return "nw_uint8_t";
+    case RID_NUINT2: return "nw_uint16_t";
+    case RID_NUINT4: return "nw_uint32_t";
+    case RID_NUINT8: return "nw_uint64_t";
     case RID_UNSIGNED: return "unsigned";
     case RID_SHORT: return "short";
     case RID_LONG: return "long";

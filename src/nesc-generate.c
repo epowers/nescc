@@ -29,6 +29,7 @@ Boston, MA 02111-1307, USA.  */
 #include "constants.h"
 #include "nesc-concurrency.h"
 #include "nesc-uses.h"
+#include "nesc-network.h"
 
 static void prt_nesc_function_hdr(data_declaration fn_decl,
 				  psd_options options)
@@ -1097,11 +1098,14 @@ void generate_c_code(nesc_declaration program, const char *target_name,
   /* We start by finding each module's identifier uses and connections
      and marking uncallable functions */
   collect_uses(all_cdecls);
+  handle_network_types(all_cdecls);
   dd_scan (mod, modules)
     {
       nesc_declaration m = DD_GET(nesc_declaration, mod);
+      declaration body = CAST(module, m->impl)->decls;
 
-      collect_uses(CAST(module, m->impl)->decls);
+      collect_uses(body);
+      handle_network_types(body);
       find_connections(cg, m);
     }
 

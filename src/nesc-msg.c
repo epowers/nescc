@@ -22,6 +22,7 @@ Boston, MA 02111-1307, USA.  */
 #include "semantics.h"
 #include "constants.h"
 #include "c-parse.h"
+#include "AST_utils.h"
 
 static const char *selected_type;
 static bool print_csts;
@@ -143,8 +144,7 @@ static void dump_layout(tag_declaration tdecl)
   region r = newregion();
   
 
-  printf("%s %s %lu %d\n",
-	 tdecl->kind == kind_struct_ref ? "struct" : "union",
+  printf("%s %s %lu %d\n", tagkind_name(tdecl->kind),
 	 tdecl->name,
 	 (unsigned long)tdecl->size,
 	 am_type(r, tdecl));

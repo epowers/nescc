@@ -102,8 +102,6 @@ void yyerror();
 %token <u.itoken> BREAK CONTINUE RETURN GOTO ASM_KEYWORD TYPEOF ALIGNOF
 %token <u.itoken> ATTRIBUTE EXTENSION LABEL
 %token <u.itoken> REALPART IMAGPART VA_ARG OFFSETOF
-/* #ifdef NETWORK */
-%token <u.itoken> NETWORK_ATTRIBUTE
 
 /* Add precedence rules to solve dangling else s/r conflict */
 %nonassoc IF
@@ -130,7 +128,6 @@ void yyerror();
 
 %type <u.asm_operand> asm_operand asm_operands nonnull_asm_operands
 %type <u.asm_stmt> maybeasm
-%type <u.network> maybe_network_attribute
 %type <u.attribute> maybe_attribute attributes attribute attribute_list attrib
 %type <u.constant> CONSTANT
 %type <u.decl> datadecl datadecls datadef decl decls extdef extdefs fndef
@@ -197,6 +194,7 @@ void yyerror();
 %type <u.type> typename
 %type <u.word> idword any_word tag
 %type <u.fields> fieldlist
+%type <u.itoken> structkind
 
 /* the dispatching (fake) tokens */
 %token <u.itoken> DISPATCH_C DISPATCH_NESC
@@ -205,6 +203,7 @@ void yyerror();
 %token <u.itoken> ATOMIC USES INTERFACE COMPONENTS PROVIDES MODULE 
 %token <u.itoken> INCLUDES CONFIGURATION AS TASTNIOP IMPLEMENTATION CALL 
 %token <u.itoken> SIGNAL POST
+%token <u.itoken> NW_STRUCT NW_UNION
 /* words reserved for nesC's future. Some may never be used... */
 %token <u.itoken> ABSTRACT COMPONENT DELETE EXTENDS GENERIC NEW
 
@@ -1504,16 +1503,6 @@ maybe_attribute:
 		{ $$ = attribute_reverse($1); }
 	;
  
-/* #ifdef NETWORK 
-   NOT DONE
-   Stick this before start_decl and change the parameters */
-maybe_network_attribute:
-	  /* empty */
-  		{ $$ = FALSE; }
-	| NETWORK_ATTRIBUTE
-		{ $$ = TRUE; }
-	;
-
 eattributes:
 	  attributes { $$ = CAST(type_element, $1); }
 	;
@@ -1752,31 +1741,21 @@ tag:
 	;
 
 structuse:
-	  STRUCT tag
-		{ $$ = xref_tag($1.location, kind_struct_ref, $2); }
-	| UNION tag
-		{ $$ = xref_tag($1.location, kind_union_ref, $2); }
+	  structkind tag
+		{ $$ = xref_tag($1.location, $1.i, $2); }
 	| ENUM tag
 		{ $$ = xref_tag($1.location, kind_enum_ref, $2); }
 	;
 
 structdef:
-	  STRUCT tag '{'
-		{ $$ = start_struct($1.location, kind_struct_ref, $2);
+	  structkind tag '{'
+		{ $$ = start_struct($1.location, $1.i, $2);
 		  /* Start scope of tag before parsing components.  */
 		}
 	  component_decl_list '}' maybe_attribute 
 		{ $$ = finish_struct($<u.telement>4, $5, $7); }
-	| STRUCT '{' component_decl_list '}' maybe_attribute
-		{ $$ = finish_struct(start_struct($1.location, kind_struct_ref,
-						  NULL), $3, $5);
-		}
-	| UNION tag '{'
-		{ $$ = start_struct ($1.location, kind_union_ref, $2); }
-	  component_decl_list '}' maybe_attribute
-		{ $$ = finish_struct($<u.telement>4, $5, $7); }
-	| UNION '{' component_decl_list '}' maybe_attribute
-		{ $$ = finish_struct(start_struct($1.location, kind_union_ref,
+	| structkind '{' component_decl_list '}' maybe_attribute
+		{ $$ = finish_struct(start_struct($1.location, $1.i,
 						  NULL), $3, $5);
 		}
 	| ENUM tag '{'
@@ -1788,6 +1767,14 @@ structdef:
 	  enumlist maybecomma_warn '}' maybe_attribute
 		{ $$ = finish_enum($<u.telement>3, declaration_reverse($4), $7); }
 	;
+
+structkind:
+	  STRUCT { $$ = $1; $$.i = kind_struct_ref; }
+	| UNION { $$ = $1; $$.i = kind_union_ref; }
+	| NW_STRUCT { $$ = $1; $$.i = kind_nw_struct_ref; }
+	| NW_UNION { $$ = $1; $$.i = kind_nw_union_ref; }
+	;
+
 
 maybecomma:
 	  /* empty */

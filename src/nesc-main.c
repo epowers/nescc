@@ -35,6 +35,7 @@ Boston, MA 02111-1307, USA.  */
 #include "nesc-msg.h"
 #include "nesc-magic.h"
 #include "nesc-uses.h"
+#include "nesc-network.h"
 #include "edit.h"
 #include "machine.h"
 
@@ -275,6 +276,7 @@ void nesc_compile(const char *filename, const char *target_name)
   init_nesc_paths_end();
   init_magic_functions();
   init_uses();
+  init_network();
 
   toplevel.filename = "<commandline>";
   toplevel.lineno = 0;

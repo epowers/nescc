@@ -70,10 +70,6 @@ bool nesc_attribute(attribute a)
     !strcmp(name, "spontaneous") ||
     !strcmp(name, "combine") ||
     !strcmp(name, "hwevent") ||
-#ifdef NETWORK
-    // remove when network becomes a keyword
-    !strcmp(name, "network") ||
-#endif
     !strcmp(name, "atomic_hwevent");
 }
 

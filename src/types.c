@@ -25,6 +25,7 @@ Boston, MA 02111-1307, USA. */
 #include "constants.h"
 #include "c-parse.h"
 #include "machine.h"
+#include "AST_utils.h"
 #include <stddef.h>
 
 struct type
@@ -65,10 +66,10 @@ struct type
 		default_conversion and type_default_conversion need revising.
 	   */
            tp_error,
-#ifdef NETWORK
+
            tp_nint1, tp_nint2, tp_nint4, tp_nint8,
            tp_nuint1, tp_nuint2, tp_nuint4, tp_nuint8,
-#endif
+
 	   tp_int2, tp_uint2, tp_int4, tp_uint4, tp_int8, tp_uint8,
 
            tp_char, 
@@ -288,17 +289,15 @@ type make_tagged_type(tag_declaration d)
   type nt = new_type(tk_tagged);
   nt->u.tag = d;
 #ifdef NETWORK
-  nt->network = d->network_struct;
+  nt->network = d->kind == kind_nw_struct_ref || d->kind == kind_nw_union_ref;
 #endif
   return nt;
 }
 
-#ifdef NETWORK
 bool type_network(type t)
 {
   return t->network;
 }
-#endif
 
 /* Make the single instance of pk, with specified size and alignment
    (Note that we may make copies if this single instance for different alignments)
@@ -407,6 +406,7 @@ void init_types(void)
   nuint8_type = make_primitive(tp_nuint8, 8, TRUE);
   nuint8_type->network = TRUE;
 #endif
+
   int2_type = lookup_primitive(tp_int2, 2, target->int2_align, FALSE);
   uint2_type = lookup_primitive(tp_uint2, 2, target->int2_align, TRUE);
   int4_type = lookup_primitive(tp_int4, 4, target->int4_align, FALSE);
@@ -519,13 +519,21 @@ bool type_smallerthanint(type t)
 
 bool type_unsigned(type t)
 {
-  return t->kind == tk_primitive &&
-    (t->u.primitive == tp_unsigned_char ||
-     (!target->char_signed && t->u.primitive == tp_char) ||
-     t->u.primitive == tp_unsigned_short ||
-     t->u.primitive == tp_unsigned_int ||
-     t->u.primitive == tp_unsigned_long ||
-     t->u.primitive == tp_unsigned_long_long);
+  if (t->kind == tk_primitive)
+    switch (t->u.primitive)
+      {
+      case tp_char: return !target->char_signed;
+      case tp_unsigned_char:
+      case tp_unsigned_short:
+      case tp_unsigned_int:
+      case tp_unsigned_long:
+      case tp_unsigned_long_long:
+      case tp_uint2: case tp_uint4: case tp_uint8:
+      case tp_nuint1: case tp_nuint2: case tp_nuint4: case tp_nuint8:
+	return TRUE;
+      default: break;
+      }
+  return FALSE;
 }
 
 bool type_floating(type t)
@@ -603,20 +611,21 @@ bool type_long_double(type t)
   return t->kind == tk_primitive && t->u.primitive == tp_long_double;
 }
 
-#ifdef NETWORK
 bool type_network_base_type(type t)
 {
   return t->kind == tk_primitive && 
-    (t->u.primitive == tp_nint1 ||
-     t->u.primitive == tp_nint2 ||
-     t->u.primitive == tp_nint4 ||
-     t->u.primitive == tp_nint8 ||
-     t->u.primitive == tp_nuint1 ||
-     t->u.primitive == tp_nuint2 ||
-     t->u.primitive == tp_nuint4 ||
-     t->u.primitive == tp_nuint8);
+    t->u.primitive >= tp_nint1 && t->u.primitive <= tp_nuint8;
 }
-#endif
+
+type type_network_platform_type(type t)
+/* Requires: type_network_base_type(t)
+   Returns: A non-network type with the same size and signedness as t
+     Note that such a type is platform-dependent
+*/
+{
+  assert(type_network_base_type(t));
+  return type_for_size(type_size(t), type_unsigned(t));
+}
 
 bool type_char(type t)
 {
@@ -662,12 +671,14 @@ bool type_tagged(type t)
 
 bool type_struct(type t)
 {
-  return t->kind == tk_tagged && t->u.tag->kind == kind_struct_ref;
+  return t->kind == tk_tagged &&
+    (t->u.tag->kind == kind_struct_ref || t->u.tag->kind == kind_nw_struct_ref);
 }
 
 bool type_union(type t)
 {
-  return t->kind == tk_tagged && t->u.tag->kind == kind_union_ref;
+  return t->kind == tk_tagged && 
+    (t->u.tag->kind == kind_union_ref || t->u.tag->kind == kind_nw_union_ref);
 }
 
 type type_function_return_type(type t)
@@ -1106,18 +1117,15 @@ static int common_primitive_type(type t1, type t2)
 	 tp_char/short/int/long/etc pair (as we only have tp_[u]int<n> if there
 	 is no corresponding integer type of the same size. So we can compare rank
 	 by comparing pk1 and pk2 */
-#ifdef NETWORK
-      // skip checking (pain) if it's special network type
-      if (!(pk1 == tp_nint1 || pk1 == tp_nint2 || pk1 == tp_nint4 || 
-            pk1 == tp_nint8 || 
-            pk1 == tp_nuint1 || pk1 == tp_nuint2 || pk1 == tp_nuint4 || 
-            pk1 == tp_nuint8 || 
-            pk2 == tp_nint1 || pk2 == tp_nint2 || pk2 == tp_nint4 || 
-            pk2 == tp_nint8 ||
-            pk2 == tp_nuint1 || pk2 == tp_nuint2 || pk2 == tp_nuint4 || 
-            pk2 == tp_nuint8))
-#endif
-      assert(!((pk1 < tp_char && pk2 >= tp_char) || (pk1 >= tp_char && pk2 < tp_char)));
+      /* Network base types: we may end up with a network base type and a
+	 regular type of the same size. We arbitrarily consider that the
+	 regular type "wins". 
+         We might, in the future, make default_conversion convert network
+         base types to the corresponding regular type. There doesn't seem
+         to be much advantage to that, though. */
+      assert(pk1 <= tp_nuint8 || pk2 <= tp_nuint8 ||
+	     !((pk1 < tp_char && pk2 >= tp_char) ||
+	       (pk1 >= tp_char && pk2 < tp_char)));
 
       /* the higher rank wins, and if either of the types is unsigned, the
 	 result is (thus unsigned short + int == unsigned int if
@@ -1317,16 +1325,24 @@ type make_unsigned_type(type t)
   if (t->kind != tk_primitive)
     return t;
 
-  if (t->u.primitive == tp_char || t->u.primitive == tp_signed_char)
-    return qualify_type1(unsigned_char_type, t);
-  if (t->u.primitive == tp_short)
-    return qualify_type1(unsigned_short_type, t);
-  if (t->u.primitive == tp_int)
-    return qualify_type1(unsigned_int_type, t);
-  if (t->u.primitive == tp_long)
-    return qualify_type1(unsigned_long_type, t);
-  if (t->u.primitive == tp_long_long)
-    return qualify_type1(unsigned_long_long_type, t);
+  switch (t->u.primitive)
+    {
+    case tp_char: case tp_signed_char:
+      return qualify_type1(unsigned_char_type, t);
+    case tp_short: return qualify_type1(unsigned_short_type, t);
+    case tp_int: return qualify_type1(unsigned_int_type, t);
+    case tp_long: return qualify_type1(unsigned_long_type, t);
+    case tp_long_long: return qualify_type1(unsigned_long_long_type, t);
+    case tp_int2: return qualify_type1(uint2_type, t);
+    case tp_int4: return qualify_type1(uint4_type, t);
+    case tp_int8: return qualify_type1(uint8_type, t);
+    case tp_nint1: return qualify_type1(nuint1_type, t);
+    case tp_nint2: return qualify_type1(nuint2_type, t);
+    case tp_nint4: return qualify_type1(nuint4_type, t);
+    case tp_nint8: return qualify_type1(nuint8_type, t);
+    default: break;
+    }
+  assert(type_unsigned(t));
 
   return t;
 }
@@ -1832,6 +1848,14 @@ data_declaration type_combiner(type t)
 
 static char *primname[] = {
   NULL,
+  "nw_int8_t",
+  "nw_int16_t",
+  "nw_int32_t",
+  "nw_int64_t",
+  "nw_uint8_t",
+  "nw_uint16_t",
+  "nw_uint32_t",
+  "nw_uint64_t",
   "int16_t",
   "uint16_t",
   "int32_t",
@@ -1953,13 +1977,8 @@ static void split_type_name(region r, type t, const char **prefix,
     case tk_tagged: {
       tag_declaration tdecl = t->u.tag;
 
-      switch (tdecl->kind)
-	{
-	case kind_struct_ref: basic = "struct "; break;
-	case kind_union_ref: basic = "union "; break;
-	case kind_enum_ref: basic = "enum "; break;
-	default: assert(0); basic = ""; break;
-	}
+      basic = rconcat(r, tagkind_name(tdecl->kind), " ");
+
       if (tdecl->container)
 	{
 	  basic = rconcat(r, basic, tdecl->container->name);

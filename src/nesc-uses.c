@@ -35,13 +35,8 @@ context exe_context(context c)
   return c & (c_atomic | c_executable | c_constant);
 }
 
-static context use_context(context c)
+static context access_context(context c)
 {
-  /* Non-executable contexts do not actually "do" anything. So
-     don't set those bits in the 'use' context */
-  if (!(c & c_executable))
-    return 0;
-
   /* Something that came via a deref is really just a read */
   if (c & c_deref)
     c = exe_context(c) | c_read;
@@ -51,6 +46,16 @@ static context use_context(context c)
     c &= ~(c_read | c_write);
 
   return c;
+}
+
+static context use_context(context c)
+{
+  /* Non-executable contexts do not actually "do" anything. So
+     don't set those bits in the 'use' context */
+  if (!(c & c_executable))
+    return 0;
+
+  return access_context(c);
 }
 
 use new_use(location l, context c)
@@ -131,10 +136,6 @@ static void collect_uses_expr(expression expr, context c)
   if (!expr)
     return;
 
-#ifdef NETWORK
-  expr->context = c;
-#endif
-
   /* A read of an array-type expression actually takes the address
      of the container 
   XXX: test on type needed because we have some unhandled nodes such
@@ -158,6 +159,7 @@ static void collect_uses_expr(expression expr, context c)
   switch (expr->kind)
     {
     case kind_identifier:
+      expr->context = access_context(c);
       identifier_used(CAST(identifier, expr), c);
       break;
 
@@ -254,9 +256,11 @@ static void collect_uses_expr(expression expr, context c)
 
       collect_uses_deref(expr, arg1, c);
       collect_uses_expr(arg2, exe_c | c_read);
+      expr->context = access_context(c);
       break;
     }
     case kind_dereference:
+      expr->context = access_context(c);
       collect_uses_deref(expr, CAST(dereference, expr)->arg1, c);
       break;
 
@@ -269,6 +273,11 @@ static void collect_uses_expr(expression expr, context c)
 	c = exe_c | c_addressed;
 
       collect_uses_expr(arg, c);
+      break;
+    }
+    case kind_field_ref: {
+      expr->context = access_context(c);
+      collect_uses_expr(CAST(field_ref, expr)->arg1, c);
       break;
     }
     case kind_preincrement: case kind_postincrement:

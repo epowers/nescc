@@ -30,6 +30,7 @@ Boston, MA 02111-1307, USA. */
 #include "errors.h"
 #include "nesc-semantics.h"
 #include "nesc-magic.h"
+#include "nesc-network.h"
 
 /* Set this to 1 to avoid warnings from gcc about paren use with
    -Wparentheses */
@@ -362,7 +363,7 @@ void prt_default_label(default_label l);
 
 void prt_regionof(expression e);
 
-static region unparse_region;
+region unparse_region;
 
 #ifdef NETWORK
 void prt_network_routines();
@@ -432,90 +433,6 @@ void disable_documentation_mode(void)
 {
   documentation_mode = FALSE;
 }
-
-#ifdef NETWORK
-// This should be in another file, like tos_network_not_parsed.h.
-// We'll leave it here for now and clean up later.
-void prt_network_routines() {
-  output("/* Start internal network declarations*/\n\
-\n\
-// new network data types\n\
-\n\
-typedef struct n_int8_t  {char data[1];} n_int8_t;\n\
-typedef struct n_int16_t {char data[2];} n_int16_t;\n\
-typedef struct n_int32_t {char data[4];} n_int32_t;\n\
-typedef struct n_int64_t {char data[8];} n_int64_t;\n\
-typedef struct n_uint8_t  {char data[1];} n_uint8_t;\n\
-typedef struct n_uint16_t {char data[2];} n_uint16_t;\n\
-typedef struct n_uint32_t {char data[4];} n_uint32_t;\n\
-typedef struct n_uint64_t {char data[8];} n_uint64_t;\n\
-\n\
-/* Network to host order read conversion, assuming little-endian\n\
-   We'll change the parameters and return types to the right size later\n\
-\n\
-   Layouts:\n\
-     Little Endian         Big Endian\n\
-     4567 0123             0123 4567   <-- host order\n\
-base [0]  [1]              [0]  [1]\n\
-*/\n\
-typedef long long bigint; // this is the biggest int available\n\
-static inline char NTOH8(void *target) {\n\
-  unsigned char *base = target;\n\
-  return ((unsigned char)base[0]);\n\
-}\n\
-static inline unsigned short NTOH16(void *target) {\n\
-  unsigned char *base = target;\n\
-  return ((unsigned short)base[1]<<8 | (unsigned short)base[0]);\n\
-}\n\
-static inline unsigned long NTOH32(void *target) {\n\
-  unsigned char *base = target;\n\
-  return ((unsigned long)base[3]<<24 | (unsigned long)base[2]<<16 |\n\
-          (unsigned long)base[1]<<8  | (unsigned long)base[0]);\n\
-}\n\
-static inline unsigned long long NTOH64(void *target) {\n\
-  unsigned char *base = target;\n\
-  return ((unsigned long long)base[7]<<56 | (unsigned long long)base[6]<<48 |\n\
-          (unsigned long long)base[5]<<40 | (unsigned long long)base[4]<<32 |\n\
-          (unsigned long long)base[3]<<24 | (unsigned long long)base[2]<<16 |\n\
-          (unsigned long long)base[1]<<8  | (unsigned long long)base[0]);\n\
-}\n\
-\n\
-// Host to network order assignment, assuming little-endian\n\
-static inline char HTON8(void *target, char value) {\n\
-  unsigned char *base = target;\n\
-  base[0] = value;\n\
-  return value;\n\
-}\n\
-static inline short HTON16(void *target, short value) {\n\
-  unsigned char *base = target;\n\
-  base[0] = value;\n\
-  base[1] = value>>8;\n\
-  return value;\n\
-}\n\
-static inline long HTON32(void *target, long value) {\n\
-  unsigned char *base = target;\n\
-  base[0] = value;\n\
-  base[1] = value>>8;\n\
-  base[2] = value>>16;\n\
-  base[3] = value>>24;\n\
-  return value;\n\
-}\n\
-static inline long long HTON64(void *target, long long value) {\n\
-  unsigned char *base = target;\n\
-  base[0] = value;\n\
-  base[1] = value>>8;\n\
-  base[2] = value>>16;\n\
-  base[3] = value>>24;\n\
-  base[4] = value>>32;\n\
-  base[5] = value>>40;\n\
-  base[6] = value>>48;\n\
-  base[7] = value>>56;\n\
-  return value;\n\
-}\n\
-\n\
-");
-}
-#endif
 
 void prt_toplevel_declarations(declaration dlist)
 {
@@ -1032,13 +949,9 @@ void prt_tag_ref(tag_ref tr, pte_options options)
     name_tag(tr->tdecl);
 
   set_location(tr->location);
-  switch (tr->kind)
-    {
-    case kind_struct_ref: output("struct "); break;
-    case kind_union_ref: output("union "); break;
-    case kind_enum_ref: output("enum "); break;
-    default: assert(0);
-    }
+  /* There's a #define for nw_struct, nw_union in the header (this is not
+     an issue as these are keywords) */
+  output("%s ", tagkind_name(tr->kind));
 
   if (tr->word1)
     {
@@ -1058,6 +971,8 @@ void prt_tag_ref(tag_ref tr, pte_options options)
       output(" ");
       prt_type_elements(CAST(type_element, tr->attributes), 0);
     }
+  if (type_network(make_tagged_type(tr->tdecl)))
+    output(" __attribute__((packed))");
 }
 
 void prt_enumerators(declaration elist, tag_declaration tdecl)
@@ -1239,52 +1154,8 @@ void prt_expressions(expression elist, bool isfirst)
 /* Context priorities are that of the containing operator, starting at 0
    for , going up to 14 for ->, . See the symbolic P_XX constants 
    P_TOP (-1) is used for contexts with no priority restrictions. */
-#ifdef NETWORK
-static bool lvalue_no_expand = FALSE; // this is used for the += case
 
-void prt_expression_helper(expression e, int context_priority);
-
-void prt_expression(expression e, int context_priority) 
-{
-  if ((type_network_base_type(e->type)) &&
-      (e->context & c_read) && !lvalue_no_expand)
-    {
-      //e->kind != kind_array_ref) {
-      output("(NTOH%d(&", (int)type_size(e->type) * BITSPERBYTE);
-      prt_expression_helper(e, context_priority);
-      output(")) ");
-    }
-  else
-    {
-      bool temp = lvalue_no_expand;
-
-      /* Only prevent one lvalue expansion
-	 n_int8_t a, b[10];
-
-	 b[a] = 3; 
-
-	 To be considered next week: you can also write
-	 a[b] = 3;
-	 and
-	 *(a + b) = 3;
-
-	 HTON8(&((NTOH8(&a))[b]), 3)
-
-	 What will break: (gcc extension alert)
-	 n_int8_t a, b;
-
-	 (a, b) = 3;
-	 (blah ? a : b) = 4;
-      */
-      lvalue_no_expand = FALSE;
-      prt_expression_helper(e, context_priority);
-      lvalue_no_expand = temp;
-    }
-}
 void prt_expression_helper(expression e, int context_priority)
-#else
-void prt_expression(expression e, int context_priority)
-#endif
 {
   switch (e->kind) 
     {
@@ -1317,6 +1188,12 @@ void prt_expression(expression e, int context_priority)
       prt_binary(CAST(binary, e), context_priority);
       return;
     }
+}
+
+void prt_expression(expression e, int context_priority) 
+{
+  if (!prt_network_expression(e))
+    prt_expression_helper(e, context_priority);
 }
 
 #define OPEN(pri) \
@@ -1357,12 +1234,31 @@ void prt_label_address(label_address e, int context_priority)
   prt_id_label(e->id_label);
 }
 
+void prt_asttype_cast(asttype t)
+{
+#ifdef NETWORK
+  /* Casts to a network base type are replaced by casts to the 
+     correspondingly sized base type */
+  if (type_network_base_type(t->type))
+    {
+      declarator d;
+      type_element qualifiers;
+      type2ast(unparse_region, t->location, 
+	       qualify_type1(type_network_platform_type(t->type), t->type),
+	       NULL, &d, &qualifiers);
+
+      t = new_asttype(unparse_region, t->location, d, qualifiers);
+    }
+#endif
+  prt_asttype(t);
+}
+
 void prt_cast(cast e, int context_priority)
 {
   OPEN(P_CAST);
   set_location(e->location);
   output("(");
-  prt_asttype(e->asttype);
+  prt_asttype_cast(e->asttype);
   output(")");
   prt_expression(e->arg1, P_CAST);
   CLOSE(P_CAST);
@@ -1373,7 +1269,7 @@ void prt_cast_list(cast_list e, int context_priority)
   OPEN(P_CAST);
   set_location(e->location);
   output("(");
-  prt_asttype(e->asttype);
+  prt_asttype_cast(e->asttype);
   output(")");
   prt_init_list(CAST(init_list, e->init_expr), P_ASSIGN);
   CLOSE(P_CAST);
@@ -1543,8 +1439,9 @@ void prt_unary(unary e, int context_priority)
     case kind_not: op = "!"; break;
     default: assert(0); return;
     }
-  OPEN(P_CAST);
+
   set_location(e->location);
+  OPEN(P_CAST);
   if (op)
     {
       output_string(op);
@@ -1665,70 +1562,12 @@ void prt_binary(binary e, int context_priority)
       lpri = P_CAST; pri = P_ASSIGN; rpri = P_ASSIGN; break;
     default: assert(0); return;
     }
+
   OPEN(pri);
-
-#ifdef NETWORK
-  {
-    bool assignment = FALSE;
-    char *selfassign = NULL;
-
-    if (type_network_base_type(e->arg1->type))
-      {
-	if (e->kind >= kind_assign && e->kind <= kind_bitxor_assign)
-	  {
-	    assignment = TRUE;
-	    switch (e->kind)
-	      {
-	      case kind_plus_assign:   selfassign = "+"; break;
-	      case kind_minus_assign:  selfassign = "+"; break;
-	      case kind_times_assign:  selfassign = "*"; break;
-	      case kind_divide_assign: selfassign = "/"; break;
-	      case kind_lshift_assign: selfassign = "<<"; break;
-	      case kind_rshift_assign: selfassign = ">>"; break;
-	      case kind_bitand_assign: selfassign = "&"; break;
-	      case kind_bitor_assign:  selfassign = "|"; break;
-	      case kind_bitxor_assign: selfassign = "^"; break;
-	      default: break;
-	      }
-	  }
-	else
-	  output("/*unknown kind:%d*/ ", e->kind);
-      }
-    if (assignment)
-      {
-	bool lvalue_no_expand_orig = lvalue_no_expand;
-
-	output("(HTON%d(&", ((int)type_size(e->arg1->type))*BITSPERBYTE);
-	lvalue_no_expand = TRUE;
-	prt_expression(e->arg1, lpri);
-	lvalue_no_expand = lvalue_no_expand_orig;
-	output(", ");
-	set_location(e->location);
-	if (selfassign)
-	  {
-	    output("(");
-	    prt_expression(e->arg1, lpri);
-	    output(")");
-	    output("%s", selfassign);
-	  }
-	prt_expression(e->arg2, rpri);
-	output("))");
-      }
-    else
-      {
-	prt_expression(e->arg1, lpri);
-	set_location(e->location);
-	output(" %s ", op);
-	prt_expression(e->arg2, rpri);
-      }
-  }
-#else
   prt_expression(e->arg1, lpri);
   set_location(e->location);
   output(" %s ", op);
   prt_expression(e->arg2, rpri);
-#endif
-
   CLOSE(pri);
 }
 

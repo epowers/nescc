@@ -139,6 +139,8 @@
 (deffield containing_atomic atomic_stmt ())
 
 (deffield cdecl nesc_declaration ())
+(deffield temp1 data_declaration ())
+(deffield temp2 data_declaration ())
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Base types
@@ -276,8 +278,8 @@ DEFINED is TRUE if this declaration defines the struct/union/enum.
 DEFINED == FALSE => FIELDS == NULL
 
 TDECL points to the internal declaration node for this type")
-(defnode struct_ref tag_ref "A struct")
-(defnode union_ref tag_ref "A union")
+(deftype struct_ref tag_ref () "A struct")
+(deftype union_ref tag_ref () "A union")
 (defnode enum_ref tag_ref "An enum")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -431,7 +433,7 @@ CALL_KIND is one of normal_call, post_task, command_call or event_signal.")
 (defnode bitnot unary "~ARG1")
 (defnode not unary "!ARG1")
 
-(deftype increment unary ()
+(deftype increment unary (temp1 temp2)
   "parent for increment nodes")
 (defnode preincrement increment "++ARG1")
 (defnode predecrement increment "--ARG1")
@@ -460,7 +462,7 @@ CALL_KIND is one of normal_call, post_task, command_call or event_signal.")
 (defnode andand binary "ARG1 && ARG2")
 (defnode oror binary "ARG1 || ARG2")
 
-(deftype assignment binary () "ARG1 <assignop> ARG2")
+(deftype assignment binary (temp1) "ARG1 <assignop> ARG2")
 (defnode assign assignment "ARG1 = ARG2")
 (defnode plus_assign assignment "ARG1 += ARG2")
 (defnode minus_assign assignment "ARG1 -= ARG2")
@@ -625,3 +627,6 @@ DDECL is the command or event's declaration")
 (deftype atomic_stmt statement (stmt)
   "ATOMIC stmt
 An atomic_stmt is not made for lexically nested atomic statements")
+
+(defnode nw_struct_ref struct_ref "A network struct")
+(defnode nw_union_ref union_ref "A network union")

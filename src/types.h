@@ -141,6 +141,11 @@ bool type_long_double(type t);
 #ifdef NETWORK
 bool type_network_base_type(type t);
 bool type_network(type t);
+type type_network_platform_type(type t);
+/* Requires: type_network_base_type(t)
+   Returns: A non-network type with the same size and signedness as t
+     Note that such a type is platform-dependent
+*/
 #endif
 
 bool type_tagged(type t);

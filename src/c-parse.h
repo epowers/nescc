@@ -72,9 +72,6 @@ struct yystype {
       statement stmt;
       int i;
     } istmt;
-
-    // #ifdef NETWORK: for the network keyword before any declaration
-    bool network;
   } u;
 
   struct {

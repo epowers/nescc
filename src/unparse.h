@@ -25,6 +25,9 @@ Boston, MA 02111-1307, USA. */
 /* string which accesses current mote number in nido */
 extern char *nido_mote_number;
 
+/* temporary region which can be used during unparsing */
+extern region unparse_region;
+
 void unparse(FILE *to, declaration program) deletes;
 void unparse_start(FILE *to, FILE *symbols);
 void unparse_end(void) deletes;
@@ -80,6 +83,7 @@ void prt_toplevel_declaration(declaration d);
 void prt_nelements(expression array);
 void prt_expressions(expression elist, bool isfirst);
 void prt_expression(expression e, int context_priority);
+void prt_expression_helper(expression e, int context_priority);
 
 typedef enum {
   pte_duplicate = 1,
