@@ -66,7 +66,7 @@ static data_declaration current_function = NULL;
 static const char *current_module_name = NULL;
 
 // whether or not we are currently in an atomic statement
-bool in_atomic = FALSE;
+int in_atomic;
 
 
 
@@ -369,9 +369,9 @@ static void find_statement_vars(statement stmt, bool is_read)
       break;
     }
     case kind_atomic_stmt: {
-      in_atomic = 1;
+      in_atomic++;
       find_statement_vars(CAST(atomic_stmt,stmt)->stmt, FALSE);
-      in_atomic = 0;
+      in_atomic--;
       break;
     }
     default: assert(0);
@@ -856,6 +856,9 @@ void find_function_vars(data_declaration fn)
   }
 
 
+  /* 1 if always atomic, 0 otherwise */
+  in_atomic =
+    (fn->contexts & (c_task | c_int | c_reentrant_int)) == 0;
   find_statement_vars( fdecl->stmt, FALSE );
 
 

@@ -33,7 +33,7 @@ Boston, MA 02111-1307, USA.  */
 #include "graph.h"
 #include "nesc-concurrency.h"
 #include "nesc-findvars.h"
-
+#include "nesc-generate.h"
 
 
 
@@ -462,8 +462,24 @@ static void rec_close_context(gnode n, enum contexts new_contexts)
   fn->contexts = nc;
 
   graph_scan_out (edge, n) 
-    if (EDGE_GET(void *, edge)) /* a call */
-      rec_close_context(graph_edge_to(edge), nc);
+    {
+      void *callkind = EDGE_GET(void *, edge);
+
+      if (callkind) /* a call */
+	{
+	  if (callkind == &atomic_call_edge)
+	    {
+	      if (nc & c_task)
+		nc = (nc & ~c_task) | c_atomic_task;
+	      if (nc & c_int)
+		nc = (nc & ~c_int) | c_atomic_int;
+	      if (nc & c_reentrant_int)
+		nc = (nc & ~c_reentrant_int) | c_reentrant_atomic_int;
+	    }
+
+	  rec_close_context(graph_edge_to(edge), nc);
+	}
+    }
 }
 
 static void close_contexts(cgraph callgraph)
