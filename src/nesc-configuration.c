@@ -980,25 +980,3 @@ bool process_abstract_params(nesc_configuration_instance cinst) {
   return TRUE;
 }
 
-//void process_abstract_params(configuration c, int parent_instance) {
-//  component_ref comp;
-//  fprintf(stderr,"\nMDW: process_abstract_params for configuration: %s parent_instance %d\n", c->cdecl->name, parent_instance);
-//
-//  scan_component_ref (comp, c->components) {
-//    if (comp->cdecl->is_abstract && comp->args) {
-//      declaration parent_aparms = NULL;
-//      fprintf(stderr,"MDW: Processing abstract parameters for component_ref %s\n", comp->cdecl->name);
-//      if (c->cdecl->is_abstract) {
-//	parent_aparms = DD_GET(declaration, dd_getindex(c->cdecl->abs_parms, parent_instance));
-//      }
-//      resolve_abstract_parameters(parent_aparms, comp);
-//    }                        
-//    if (is_configuration(comp->cdecl->impl)) {
-//      fprintf(stderr,"MDW: process_abstract_params recursing\n");
-//      process_abstract_params(CAST(configuration, comp->cdecl->impl), comp->instance_number);
-//    }
-//  }
-//
-//  fprintf(stderr,"MDW: process_abstract_params done with configuration: %s parent_instance %d\n", c->cdecl->name, parent_instance);
-//}
-
