@@ -1,4 +1,4 @@
-// $Id: WiringGraph.java,v 1.2 2005/01/17 21:11:11 idgay Exp $
+// $Id: WiringGraph.java,v 1.3 2005/01/19 23:00:23 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -27,10 +27,11 @@ public class WiringGraph
 	return found;
     }
 
-    public void addEdge(WiringNode from, Xarguments fromArgs,
-			WiringNode to, Xarguments toArgs) {
-	WiringEdge edge = new WiringEdge(from, fromArgs, to, toArgs);
-	from.addToEdge(edge);
-	to.addFromEdge(edge);
+    public void addEdge(Xwire wire) {
+	wire.from.node = lookup(wire.from.node.ep);
+	wire.from.node.addToEdge(wire);
+
+	wire.to.node = lookup(wire.to.node.ep);
+	wire.to.node.addFromEdge(wire);
     }
 }

@@ -1,4 +1,4 @@
-// $Id: TagDefinition.java,v 1.4 2005/01/18 17:09:05 idgay Exp $
+// $Id: TagDefinition.java,v 1.5 2005/01/19 23:00:23 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -25,6 +25,7 @@ public class TagDefinition extends CDefinition
     public boolean defined, packed;
 
     public void init(Attributes attrs) {
+	super.init(attrs);
 	ref = attrs.getValue("ref");
 	name = attrs.getValue("name");
 	/* ignoring scoped for now */

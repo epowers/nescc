@@ -1,4 +1,4 @@
-// $Id: WiringScan.java,v 1.1 2005/01/18 21:48:59 idgay Exp $
+// $Id: WiringScan.java,v 1.2 2005/01/19 23:00:23 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -11,10 +11,10 @@
 
 package net.tinyos.nesc.dump.xml;
 
-abstract public class WiringScan extends WiringPosition implements Cloneable
+abstract public class WiringScan extends WiringEndpoint implements Cloneable
 {
     abstract public java.util.ListIterator edges();
-    abstract public boolean follow(WiringEdge e);
+    abstract public boolean follow(Xwire e);
     abstract public boolean isForwards();
 
     public WiringScan duplicate() {

@@ -1,4 +1,4 @@
-// $Id: WiringNode.java,v 1.3 2005/01/18 17:09:05 idgay Exp $
+// $Id: WiringNode.java,v 1.4 2005/01/19 23:00:23 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -24,14 +24,14 @@ public class WiringNode
 	this.ep = ep;
     }
 
-    void addToEdge(WiringEdge e) {
+    void addToEdge(Xwire e) {
 	//System.err.println("" + this + " TO " + e.to);
 	if (outgoing == null)
 	    outgoing = new LinkedList();
 	outgoing.add(e);
     }
 
-    void addFromEdge(WiringEdge e) {
+    void addFromEdge(Xwire e) {
 	//System.err.println("" + this + " FROM " + e.from);
 	if (incoming == null)
 	    incoming = new LinkedList();

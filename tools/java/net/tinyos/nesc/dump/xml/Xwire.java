@@ -1,4 +1,4 @@
-// $Id: Xwire.java,v 1.2 2005/01/11 23:27:53 idgay Exp $
+// $Id: Xwire.java,v 1.3 2005/01/19 23:00:23 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -15,7 +15,13 @@ import org.xml.sax.*;
 
 public class Xwire extends NDElement
 {
-    public Endpoint from, to;
+    public WiringEndpoint from, to;
+    public Location location; /* may be null */
+
+    public NDElement start(Attributes attrs) {
+	location = Location.decode(attrs.getValue("loc"));
+	return this;
+    }
 
     public void child(NDElement subElement) {
 	super.child(subElement);
@@ -23,5 +29,31 @@ public class Xwire extends NDElement
 	    from = (Xfrom)subElement;
 	if (subElement instanceof Xto)
 	    to = (Xto)subElement;
+    }
+
+    protected boolean follow(WiringEndpoint position,
+			     WiringEndpoint start, WiringEndpoint end) {
+	/* assert(position.node == start.node); */
+	if (position.arguments != null) {
+	    if (start.arguments != null) {
+		if (!start.arguments.equals(position.arguments))
+		    return false;
+		position.arguments = end.arguments;
+	    }
+	    /* else assert(end.arguments == null); */
+	}
+	else
+	    position.arguments = end.arguments;
+	position.node = end.node;
+	return true;
+    }
+
+
+    public boolean followForwards(WiringEndpoint position) {
+	return follow(position, from, to);
+    }
+
+    public boolean followBackwards(WiringEndpoint position) {
+	return follow(position, to, from);
     }
 }

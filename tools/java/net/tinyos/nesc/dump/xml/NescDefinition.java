@@ -1,4 +1,4 @@
-// $Id: NescDefinition.java,v 1.6 2005/01/18 21:48:59 idgay Exp $
+// $Id: NescDefinition.java,v 1.7 2005/01/19 23:00:23 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -22,6 +22,7 @@ public class NescDefinition extends Definition
     public String qname; /* globally unique */
 
     public void init(Attributes attrs) {
+	super.init(attrs);
 	qname = attrs.getValue("qname");
     }
 

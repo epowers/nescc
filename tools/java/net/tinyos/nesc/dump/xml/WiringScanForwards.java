@@ -1,4 +1,4 @@
-// $Id: WiringScanForwards.java,v 1.1 2005/01/18 21:48:59 idgay Exp $
+// $Id: WiringScanForwards.java,v 1.2 2005/01/19 23:00:23 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -21,7 +21,7 @@ public class WiringScanForwards extends WiringScan
 
     public WiringScanForwards(WiringNode n, Xarguments a) { 
 	node = n;
-	args = a;
+	arguments = a;
     }
 
     public boolean isForwards() {
@@ -32,7 +32,7 @@ public class WiringScanForwards extends WiringScan
 	return node.outgoingEdges();
     }
 
-    public boolean follow(WiringEdge e) {
+    public boolean follow(Xwire e) {
 	return e.followForwards(this);
     }
 }

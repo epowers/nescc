@@ -1,4 +1,4 @@
-// $Id: Definition.java,v 1.5 2005/01/18 17:09:05 idgay Exp $
+// $Id: Definition.java,v 1.6 2005/01/19 23:00:23 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -18,8 +18,11 @@ abstract public class Definition extends NDElement
 {
     public boolean definitionAvailable;
     public LinkedList/*Xattribute_value*/ attributes;
+    public Location location; /* may be null */
 
-    abstract public void init(Attributes attrs);
+    public void init(Attributes attrs) {
+	location = Location.decode(attrs.getValue("loc"));
+    }
 
     public void child(NDElement subElement) {
 	if (subElement instanceof Xattribute_value) {
