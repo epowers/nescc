@@ -155,6 +155,7 @@ typedef struct data_declaration {
   nesc_declaration itype;
   environment functions;
   bool required;
+  bool static_interface;
   typelist gparms;
 
   /* For component_ref */

@@ -1206,7 +1206,8 @@ void prt_function_call(function_call e, int context_priority)
 
 	  else if (is_interface_deref(e->arg1) &&
 	      CAST(interface_deref, e->arg1)->ddecl->container &&
-	      CAST(interface_deref, e->arg1)->ddecl->container->is_abstract) {
+	      CAST(interface_deref, e->arg1)->ddecl->container->is_abstract &&
+	      !(CAST(interface_deref, e->arg1)->ddecl->interface->static_interface)) {
 	    /* prt_interface_deref already started the argument list */
 	    prt_expressions(e->args, FALSE);
 	  } else {
@@ -1290,6 +1291,9 @@ void prt_interface_deref(interface_deref e, int context_priority)
 {
   data_declaration decl = e->ddecl;
   instance_ref iref = NULL;
+  bool is_abstract = FALSE;
+
+  fprintf(stderr,"MDW: prt_interface_deref: decl %s kind %d decl->interface %s kind %d\n", decl->name, decl->kind, decl->interface->name, decl->interface->kind);
 
   if (decl->kind == decl_function && decl->uncallable) {
     if (is_instance_ref(e->arg1)) {
@@ -1303,21 +1307,28 @@ void prt_interface_deref(interface_deref e, int context_priority)
     }
   } 
 
+  if (decl->kind == decl_function && decl->container && decl->container->is_abstract) 
+    is_abstract = TRUE;
+
   if (is_instance_ref(e->arg1)) {
     // OK, we have an instance ref inside, so need to use the 
     // particular instance rather than 'this'. This is ugly because 
     // the instance_ref is embedded in the interface_deref, rather 
     // than the other way around
     iref = CAST(instance_ref, e->arg1);
+    if (!is_abstract) 
+      error("cannot use `instance' in non-abstract component");
+    if (decl->interface->static_interface)
+      error("cannot use `instance' to invoke static interface");
   }
 
   prt_expression(e->arg1, P_CALL);
   output(function_separator);
   output_stripped_cstring(e->cstring);
 
-  if (decl->kind == decl_function && decl->container && decl->container->is_abstract) {
+  if (is_abstract && !decl->interface->static_interface) {
+    // Calling an abstract function
     output("(");
-
     if (iref != NULL) {
       output("&(%s$%s[", iref->ddecl->container->name, NESC_INSTANCEARR_LITERAL);
       // XXX MDW: If arg1 is cst, check if it's in range

@@ -132,7 +132,7 @@ void copy_interface_functions(data_declaration iref)
 }
 
 void declare_interface_ref(interface_ref iref, declaration gparms,
-			   environment genv)
+			   environment genv) 
 {
   const char *iname = (iref->word2 ? iref->word2 : iref->word1)->cstring.data;
   nesc_declaration idecl = 
@@ -146,6 +146,16 @@ void declare_interface_ref(interface_ref iref, declaration gparms,
   tempdecl.itype = idecl;
   tempdecl.required = current.component_requires;
   tempdecl.gparms = gparms ? make_gparm_typelist(gparms) : NULL;
+  if (iref->modifiers != NULL) {
+    type_element em;
+    scan_type_element(em, iref->modifiers) {
+      if (em->kind != kind_rid && (CAST(rid,em)->id == RID_STATIC)) {
+	error("only allowed modifier for interface is `static'");
+      }
+    }
+    fprintf(stderr,"MDW: interface %s declared static\n", iname);
+    tempdecl.static_interface = TRUE;
+  }
 
   old_decl = lookup_id(iname, TRUE);
   if (old_decl)

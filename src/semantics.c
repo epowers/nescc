@@ -124,6 +124,7 @@ void init_data_declaration(data_declaration dd, declaration ast,
   dd->itype = NULL;
   dd->isgeneric = FALSE;
   dd->gparms = NULL;
+  dd->static_interface = FALSE;
   dd->ctype = NULL;
   dd->container = NULL;
   dd->interface = NULL;

@@ -1078,28 +1078,26 @@ static void suppress_function(const char *name)
 
 static void prt_nido_initializations(nesc_declaration mod) {
   declaration dlist = CAST(module, mod->impl)->decls;
-  declaration aplist = CAST(component, mod->ast)->abs_param_list;
   declaration d;
   int instance;
 
-  if (mod->is_abstract) {
     outputln("/* Module %s */", mod->name);
 
     /* Static variables */
     scan_declaration (d, dlist) {
       if (d->kind != kind_data_decl) continue;
       if (vdecl_is_instancevar(d)) continue; // These done below
+      // XXX Ideally - iniitialize unknown to appropriate analogue of 0
+      if (!vdecl_has_initializer(d)) continue;
       if (!vdecl_is_used(d)) continue; // Don't print if not referenced
       prt_vdecl_variable_ref(d);
       output("[mote_number] = ");
-      if (vdecl_has_initializer(d)) {
-	prt_vdecl_initializer_part(d);
-	outputln(";");
-      } else {
-	output("0;"); // Let's ensure everything is zeroed out
-      }
+      prt_vdecl_initializer_part(d);
+      outputln(";");
     }
 
+  if (mod->is_abstract) {
+    declaration aplist = CAST(component, mod->ast)->abs_param_list;
     for (instance = 0; instance < mod->abstract_instance_count; instance++) {
       outputln("/* Module %s instance %d */", mod->name, instance);
 
@@ -1132,16 +1130,14 @@ static void prt_nido_initializations(nesc_declaration mod) {
       /* Now add instance variables */
       scan_declaration (d, dlist) {
 	if (vdecl_is_instancevar(d)) {
+	  // XXX Ideally - iniitialize unknown to appropriate analogue of 0
+	  if (!vdecl_has_initializer(d)) continue;
 	  output_instanceref(mod, instance);
 	  output(".");
 	  prt_vdecl_variable_ref(d);
 	  output("[mote_number] = ");
-	  if (vdecl_has_initializer(d)) {
-	    prt_vdecl_initializer_part(d);
-	    outputln(";");
-	  } else {
-	    output("0;"); // Let's ensure everything is zeroed out
-	  }
+       	  prt_vdecl_initializer_part(d);
+	  outputln(";");
 	}
       }
 

@@ -582,9 +582,16 @@ parameterised_interface:
 
 interface_ref: 
 	  INTERFACE idword 
-		{ $$ = new_interface_ref(pr, $1.location, $2, NULL, NULL); }
+		{ $$ = new_interface_ref(pr, $1.location, $2, NULL, NULL, NULL); }
 	| INTERFACE idword AS idword
-		{ $$ = new_interface_ref(pr, $1.location, $2, $4, NULL); }
+		{ $$ = new_interface_ref(pr, $1.location, $2, $4, NULL, NULL); }
+	/* XXX MDW: I don't like the following but it works for now */
+	| INTERFACE SCSPEC idword 
+		{ type_element mod = CAST(type_element, new_rid(pr, $2.location, $2.i)); 
+		  $$ = new_interface_ref(pr, $1.location, $3, NULL, NULL, mod); }
+	| INTERFACE SCSPEC idword AS idword
+		{ type_element mod = CAST(type_element, new_rid(pr, $2.location, $2.i)); 
+		$$ = new_interface_ref(pr, $1.location, $3, $5, NULL, mod); }
 	;
 
 iconfiguration:
