@@ -249,12 +249,8 @@ bool generate_momllib(dd_list nesccomponents, const char *inputpathname) {
     // Create a .xml that lists the .xml components created above.
     {
         if (!dd_is_empty(nesccomponents)) {
-            const char *shorttargetname = element_name(moml_region, inputpathname);
-            //char *targetname = rarrayalloc(moml_region,
-            //        strlen(momldir) + strlen(shorttargetname) + 4 + 1, char);
             char *targetname = rarrayalloc(moml_region,
                     strlen(momldir) + strlen("index") + 4 + 1, char);
-            //sprintf(targetname, "%s%s.xml", momldir, shorttargetname);
             sprintf(targetname, "%s%s.xml", momldir, "index");
             
             if (targetname) {
@@ -274,6 +270,10 @@ bool generate_momllib(dd_list nesccomponents, const char *inputpathname) {
             prt_moml_header();
             
             prt_moml_begin_entitity(inputpathname);
+
+            outputln("<configure>");
+            outputln("<?moml");
+            outputln("<group>");
             
             dd_scan(nesccomponents_element, nesccomponents) {
                 nesccomponent_t n = DD_GET(nesccomponent_t, nesccomponents_element);
@@ -281,9 +281,13 @@ bool generate_momllib(dd_list nesccomponents, const char *inputpathname) {
                 const char *filename = n->filename;
                 prt_moml_entity(c, filename);
             }
+
+            outputln("</group>");
+            outputln("?>");
+            outputln("</configure>");
             
             prt_moml_end_entitity();
-            
+
             unparse_end();
         
             if (output) {

@@ -67,7 +67,9 @@ const char *get_next_nesc_file_in_dir(DIR *nescdir) {
 }
 
 bool is_nesc_file(const char *filename) {
-    if (strstr(filename, ".nc"))
+    // Find last occurrence of ".nc"
+    char *period = strrchr(filename, '.');
+    if (strstr(period, ".nc"))
         return TRUE;
     return FALSE;
 }

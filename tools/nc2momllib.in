@@ -62,7 +62,13 @@ print TOSINDEX "      <group>\n";
 # and an index.xml file in the current directory and all
 # subdirectories.
 while (my $inputdir = shift @inputdirs) {
+  # Get the name of the current directory from the absolute pathname.
+  @entitynameparts = split "\/", $inputdir;
+  my $entityname = pop @entitynameparts;
+
+  print TOSINDEX "<entity name=\"${entityname}\" class=\"ptolemy.moml.EntityLibrary\">\n";
   openrecursive($inputdir);
+  print TOSINDEX "</entity>\n";
 }
 
 print TOSINDEX "      </group>\n";
@@ -86,14 +92,14 @@ sub openrecursive {
   my $inputdir_handle;
   opendir($inputdir_handle, $inputdir) or die "Could not open tinyos subdirectory: $!";
 
-  # Get the name of the current directory from the absolute pathname.
-  @entitynameparts = split "\/", $inputdir;
-  my $entityname = pop @entitynameparts;
+#  # Get the name of the current directory from the absolute pathname.
+#  @entitynameparts = split "\/", $inputdir;
+#  my $entityname = pop @entitynameparts;
 
-  print TOSINDEX "<entity name=\"${entityname}\" class=\"ptolemy.moml.EntityLibrary\">\n";
-#  print TOSINDEX "  <configure>\n";
-#  print TOSINDEX "    <?moml\n";
-#  print TOSINDEX "      <group>\n";
+#  print TOSINDEX "<entity name=\"${entityname}\" class=\"ptolemy.moml.EntityLibrary\">\n";
+##  print TOSINDEX "  <configure>\n";
+##  print TOSINDEX "    <?moml\n";
+##  print TOSINDEX "      <group>\n";
 
   # Get all files in current directory (including "."), except for ".."
   my @allfiles = grep !/^\.\.\z/, readdir $inputdir_handle;
@@ -128,8 +134,8 @@ sub openrecursive {
       openrecursive("${inputdir}/${tempfile}");
     }
   }
-#  print TOSINDEX "      </group>\n";
-#  print TOSINDEX "    ?>\n";
-#  print TOSINDEX "  </configure>\n";
-  print TOSINDEX "</entity>\n";
+##  print TOSINDEX "      </group>\n";
+##  print TOSINDEX "    ?>\n";
+##  print TOSINDEX "  </configure>\n";
+#  print TOSINDEX "</entity>\n";
 }
