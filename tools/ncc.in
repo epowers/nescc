@@ -135,6 +135,10 @@ foreach $idir (@includes) {
 }
 
 print STDERR join(' ', @new_args), "\n" if $verbose;
+
+map { s/-((f|W|Wno-)nesc)/-_\1/; $_; } @new_args;
+#print STDERR "fun: ". join(" ", @actual_args) . "\n";
+
 exec @new_args;
 print STDERR "Couldn't execute nescc\n";
 exit 2;

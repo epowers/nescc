@@ -114,91 +114,100 @@ static void connect_graphs(region r, nesc_declaration program,
 
 bool nesc_option(char *p)
 {
+  if (p[0] != '-')
+    return FALSE;
+
+  /* Skip optional (make gcc 3.x happy) initial _ added by ncc */
+  if (p[1] == '_')
+    p += 2;
+  else
+    p += 1;
+
   /* Yes, using here strlen is evil. But who *really* cares? */
-  if (!strncmp (p, "-fnesc-nido-tosnodes=", strlen("-fnesc-nido-tosnodes=")))
+  if (!strncmp (p, "fnesc-nido-tosnodes=", strlen("fnesc-nido-tosnodes=")))
     {
-      nido_num_nodes = p + strlen("-fnesc-nido-tosnodes=");
+      nido_num_nodes = p + strlen("fnesc-nido-tosnodes=");
     }
-  else if (!strncmp (p, "-fnesc-nido-motenumber=", strlen("-fnesc-nido-motenumber=")))
+  else if (!strncmp (p, "fnesc-nido-motenumber=", strlen("fnesc-nido-motenumber=")))
     {
-      nido_mote_number = p + strlen("-fnesc-nido-motenumber=");
+      nido_mote_number = p + strlen("fnesc-nido-motenumber=");
     }
-  else if (!strncmp (p, "-fnesc-include=", strlen("-fnesc-include=")))
+  else if (!strncmp (p, "fnesc-include=", strlen("fnesc-include=")))
     {
-      add_nesc_include(p + strlen("-fnesc-include="));
+      add_nesc_include(p + strlen("fnesc-include="));
     }
-  else if (!strncmp (p, "-fnesc-path=", strlen("-fnesc-path=")))
+  else if (!strncmp (p, "fnesc-path=", strlen("fnesc-path=")))
     {
-      add_nesc_path(p + strlen("-fnesc-path="));
+      add_nesc_path(p + strlen("fnesc-path="));
     }
-  else if (!strncmp (p, "-fnesc-msg=", strlen("-fnesc-msg=")))
+  else if (!strncmp (p, "fnesc-msg=", strlen("fnesc-msg=")))
     {
-      select_nesc_msg(p + strlen("-fnesc-msg="));
+      select_nesc_msg(p + strlen("fnesc-msg="));
     }
-  else if (!strcmp (p, "-fnesc-csts"))
+  else if (!strcmp (p, "fnesc-csts"))
     {
       select_nesc_csts();
     }
-  else if (!strncmp (p, "-fnesc-target=", strlen("-fnesc-target=")))
+  else if (!strncmp (p, "fnesc-target=", strlen("fnesc-target=")))
     {
-      char *target = p + strlen("-fnesc-target=");
+      char *target = p + strlen("fnesc-target=");
       if (!strcmp(target, "pc"))
 	use_nido = TRUE;
       select_target(target);
     }
-  else if (!strcmp (p, "-fnesc-no-debug"))
+  else if (!strcmp (p, "fnesc-no-debug"))
     {
       flag_no_debug = 1;
     }
-  else if (!strcmp (p, "-fnesc-no-inline"))
+  else if (!strcmp (p, "fnesc-no-inline"))
     {
       flag_no_inline = 1;
     }
-  else if (!strcmp (p, "-fnesc-verbose"))
+  else if (!strcmp (p, "fnesc-verbose"))
     {
       flag_verbose = 2;
     }
-  else if (!strcmp (p, "-fnesc-save-macros"))
+  else if (!strcmp (p, "fnesc-save-macros"))
     {
       flag_save_macros = 1;
     }
-  else if (!strncmp (p, "-fnesc-docdir=", strlen("-fnesc-docdir=")))
+  else if (!strncmp (p, "fnesc-docdir=", strlen("fnesc-docdir=")))
     {
-      doc_set_outdir(p + strlen("-fnesc-docdir="));
+      doc_set_outdir(p + strlen("fnesc-docdir="));
     }
-  else if (!strncmp (p, "-fnesc-topdir=", strlen("-fnesc-topdir=")))
+  else if (!strncmp (p, "fnesc-topdir=", strlen("fnesc-topdir=")))
     {
-      doc_add_topdir(p + strlen("-fnesc-topdir="));
+      doc_add_topdir(p + strlen("fnesc-topdir="));
     }
-  else if (!strncmp (p, "-fnesc-is-app", strlen("-fnesc-is-app")))
+  else if (!strncmp (p, "fnesc-is-app", strlen("fnesc-is-app")))
     {
       doc_is_app(TRUE);
     }
-  else if (!strncmp (p, "-fnesc-docs-use-graphviz", strlen("-fnesc-docs-use-graphviz")))
+  else if (!strncmp (p, "fnesc-docs-use-graphviz", strlen("fnesc-docs-use-graphviz")))
     {
       doc_use_graphviz(TRUE);
     }
-  else if (!strcmp (p, "-Wnesc-docstring"))
+  else if (!strcmp (p, "Wnesc-docstring"))
     warn_unexpected_docstring = 1;
-  else if (!strcmp (p, "-Wno-nesc-docstring"))
+  else if (!strcmp (p, "Wno-nesc-docstring"))
     warn_unexpected_docstring = 0;
-  else if (!strcmp (p, "-Wnesc-fnptr"))
+  else if (!strcmp (p, "Wnesc-fnptr"))
     warn_fnptr = 1;
-  else if (!strcmp (p, "-Wno-nesc-fnptr"))
+  else if (!strcmp (p, "Wno-nesc-fnptr"))
     warn_fnptr = 0;
-  else if (!strcmp (p, "-Wnesc-data-race"))
+  else if (!strcmp (p, "Wnesc-data-race"))
     warn_data_race = 1;
-  else if (!strcmp (p, "-Wno-nesc-data-race"))
+  else if (!strcmp (p, "Wno-nesc-data-race"))
     warn_data_race = 0;
-  else if (!strcmp (p, "-Wnesc-async"))
+  else if (!strcmp (p, "Wnesc-async"))
     warn_async = 1;
-  else if (!strcmp (p, "-Wno-nesc-async"))
+  else if (!strcmp (p, "Wno-nesc-async"))
     warn_async = 0;
-  else if (!strcmp (p, "-Wnesc-combine"))
+  else if (!strcmp (p, "Wnesc-combine"))
     warn_no_combiner = 1;
-  else if (!strcmp (p, "-Wno-nesc-combine"))
+  else if (!strcmp (p, "Wno-nesc-combine"))
     warn_no_combiner = 0;
-  else if (!strcmp (p, "-Wnesc-all"))
+  else if (!strcmp (p, "Wnesc-all"))
     warn_data_race = warn_fnptr = warn_async = warn_no_combiner = 1;
   else
     return FALSE;
