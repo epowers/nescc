@@ -128,7 +128,7 @@ if( defined($docdir) ) {
     }
 }
 
-if (!momllib) {
+if (!$momllib) {
   unshift @new_args, "-specs=$NCDIR/tdspecs";
   unshift @new_args, $gcc;
   $ENV{NESC_GCC} = $gcc;
