@@ -102,6 +102,8 @@ void yyerror();
 %token <u.itoken> BREAK CONTINUE RETURN GOTO ASM_KEYWORD TYPEOF ALIGNOF
 %token <u.itoken> ATTRIBUTE EXTENSION LABEL
 %token <u.itoken> REALPART IMAGPART VA_ARG OFFSETOF
+/* #ifdef NETWORK */
+%token <u.itoken> NETWORK_ATTRIBUTE
 
 /* Add precedence rules to solve dangling else s/r conflict */
 %nonassoc IF
@@ -128,6 +130,7 @@ void yyerror();
 
 %type <u.asm_operand> asm_operand asm_operands nonnull_asm_operands
 %type <u.asm_stmt> maybeasm
+%type <u.network> maybe_network_attribute
 %type <u.attribute> maybe_attribute attributes attribute attribute_list attrib
 %type <u.constant> CONSTANT
 %type <u.decl> datadecl datadecls datadef decl decls extdef extdefs fndef
@@ -1501,6 +1504,16 @@ maybe_attribute:
 		{ $$ = attribute_reverse($1); }
 	;
  
+/* #ifdef NETWORK 
+   NOT DONE
+   Stick this before start_decl and change the parameters */
+maybe_network_attribute:
+	  /* empty */
+  		{ $$ = FALSE; }
+	| NETWORK_ATTRIBUTE
+		{ $$ = TRUE; }
+	;
+
 eattributes:
 	  attributes { $$ = CAST(type_element, $1); }
 	;

@@ -32,6 +32,7 @@ struct type
   enum { tk_primitive, tk_complex, tk_tagged, tk_error, tk_void,
 	 tk_pointer, tk_function, tk_array, tk_iref } kind;
   type_quals qualifiers;
+  bool network;
   data_declaration combiner;
 
   /* size is not used for aggregate types
@@ -64,7 +65,12 @@ struct type
 		default_conversion and type_default_conversion need revising.
 	   */
            tp_error,
+#ifdef NETWORK
+           tp_nint1, tp_nint2, tp_nint4, tp_nint8,
+           tp_nuint1, tp_nuint2, tp_nuint4, tp_nuint8,
+#endif
 	   tp_int2, tp_uint2, tp_int4, tp_uint4, tp_int8, tp_uint8,
+
            tp_char, 
 	   tp_signed_char, tp_unsigned_char,
 	   tp_short, tp_unsigned_short,
@@ -72,7 +78,6 @@ struct type
 	   tp_long, tp_unsigned_long,
 	   tp_long_long, tp_unsigned_long_long,
 
-	   
 	   tp_first_floating,
 	   tp_float = tp_first_floating, tp_double, tp_long_double,
 	   tp_last
@@ -171,6 +176,10 @@ type float_type, double_type, long_double_type,
   char_type, char_array_type, wchar_type, wchar_array_type,
   unsigned_char_type, signed_char_type, void_type, ptr_void_type,
   size_t_type, ptrdiff_t_type, intptr_type,
+#ifdef NETWORK
+  nint1_type, nint2_type, nint4_type, nint8_type, 
+  nuint1_type, nuint2_type, nuint4_type, nuint8_type, 
+#endif
   int2_type, uint2_type, int4_type, uint4_type, int8_type, uint8_type;
 type error_type;
 
@@ -187,6 +196,7 @@ static type new_type(int kind)
 
   nt->kind = kind;
   /*nt->qualifiers = 0;
+    nt->network = FALSE;
     nt->size = nt->alignment = 0;
     nt->combiner = NULL;*/
   return nt;
@@ -238,7 +248,6 @@ type make_pointer_type(type t)
   /* ASSUME: all pointers are the same */
   nt->size = target->tptr.size;
   nt->alignment = target->tptr.align;
-
   return nt;
 }
 
@@ -249,6 +258,9 @@ type make_array_type(type t, expression size)
 
   nt->u.array.arrayof = t;
   nt->u.array.size = size;
+#ifdef NETWORK
+  nt->network = t->network;
+#endif
   assert(!size || !size->cst || cval_intcompare(size->cst->cval, cval_zero) >= 0);
 
   return nt;
@@ -275,8 +287,18 @@ type make_tagged_type(tag_declaration d)
 {
   type nt = new_type(tk_tagged);
   nt->u.tag = d;
+#ifdef NETWORK
+  nt->network = d->network_struct;
+#endif
   return nt;
 }
+
+#ifdef NETWORK
+bool type_network(type t)
+{
+  return t->network;
+}
+#endif
 
 /* Make the single instance of pk, with specified size and alignment
    (Note that we may make copies if this single instance for different alignments)
@@ -367,6 +389,24 @@ void init_types(void)
   unsigned_char_type = make_primitive(tp_unsigned_char, 1, target->int1_align);
   char_type = make_primitive(tp_char, 1, target->int1_align);
 
+#ifdef NETWORK
+  nint1_type = make_primitive(tp_nint1, 1, TRUE);
+  nint1_type->network = TRUE;
+  nint2_type = make_primitive(tp_nint2, 2, TRUE);
+  nint2_type->network = TRUE;
+  nint4_type = make_primitive(tp_nint4, 4, TRUE);
+  nint4_type->network = TRUE;
+  nint8_type = make_primitive(tp_nint8, 8, TRUE);
+  nint8_type->network = TRUE;
+  nuint1_type = make_primitive(tp_nuint1, 1, TRUE);
+  nuint1_type->network = TRUE;
+  nuint2_type = make_primitive(tp_nuint2, 2, TRUE);
+  nuint2_type->network = TRUE;
+  nuint4_type = make_primitive(tp_nuint4, 4, TRUE);
+  nuint4_type->network = TRUE;
+  nuint8_type = make_primitive(tp_nuint8, 8, TRUE);
+  nuint8_type->network = TRUE;
+#endif
   int2_type = lookup_primitive(tp_int2, 2, target->int2_align, FALSE);
   uint2_type = lookup_primitive(tp_uint2, 2, target->int2_align, TRUE);
   int4_type = lookup_primitive(tp_int4, 4, target->int4_align, FALSE);
@@ -562,6 +602,21 @@ bool type_long_double(type t)
 {
   return t->kind == tk_primitive && t->u.primitive == tp_long_double;
 }
+
+#ifdef NETWORK
+bool type_network_base_type(type t)
+{
+  return t->kind == tk_primitive && 
+    (t->u.primitive == tp_nint1 ||
+     t->u.primitive == tp_nint2 ||
+     t->u.primitive == tp_nint4 ||
+     t->u.primitive == tp_nint8 ||
+     t->u.primitive == tp_nuint1 ||
+     t->u.primitive == tp_nuint2 ||
+     t->u.primitive == tp_nuint4 ||
+     t->u.primitive == tp_nuint8);
+}
+#endif
 
 bool type_char(type t)
 {
@@ -1051,6 +1106,17 @@ static int common_primitive_type(type t1, type t2)
 	 tp_char/short/int/long/etc pair (as we only have tp_[u]int<n> if there
 	 is no corresponding integer type of the same size. So we can compare rank
 	 by comparing pk1 and pk2 */
+#ifdef NETWORK
+      // skip checking (pain) if it's special network type
+      if (!(pk1 == tp_nint1 || pk1 == tp_nint2 || pk1 == tp_nint4 || 
+            pk1 == tp_nint8 || 
+            pk1 == tp_nuint1 || pk1 == tp_nuint2 || pk1 == tp_nuint4 || 
+            pk1 == tp_nuint8 || 
+            pk2 == tp_nint1 || pk2 == tp_nint2 || pk2 == tp_nint4 || 
+            pk2 == tp_nint8 ||
+            pk2 == tp_nuint1 || pk2 == tp_nuint2 || pk2 == tp_nuint4 || 
+            pk2 == tp_nuint8))
+#endif
       assert(!((pk1 < tp_char && pk2 >= tp_char) || (pk1 >= tp_char && pk2 < tp_char)));
 
       /* the higher rank wins, and if either of the types is unsigned, the
@@ -1335,6 +1401,16 @@ static type_element primitive2ast(region r, location loc, int primitive,
       keyword = RID_DOUBLE;
       rest = rid2ast(r, loc, RID_LONG, rest);
       break;
+#ifdef NETWORK
+    case tp_nint1: keyword = RID_NINT1; isunsigned = FALSE; break;
+    case tp_nint2: keyword = RID_NINT2; isunsigned = FALSE; break;
+    case tp_nint4: keyword = RID_NINT4; isunsigned = FALSE; break;
+    case tp_nint8: keyword = RID_NINT8; isunsigned = FALSE; break;
+    case tp_nuint1: keyword = RID_NUINT1; isunsigned = TRUE; break;
+    case tp_nuint2: keyword = RID_NUINT2; isunsigned = TRUE; break;
+    case tp_nuint4: keyword = RID_NUINT4; isunsigned = TRUE; break;
+    case tp_nuint8: keyword = RID_NUINT8; isunsigned = TRUE; break;
+#endif
     default:
       assert(0);
       keyword = RID_INT; break;

@@ -42,6 +42,10 @@ extern type float_type, double_type, long_double_type,
   long_long_type, unsigned_long_long_type, short_type, unsigned_short_type,
   char_type, char_array_type, wchar_type, wchar_array_type,
   unsigned_char_type, signed_char_type, void_type, ptr_void_type,
+#ifdef NETWORK
+  nint1_type, nint2_type, nint4_type, nint8_type, 
+  nuint1_type, nuint2_type, nuint4_type, nuint8_type, 
+#endif
   size_t_type, ptrdiff_t_type, intptr_type;
 extern type error_type;
 
@@ -134,6 +138,10 @@ bool type_unsigned_long(type t);
 bool type_long_long(type t);
 bool type_unsigned_long_long(type t);
 bool type_long_double(type t);
+#ifdef NETWORK
+bool type_network_base_type(type t);
+bool type_network(type t);
+#endif
 
 bool type_tagged(type t);
 bool type_integral(type t);	/* Does not include enum's */
