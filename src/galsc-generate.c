@@ -449,7 +449,10 @@ void prt_galsc_parameter_functions(dd_list parameters) {
     dd_scan (pos, parameters) {
         data_declaration p = DD_GET(data_declaration, pos);
         prt_galsc_parameter_get_function(p);
-        prt_galsc_parameter_put_function(p);
+        // Print only if parameter is updated in this application.
+        if (p->parameter_put_type) {
+            prt_galsc_parameter_put_function(p);
+        }
     }
 }
 
@@ -460,8 +463,11 @@ void prt_galsc_parameter_function_declarations(dd_list parameters) {
         data_declaration p = DD_GET(data_declaration, pos);
         prt_galsc_parameter_get_function_header(p);
         outputln(";");
-        prt_galsc_parameter_put_function_header(p);
-        outputln(";");
+        // Print only if parameter is updated in this application.
+        if (p->parameter_put_type) {
+            prt_galsc_parameter_put_function_header(p);
+            outputln(";");
+        }
     }
 }
 
