@@ -17,7 +17,8 @@ The first call should be generated first.
 error by the type checker).
 
 - nesC concurrency checker has not beed updated to reflect lack of
-race conditions and port boundaries.
+race conditions and port boundaries.  Warnings may appear ("...called
+asynchronously from...").
 
 - Global parameter access is not currently allowed.  
         Example: [(p, g) -> p] in an application file.
