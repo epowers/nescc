@@ -97,12 +97,15 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write)
 
   // skip constant expressions that are neither pointers nor arrays
   // FIXME: there's more to this.
-  if(expr->cst && !is_identifier(expr) && !type_array(expr->type) && !type_pointer(expr->type))
+  //if(expr->cst &&  !(is_identifier(expr) && (type_array(expr->type) || type_pointer(expr->type))) )
+  if(expr->cst &&  !type_array(expr->type) && !type_pointer(expr->type))
     return;
 
-#if 0
+#if 1
   if (expr->cst) {
     set_unparse_outfile(stdout);
+    if( is_identifier(expr) )
+       printf("###");
     prt_expression(expr,TRUE);
     printf("\n");
   }
