@@ -1927,54 +1927,66 @@ unsigned long type_hash(type t)
 }
 
 
+/* True if an assignment to type child could modify a value of type parent
+   according to the ANSI C rules.
+   Note: child cannot be an array type (assignments to arrays do not exist
+   in C)
+*/
 bool type_contains(type parent, type child)
 {
-  // FIXME: should this use type_compatable, instead fo type_equal?
-  if(type_equal(parent,child))
+  assert(!type_array(child));
+
+  /* Short-circuit easy case */
+  if (parent == child)
     return TRUE;
 
-  // ARRAYS.  an array type contains another if both have the same
-  // base type, and parent does not have fewer levels than child
-  if( type_array(parent) ) {
-    int parent_level=0;
-    int child_level=0;
-    
-    // find base types, and count array levels
-    while(parent->kind == tk_array) {
-      parent = parent->u.array.arrayof;
-      parent_level++;
-    }
-    while(child->kind == tk_array) {
-      child = child->u.array.arrayof;
-      child_level++;
-    }
+  /* Char writes can be used on any value */
+  if (type_char(child))
+    return TRUE;
 
-    if(parent_level >= child_level  &&  type_equal(parent,child))
-      return TRUE;
-    else
-      return FALSE;
-  }
-
-  // STRUCTURES.  Look 
-  if( type_tagged(parent) ) {
-    // if parent is an enum, then the type_equal() above was sufficient
-    if( type_enum(parent) ) 
-      return FALSE;
-
-    // recurse on field values
+  switch (parent->kind)
     {
+    default:
+      /* for primitive, void, function */
+      return type_equal_unqualified(parent, child);
+
+    case tk_complex:
+      /* true if child is primitive or complex and same base primitive type */
+      return (child->kind == tk_primitive || child->kind == tk_complex) &&
+	parent->u.primitive == child->u.primitive;
+
+    case tk_tagged: {
+      /* Same tags -> yes. Otherwise, for structs, unions: true if parent
+	 has a field type that contains child */
       field_declaration field;
+
+      if (child->kind == tk_tagged && parent->u.tag == child->u.tag)
+	return TRUE;
+
+      if (parent->u.tag->kind == kind_enum_ref)
+	return FALSE;
 
       for (field = parent->u.tag->fieldlist; field; field = field->next)
 	if (type_contains(field->type, child))
 	  return TRUE;
+
+      return FALSE;
     }
+
+    case tk_pointer:
+      /* base types must match, but can have different qualifiers
+	 (this is different from type_equal) */
+      return 
+	child->kind == tk_pointer &&
+	type_equal_unqualified(parent->u.pointsto, child->u.pointsto);
+
+    case tk_array: {
+      type base_parent = parent;
     
-    // no match
-    return FALSE;
-  }
+      while (base_parent->kind == tk_array)
+	base_parent = base_parent->u.array.arrayof;
 
-
-  return FALSE;
+      return type_contains(base_parent, child);
+    }
+    }
 }
-
