@@ -94,7 +94,8 @@ static void prt_vdecl_initializer_part(declaration d) {
 	output(" /* %s (initializer kind %d) */ ", vdecl->name, 
 	    initializer->kind);
       } else {
-	error("need initializer for '%s'", vdecl->name);
+	// XXX FIX THIS - should be error
+	output(" 0 /* XXX XXX YO! MDW! No initializer for %s! */", vdecl->name);
       }
     }
   }
@@ -177,6 +178,15 @@ void prt_nesc_function_declarations(nesc_declaration mod)
   component_functions_iterate(mod, prt_nesc_function_declaration, NULL);
 }
 
+void prt_nesc_abstract_type(nesc_declaration mod) {
+  // Initial type declaration (without fields) so that subsequent 
+  // declarations will have it
+  if (mod->is_abstract) {
+    output_instancetype(mod);
+    outputln(";");
+  }
+}
+
 void prt_nesc_abstract_declarations(nesc_declaration mod)
 {
   declaration dlist = CAST(module, mod->impl)->decls;
@@ -194,6 +204,7 @@ void prt_nesc_abstract_declarations(nesc_declaration mod)
     /* Instance parameters and magic variables need to go first, so 
      * we can initialize them. Only need this for first instance */
     scan_declaration(d, aplist) {
+      fprintf(stderr,"MDW: PNAD: aplist contains %s\n", CAST(variable_decl, CAST(data_decl, d)->decls)->ddecl->name);
       prt_vdecl_variable_part(d);
     }
 
@@ -302,7 +313,7 @@ static full_connection new_full_connection(region r, endp ep, expression cond,
 {
   full_connection c = ralloc(r, struct full_connection);
 
-  //print_endp("MDW: new_full_connection: ep: ", ep);
+  print_endp("MDW: new_full_connection: ep: ", ep);
   c->ep = ep;
   c->cond = cond;
   c->args = args;
@@ -376,6 +387,8 @@ void prt_ncf_direct_call(struct connections *c,
 {
   bool first = TRUE;
 
+  print_endp("MDW: prt_ncf_direct_call: ", ccall->ep);
+
   /* set result for last call */
   if (last_call && !type_void(return_type))
     output("result = ");
@@ -389,6 +402,10 @@ void prt_ncf_direct_call(struct connections *c,
       ccall->ep->component->instance_number != -1 &&
       (ccall->ep->interface == NULL ||
       !ccall->ep->interface->static_interface)) {
+
+    fprintf(stderr,"MDW: prt_ncf_direct_call: function %s\n", ccall->ep->function->name);
+    print_endp("MDW: prt_ncf_direct_call: ep is ", ccall->ep);
+    fprintf(stderr,"MDW: prt_ncf_direct_call: instance %d\n", ccall->ep->component->instance_number);
 
     output("&(");
     output_instanceref(ccall->ep->component->ctype, ccall->ep->component->instance_number);
@@ -455,6 +472,8 @@ void prt_ncf_direct_calls(struct connections *c,
   dd_scan (call, calls) {
     full_connection ccall = DD_GET(full_connection, call);
     assert(!ccall->cond);
+    print_endp("MDW: prt_ncf_direct_calls: ", ccall->ep);
+    fprintf(stderr, "MDW: prt_ncf_direct_calls: instancenum %d caller_instance %d\n", instancenum, ccall->caller_instance);
     if (instancenum == -1 || instancenum == ccall->caller_instance) {
       prt_ncf_direct_call(c, ccall, (num_calls>0), 0, return_type, called_fd);
       num_calls--;
@@ -618,8 +637,22 @@ static void prt_nesc_connection_function(data_declaration fn, endp ep)
   type return_type = function_return_type(c->called);
   int num_instances = 1;
 
+//  print_endp("    * MDW: prt_nesc_connection_function: ", ep);
+ // output("/* MDW: prt_nesc_connection_function on %s */\n", c->called->name);
+ // output("/* MDW: EP instance is %d */\n", ep->instance);
+ // if (fn->container && fn->container->is_abstract && (!fn->interface || !fn->interface->static_interface)) {
+ //   output("/* MDW: Call is ");
+ //   if (dd_is_empty(c->normal_calls))
+ //     prt_ncf_default_call(c, return_type,
+//	  ddecl_get_fdeclarator(c->called));
+//    else
+//      prt_ncf_direct_calls(c, c->normal_calls, return_type, ep->instance);
+//    output(" --MDW */\n");
+//  }
+
   if (fn->container && fn->container->is_abstract && (fn->interface && !fn->interface->static_interface) && ep->instance != 0) {
     // Only emit one instance
+//    fprintf(stderr, "    * MDW: returning early\n");
     return;
   }
   prt_ncf_header(c, return_type);
@@ -672,6 +705,7 @@ static void prt_nesc_connection_function(data_declaration fn, endp ep)
   }
 
   prt_ncf_trailer(return_type);
+  print_endp("    * MDW: done with conn fn: ", ep);
 }
 
 void prt_nesc_called_function_hdr(data_declaration fndecl, void *data)
@@ -712,15 +746,18 @@ void prt_toplevel_module_declarations(nesc_declaration mod) {
     }
 
     scan_declaration (d, dlist) {
+      output("/* MDW: prt_toplevel_module_declarations: kind %d */\n", d->kind);
       if (d->kind == kind_data_decl) {
 	data_decl dd = CAST(data_decl, d);
 	declaration vd;
+        output("/* MDW: prt_toplevel_module_declarations: decls 0x%lx */\n", (unsigned long)dd->decls);
 	if (dd->decls == NULL) 
 	  prt_toplevel_declaration(d);
 	else {
 	  scan_declaration (vd, dd->decls) {
 	    variable_decl vdd = CAST(variable_decl, vd);
 	    data_declaration vdecl = vdd->ddecl;
+	    output("/* MDW: prt_toplevel_module_declarations: vdecl %s */\n", vdecl->name);
 	    if (!is_instance_variable(vdecl)) { 
 	      prt_data_decl(dd);
 	    } 
@@ -733,6 +770,7 @@ void prt_toplevel_module_declarations(nesc_declaration mod) {
 
   } else {
     scan_declaration (d, dlist) {
+      output("/* MDW: prt_toplevel_module_declarations: kind %d */\n", d->kind);
       prt_toplevel_declaration(d);
     }
   }
@@ -740,8 +778,9 @@ void prt_toplevel_module_declarations(nesc_declaration mod) {
 
 void prt_nesc_module(cgraph cg, nesc_declaration mod)
 {
+  output("/* MDW: begin: prt_nesc_module(%s) */\n", mod->name);
   prt_nesc_called_function_headers(cg, mod);
-  prt_toplevel_module_declarations(mod);
+  output("/* MDW: end: prt_nesc_module(%s) */\n", mod->name);
 }
 
 static bool find_reachable_functions(struct connections *c, gnode n,
@@ -749,6 +788,8 @@ static bool find_reachable_functions(struct connections *c, gnode n,
 				     int instance, bool *foundany)
 {
   endp ep = NODE_GET(endp, n);
+  print_endp("\nMDW: find_reachable_functions: ep ", ep);
+  fprintf(stderr,"MDW: find_reachable_functions: instance %d\n", instance);
 
   if (ep->args)
     {
@@ -783,6 +824,8 @@ static bool find_reachable_functions(struct connections *c, gnode n,
 
       assert(!graph_first_edge_out(n));
 
+      print_endp("MDW: scanning EP for call list: ", ep);
+
       /* Eliminate redundant calls: Scan to see if 'target' is in list */
       dd_scan (scan, l) {
 	full_connection fc = DD_GET(full_connection, scan);
@@ -791,6 +834,9 @@ static bool find_reachable_functions(struct connections *c, gnode n,
 	}
       }
       if (!found) {
+	print_endp("MDW: adding EP for call list: ", ep);
+	fprintf(stderr,"MDW: adding EP to call list for %s (0x%lx)\n",
+	    c->called->name, (unsigned long)c->called);
 	dd_add_last_nodups(c->r, l, target);
       }
       *foundany = TRUE;
@@ -799,11 +845,13 @@ static bool find_reachable_functions(struct connections *c, gnode n,
     {
       gedge out;
 
+      fprintf(stderr,"  MDW: Recursing into graph_scan_out (ep=0x%lx)\n", (unsigned long)ep);
       graph_mark_node(n);
       graph_scan_out (out, n)
 	if (find_reachable_functions(c, graph_edge_to(out), gcond, gargs, instance, foundany))
 	  return TRUE;
       graph_unmark_node(n);
+      fprintf(stderr,"  MDW: Done with graph_scan_out (ep=0x%lx)\n", (unsigned long)ep);
 
     }
   return FALSE;
@@ -819,6 +867,8 @@ static bool find_connected_functions(struct connections *c, int instance)
   called_fn_node = fn_lookup(c->cg, c->called, instance);
 
   ep = NODE_GET(endp, called_fn_node);
+  print_endp("MDW: find_connected_functions: got ep: ", ep);
+  fprintf(stderr,"MDW: find_connected_functions: instance: %d\n", instance);
 
   assert(!graph_first_edge_in(called_fn_node));
 
@@ -842,11 +892,23 @@ void find_function_connections(data_declaration fndecl, void *data)
       region r = parse_region;
       struct connections *connections;
 
+      fprintf(stderr,"MDW: find_function_connections: fndecl '%s' NOT DEFINED\n", fndecl->name);
+      if (fndecl->container) {
+        fprintf(stderr,"MDW: container is %s (0x%lx) is_abstract %d aic %d interface %s static_interface %d\n", 
+	    fndecl->container->name,
+	    (unsigned long)fndecl->container,
+	    fndecl->container->is_abstract,
+	    fndecl->container->abstract_instance_count,
+	    fndecl->interface?(fndecl->interface->name):("null"),
+	    fndecl->interface?fndecl->interface->static_interface:0);
+      }
+
       num_instances = num_abstract_instances(fndecl);
       if (!num_instances || 
 	  (fndecl->interface && fndecl->interface->static_interface)) 
       	num_instances = 1;
 
+      /* XXX MDW: Try doing this once */
       fndecl->connections = connections = ralloc(r, struct connections);
       connections->r = r;
       connections->cg = cg;
@@ -869,6 +931,8 @@ void find_function_connections(data_declaration fndecl, void *data)
   	      (!fndecl->gparms && !dd_is_empty(connections->normal_calls)) ||
 	      // dd_length(connections->normal_calls) != last_normal_calls_length
 	      foundany)) {
+	  fprintf(stderr,"MDW: setting fndecl uncallable: %s.%s\n",
+	      fndecl->container->name, fndecl->name);
 
   	  fndecl->uncallable = TRUE; 
 	} else {
@@ -883,7 +947,9 @@ void find_function_connections(data_declaration fndecl, void *data)
 
 void find_connections(cgraph cg, nesc_declaration mod)
 {
+  fprintf(stderr,"\nMDW: find_connections for module %s\n\n", mod->name);
   component_functions_iterate(mod, find_function_connections, cg);
+  fprintf(stderr,"\nMDW: DONE with find_connections for module %s\n\n", mod->name);
 }
 
 static void mark_reachable_function(cgraph cg,
@@ -920,6 +986,8 @@ static void mark_reachable_function(cgraph cg,
       for (ddecl_instance = 0; ddecl_instance < num_ddecl_instances; ddecl_instance++) {
 	gnode gn1 = fn_lookup(cg, caller, caller_instance);
 	gnode gn2 = fn_lookup(cg, ddecl, ddecl_instance);
+	print_endp("\nMDW: mark_reachable_function: ep1 ", NODE_GET(endp, gn1));
+	print_endp("MDW: mark_reachable_function: ep2 ", NODE_GET(endp, gn2));
 	graph_add_edge(gn1, gn2, NULL);
       }
     }
@@ -979,11 +1047,15 @@ static void prt_nesc_function(data_declaration fn, endp ep)
 {
   assert(fn->kind == decl_function);
 
+  print_endp("\nMDW: prt_nesc_function EP ", ep);
+  fprintf(stderr, "   MDW: prt_nesc_function %s (%d instances) (inum %d)\n", fn->name, num_abstract_instances(fn), ep->instance);
+
   if (fn->definition && !fn->suppress_definition) {
     // Only emit one instance 
     if (!fn->container || !fn->container->is_abstract || 
 	(!fn->interface || fn->interface->static_interface) || 
 	(ep->instance == 0)) {
+      fprintf(stderr, "   MDW: prt_function_body\n");
       prt_function_body(CAST(function_decl, fn->definition));
     }
   }
@@ -991,6 +1063,7 @@ static void prt_nesc_function(data_declaration fn, endp ep)
   /* if this is a connection function, print it now */
   if ((fn->ftype == function_command || fn->ftype == function_event) &&
       !fn->defined && !fn->uncallable) {
+    fprintf(stderr, "   MDW: prt_nesc_connection_function\n");
     prt_nesc_connection_function(fn, ep);
   }
 
@@ -1008,12 +1081,17 @@ static void topological_prt(gnode gep, bool force)
 
   fn = NODE_GET(endp, gep)->function;
 
+  print_endp("MDW: topological_prt: ", NODE_GET(endp, gep));
+
   if (isinlined(fn) || force)
     {
+      endp ep = NODE_GET(endp, gep);
       if (graph_node_markedp(gep))
 	return;
 
       graph_mark_node(gep);
+
+      if (!(ep->instance == 0 || ep->instance == -1)) return;
 
       graph_scan_out (out, gep)
 	topological_prt(graph_edge_to(out), FALSE);
@@ -1030,11 +1108,14 @@ static void prt_inline_functions(cgraph callgraph)
     {
       endp ep = NODE_GET(endp, fns);
       data_declaration fn = ep->function;
+      print_endp("\nMDW: prt_inline_functions: ep ", ep);
 
       if (isinlined(fn))
 	{
 	  gedge callers;
 	  bool inlinecallers = FALSE;
+
+	  if (!(ep->instance == 0 || ep->instance == -1)) return;
 
 	  graph_scan_in (callers, fns)
 	    {
@@ -1064,6 +1145,7 @@ static void prt_noninline_functions(cgraph callgraph)
   graph_scan_nodes (fns, cgraph_graph(callgraph))
     {
       data_declaration fn = NODE_GET(endp, fns)->function;
+      print_endp("\nMDW: prt_noninline_functions: ep ", NODE_GET(endp, fns));
 
       if (!isinlined(fn))
 	{
@@ -1209,6 +1291,8 @@ void generate_c_code(nesc_declaration program, const char *target_name,
       outputln("#define dbg_active(mode) 0");
     }
 
+  fprintf(stderr,"\n\nMDW: generate_c_code starting\n\n\n");
+
   /* Process abstract component parameters */
   assert(is_configuration(program->impl));
 
@@ -1220,10 +1304,15 @@ void generate_c_code(nesc_declaration program, const char *target_name,
   dd_scan (mod, modules)
     find_connections(cg, DD_GET(nesc_declaration, mod));
 
+  fprintf(stderr,"MDW: done with find_connections\n");
+
   /* Then we set the 'isused' bit on all functions that are reachable
      from spontaneous_calls or global_uses */
   callgraph = mark_reachable_code();
   inline_functions(callgraph);
+
+  fprintf(stderr,"MDW: done with inline_functions\n");
+  outputln("\n/* MDW: prt_toplevel_declarations */");
 
   /* Then we print the code. */
   /* The C declarations first */
@@ -1231,18 +1320,32 @@ void generate_c_code(nesc_declaration program, const char *target_name,
   prt_toplevel_declarations(all_cdecls);
   disable_line_directives();
 
+  fprintf(stderr,"MDW: done with prt_toplevel_declarations\n");
+
   dd_scan (mod, modules) {
+    outputln("\n/* MDW: prt_nesc_abstract_type */");
+    prt_nesc_abstract_type(DD_GET(nesc_declaration, mod));
+    outputln("\n/* MDW: prt_toplevel_module_declarations */");
+    prt_toplevel_module_declarations(DD_GET(nesc_declaration, mod));
+    outputln("\n/* MDW: prt_abstract_declarations */");
     prt_nesc_abstract_declarations(DD_GET(nesc_declaration, mod));
+    outputln("\n/* MDW: prt_function_declarations */");
     prt_nesc_function_declarations(DD_GET(nesc_declaration, mod));
   }
 
   enable_line_directives();
 
+  fprintf(stderr,"MDW: Printing modules\n");
+
   dd_scan (mod, modules)
     prt_nesc_module(cg, DD_GET(nesc_declaration, mod));
 
+  fprintf(stderr,"MDW: Printing inline functions\n");
+  outputln("\n/* MDW: prt_inline_functions */");
   prt_inline_functions(callgraph);
 
+  fprintf(stderr,"MDW: Printing noninline functions\n");
+  outputln("\n/* MDW: prt_noninline_functions */");
   prt_noninline_functions(callgraph);
 
   if (use_nido) prt_nido_initialize(modules); 
@@ -1252,4 +1355,5 @@ void generate_c_code(nesc_declaration program, const char *target_name,
   if (output)
     fclose(output);
 
+  fprintf(stderr,"MDW: Done with generate_c_code\n");
 }

@@ -483,6 +483,8 @@ void prt_data_decl(data_decl d)
       data_declaration vdecl = vdd->ddecl;
       pte_options extraopts = 0;
 
+      fprintf(stderr,"MDW: prt_data_decl '%s'\n", vdecl?vdecl->name:"null");
+
       if (vdecl) /* because of build_declaration */
 	{
 	  /* Ignore unused non-local declarations 
@@ -495,6 +497,8 @@ void prt_data_decl(data_decl d)
 
 	  extraopts = prefix_decl(vdecl);
 	}
+
+      fprintf(stderr," MDW: ** printing\n");
 
       prt_type_elements(d->modifiers, opts | extraopts);
       opts |= pte_duplicate;
@@ -940,6 +944,9 @@ void prt_parameters(declaration gparms, declaration parms, data_declaration fnde
 
   output("(");
 
+  output("/* MDW: in prt_parameters: fndecl 0x%lx container 0x%lx interface 0x%lx */", 
+      fndecl, fndecl?fndecl->container:0, fndecl?fndecl->interface:0);
+
   /* For abstract functions: Pass thisptr */
   if (fndecl != NULL &&
       fndecl->container != NULL &&
@@ -1145,11 +1152,12 @@ void prt_identifier(identifier e, int context_priority)
   data_declaration decl = e->ddecl;
 
   if (decl->kind == decl_function && decl->uncallable)
-    error_with_location(e->location, "%s not connected", e->cstring.data);
+    error_with_location(e->location, "%s not connected (MDW: unparse.c 1)", e->cstring.data);
 
   set_location(e->location);
   if (decl->container && !decl->Cname) {
     if (is_instance_variable(decl)) {
+      //fprintf(stderr,"MDW: prt_identifier for %s, container_function %s with interface %s\n", e->cstring.data, decl->container_function, decl->container_function->interface);
       if (e->parent_function != NULL &&
 	  e->parent_function->ddecl->interface != NULL &&
 	  e->parent_function->ddecl->interface->static_interface) {
@@ -1271,6 +1279,8 @@ void prt_field_ref(field_ref e, int context_priority)
 
 void prt_instance_ref(instance_ref e, int context_priority)
 {
+  fprintf(stderr,"prt_instance_ref: %s\n", e->cstring.data);
+
   if (e->ddecl->kind == decl_variable) {
 
     if (!is_instance_variable(e->ddecl)) {
@@ -1339,6 +1349,9 @@ static bool prt_interface_deref_initargs(interface_deref e) {
     }
   }
 
+  output("/* MDW: interface_deref: is_abstract %d kind %d ftype %d si %d */\n", 
+      is_abstract, decl->kind, decl->ftype, decl->interface?decl->interface->static_interface:0);
+
   if (is_abstract) {
     // Calling an abstract function
     if (iref != NULL) {
@@ -1360,13 +1373,15 @@ void prt_interface_deref(interface_deref e, int context_priority)
 {
   data_declaration decl = e->ddecl;
 
+  fprintf(stderr,"MDW: prt_interface_deref: decl %s kind %d decl->interface %s kind %d static_interface %d\n", decl->name, decl->kind, decl->interface->name, decl->interface->kind, decl->interface->static_interface);
+
   if (decl->kind == decl_function && decl->uncallable) {
     if (is_instance_ref(e->arg1)) {
       instance_ref iref = CAST(instance_ref, e->arg1);
-      error_with_location(e->location, "%s.%s not connected",
+      error_with_location(e->location, "%s.%s not connected (MDW: unparse.c 2)",
 	  iref->ddecl->name, e->cstring.data);
     } else {
-      error_with_location(e->location, "%s.%s not connected",
+      error_with_location(e->location, "%s.%s not connected (MDW: unparse.c 3)",
 	  CAST(identifier, e->arg1)->cstring.data,
 	  e->cstring.data);
     }
