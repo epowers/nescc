@@ -123,11 +123,11 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write)
       expression e;
 
       // the last exrepssion in a comma list can be an lvalue and an rvalue
-      scan_expression (e, elist) {
+      scan_expression (e, CAST(comma, expr)->arg1) {
         if( e->next )
-          find_expression_vars(CAST(comma, expr)->arg1, FALSE, FALSE);
+          find_expression_vars(e, FALSE, FALSE);
         else 
-          find_expression_vars(CAST(comma, expr)->arg1, is_read, is_write);
+          find_expression_vars(e, is_read, is_write);
       }
       break;
     }
