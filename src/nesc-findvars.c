@@ -486,8 +486,7 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write, e
       break;
     }
     case kind_extension_expr: {
-      assert( 0 ); 
-      find_expression_vars(CAST(unary, expr)->arg1, FALSE, FALSE, NULL);
+      find_expression_vars(CAST(unary, expr)->arg1, is_read, is_write, pa_expr);
       break;
     }
 
