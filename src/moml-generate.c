@@ -142,36 +142,44 @@ static void prt_moml_component_ports(nesc_declaration c) {
   while (env_next(&scanifs, &ifname, &ifentry))
     {
       data_declaration idecl = ifentry;
-
+      
+      outputln("<port name=\"%s\" class=\"ptolemy.actor.IOPort\">", idecl->name);
       if (idecl->kind == decl_interface_ref)
 	{
-            outputln("<port name=\"%s\" class=\"ptolemy.actor.IOPort\">", idecl->name);
-
             indent();
             if (idecl->required) {
                 outputln("<property name=\"output\"/>");
             } else {
                 outputln("<property name=\"input\"/>");
             }
+
+            // See if this interface is parameterised.
+            if (idecl->gparms != NULL) {
+                typelist_scanner scan_gparms;
+                typelist_scan(idecl->gparms, &scan_gparms);
+
+                // Look at first type in list.
+                typelist_next(&scan_gparms);
+
+                // Look at next type in list.
+                if (!typelist_next(&scan_gparms)) {
+                    outputln("<property name=\"multiport\"/>");
+                } else {
+                    fprintf(stderr, "Don't know how to deal with more than one index for a parameterized interface in %s", idecl->name);
+                }
+            }
+            
             unindent();
 
-            /*
-	  env_scanner scanfns;
-	  const char *fnname;
-	  void *fnentry;
-
-	  interface_scan(idecl, &scanfns);
-	  while (env_next(&scanfns, &fnname, &fnentry)) {
-              //iterator(fnentry, data);
-              data_declaration intf = (data_declaration) fnentry;
-              outputln("hi: %s", intf->name);
-          }
-             */
 	}
-      else {
-          outputln("<port name=\"%s\" class=\"ptolemy.actor.IOPort\">", idecl->name);
-          //iterator(idecl, data);
+      else if (idecl->kind == decl_function) {
+          if (!idecl->defined) {
+              outputln("<property name=\"output\"/>");
+          } else {
+              outputln("<property name=\"input\"/>");
+          }
       }
+      
       outputln("<property name=\"_showName\" class=\"ptolemy.kernel.util.SingletonAttribute\"/>");
       outputln("</port>");
     }
@@ -230,7 +238,6 @@ bool generate_momllib(dd_list nesccomponents, const char *inputpathname) {
                 }
             }
             
-            // FIXME: 2nd argument ok?
             unparse_start(output ? output : stdout, NULL);
             disable_line_directives();
 
@@ -262,7 +269,6 @@ bool generate_momllib(dd_list nesccomponents, const char *inputpathname) {
                 }
             }
 
-            // FIXME: 2nd argument ok?
             unparse_start(output ? output : stdout, NULL);
             disable_line_directives();
             
