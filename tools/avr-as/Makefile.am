@@ -25,6 +25,7 @@ as$(EXEEXT): make-avr-as
 	perl make-avr-as $(EXEEXT)
 
 install-exec-local: as$(EXEEXT)
+	mkdir -p $(ncclibdir)/avr/`avr-gcc -dumpversion`
 	install as$(EXEEXT) $(ncclibdir)/avr/`avr-gcc -dumpversion`/as
 
 EXTRA_DIST =					\
