@@ -224,17 +224,13 @@ void yyerror();
 %type <u.impl> iapplication iactor        
 %type <u.start> start_function_call start_function_call_list start
 %type <u.conn> application_connection application_connection_list       
-// FIXME
-//%type <u.gconn> global_connection global_connection_list
 %type <u.aref> actor_ref actor_list application_actor application_actors
 %type <u.portlist> in out in_or_out in_or_out_list actor_port
 %type <u.decl> parameterised_port parameterised_ports parameterised_port_list
 %type <u.pref> port_ref
 %type <u.conn> local_connection local_connection_list
 %type <u.ep> actorControl_decl actorControl_decl_list actorControl
-
-// TinyGUYS
-%type <u.decl> app_guys actor_guys
+%type <u.decl> tinyguys tinyguys_decls
 %type <u.ep> endpoint_list
                         
 /* end galsC-specific code */
@@ -485,21 +481,25 @@ application:
 		      current.container->kind = l_application; }
 	idword
         '{'
-        app_guys
+        tinyguys
         iapplication
         '}'
               {
-                  parsed_nesc_decl = CAST(nesc_decl, new_application(pr, $2.location, $4, $<u.docstring>3, $6, $7));
+                parsed_nesc_decl = CAST(nesc_decl, new_application(pr, $2.location, $4, $<u.docstring>3, $6, $7));
               }
 	;
 
-/* TinyGUYS */
-app_guys:
+tinyguys:
           PARAMETER
           '{'
-          decls
+          tinyguys_decls
           '}'
                 { $$ = $3; }
+        | /* empty */ { $$ = NULL; }
+        ;
+
+tinyguys_decls:
+          decls
         | /* empty */ { $$ = NULL; }
         ;
 
@@ -512,7 +512,7 @@ iapplication:
         start
         '}'
                 {
-                    $$ = CAST(implementation, new_application_implementation(pr, $1.location, $<u.env>2, actor_ref_reverse($4), connection_reverse($5), $6));
+                  $$ = CAST(implementation, new_application_implementation(pr, $1.location, $<u.env>2, actor_ref_reverse($4), connection_reverse($5), $6));
                 }
         ;
                 
@@ -560,12 +560,10 @@ application_connection:
                 { $$ = CAST(connection, new_global_connection(pr, $2.location, $7, $1, $4)); }
 	| endpoint TASTNIOP_GALSC '[' expr ']' '=' endpoint ';'
                 { $$ = CAST(connection, new_global_connection(pr, $2.location, $1, $7, $4)); }
-// TinyGUYS global to local mappings.
-        | endpoint '=' endpoint ';'
+        | endpoint '=' endpoint ';' // TinyGUYS global to local mappings.
                 { $$ = CAST(connection, new_eq_connection(pr, $2.location, $1, $3)); }
 	;
 
-/* FIMXE: add action */
 start:
           APPSTART '{' start_function_call_list '}' { $$ = $3; }
         | /* empty */ { $$ = NULL; }
@@ -590,20 +588,20 @@ actor:
         includes_list
         ACTOR   { $<u.docstring>$ = get_docstring(); 
 	  	/* force matching kind in current galsc declaration */
-		//current.container->kind = l_actor;
+		current.container->kind = l_actor;
                 }
 	idword
         '{'
 	actor_port
-        actor_guys
+        tinyguys
         iactor
         '}'
                 {
-                    parsed_nesc_decl = CAST(nesc_decl, new_actor(pr, $2.location, $4, $<u.docstring>3, $6, $8));
+                  parsed_nesc_decl = CAST(nesc_decl, new_actor(pr, $2.location, $4, $<u.docstring>3, $6, $8));
                 }
 	;
 
-/* EC: (see configuration:) */ 
+/* See configuration: */
 actor_port:
         PORT '{' in_or_out_list '}'
                 { $$ = port_interface_reverse($3); }
@@ -613,7 +611,8 @@ actor_port:
 in_or_out_list: 
           in_or_out_list in_or_out
                 { $$ = port_interface_chain($2, $1); }
-        | /*    empty */ { $$ = NULL; }
+        | /* empty */
+                { $$ = NULL; }
 	;
 
 /* See requires_or_provides: */
@@ -670,18 +669,7 @@ port_ref:
                 { $$ = new_port_ref(pr, $1->location, $1, NULL, NULL); }
 	| idword AS idword
                 { $$ = new_port_ref(pr, $1->location, $1, $3, NULL); }
-	;
-
-/* TinyGUYS */
-// FIXME: same as app_guys???
-actor_guys:
-          PARAMETER
-          '{'
-          decls
-          '}'
-                { $$ = $3; }
-        | /* empty */ { $$ = NULL; }
-        ;    
+	;    
 
 /* See iconfiguration: */
 /* NOTE: We cannot reuse connection_list because we are disallowing
@@ -693,7 +681,8 @@ iactor:
 	  local_connection_list
           actorControl
 	  '}'
-                { $$ = CAST(implementation, new_actor_implementation(pr, $1.location, $<u.env>2, component_ref_reverse($4), connection_reverse($5), endpoint_reverse($6)))
+                {
+                  $$ = CAST(implementation, new_actor_implementation(pr, $1.location, $<u.env>2, component_ref_reverse($4), connection_reverse($5), endpoint_reverse($6)))
                 }
 	;
 
@@ -711,57 +700,16 @@ local_connection:
                 { $$ = CAST(connection, new_rp_connection(pr, $2.location, $3, $1)); }
 	| endpoint TASTNIOP endpoint ';'
                 { $$ = CAST(connection, new_rp_connection(pr, $2.location, $1, $3)); }
-// TinyGUYS
-        | '(' endpoint_list ')' POINTSAT endpoint ';'
+        | '(' endpoint_list ')' POINTSAT endpoint ';' // TinyGUYS
                 { $$ = CAST(connection, new_tg_get_connection(pr, $4.location, $5, endpoint_reverse($2))); }
-        | endpoint TASTNIOP '(' endpoint_list ')' ';'
+        | endpoint TASTNIOP '(' endpoint_list ')' ';' // TinyGUYS
                 { $$ = CAST(connection, new_tg_get_connection(pr, $2.location, $1, endpoint_reverse($4))); }
-
-/*
-Example:
-                
-  - PUT: 
-    - [f x l] 
-      Component.Interface.function -> localname;
-
-  - GET: 
-    - [(f, l) x f]
-      (Component.Interface.function, localname) -> Component.Interface.function;
-    - [(l, p) x f]
-      (inport, localname) -> Component.Interface.function;
-
-
-  * source = (p | f) (l)*
-  * target = l | p | f
-  * "source -> target" is valid if number of arguments and type of arguments
-match on both sides of the arrow when each side is concatenated
-separately.
-
-With this model you get the following cases:
-(l on the right hand side (the source side) means any number of l's,
-provided number of arguments match up correctly when concatenated):
-
-GET
-A.  (p, l) x p
-B.  (f, l) x p
-C.  (p, l) x f
-D.  (f, l) x f
-
-PUT
-E.  p x l
-F.  f x l
-
-GET and PUT
-G.  (p, l) x l
-H.  (f, l) x l
-*/
 	;
 
 endpoint_list:
           endpoint_list ',' endpoint { $$ = endpoint_chain($3, $1); }
         | endpoint
         ;
-
 
 /* See configuration: */
 actorControl:
@@ -773,7 +721,7 @@ actorControl:
 actorControl_decl_list: 
           actorControl_decl_list actorControl_decl
                 { $$ = endpoint_chain($2, $1); }
-        | /*    empty */ { $$ = NULL; }
+        | /* empty */ { $$ = NULL; }
 	;
 
 actorControl_decl:

@@ -19,7 +19,6 @@ Boston, MA 02111-1307, USA. */
    This file is based on:
    - nesc-component.c
    - nesc-configuration.c
-   
  */
 
 #include "parser.h"

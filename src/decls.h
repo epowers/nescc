@@ -217,11 +217,7 @@ struct data_declaration {
     // connection.
     dd_list parameters;
 
-    // List of galsc_parameter_connection.  Filled if this
-    // data_declaration is the target of a TinyGUYS GET or GET/PUT
-    // connection.
-    //dd_list param_target;
-    // FIXME not used
+    // Return type of a TinyGUYS parameter that is used for PUT.
     type parameter_put_type;
 #endif
     

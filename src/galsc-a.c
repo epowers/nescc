@@ -29,11 +29,10 @@ Boston, MA 02111-1307, USA. */
 // given an "endpoint", which is a basically list of names (strings).
 //
 // Based on lookup_endpoint() in nesc-configuration.c.  Added cases
-// for decl_port_ref and decl_actor_ref.  Also fixed the
-// decl_interface_ref case for NO_FUNCTION_INTERFACE_MATCHING.  We use
-// this separate implementation so that we can leave
+// for decl_port_ref and decl_actor_ref and decl_variable.  Also fixed
+// the decl_interface_ref case for NO_FUNCTION_INTERFACE_MATCHING.  We
+// use this separate implementation so that we can leave
 // NO_FUNCTION_INTERFACE_MATCHING undefined.
-// FIXME comment
 bool lookup_endpoint(environment configuration_env, endpoint ep,
 			    endp lep)
 {
@@ -157,8 +156,11 @@ galsc_parameter_connection new_galsc_parameter_connnection(region r) {
     return conn;
 }
 
-// Find the galsc_parameter_connection in the list "pconns" that
-// contains "target".
+// If "target" is filled, find the galsc_parameter_connection in the
+// list "pconns" that contains "target" as the target of the
+// connection.  If "source" is filled, but not target, find the
+// galsc_parameter_connection in the list "pconns" that contains
+// "source" as the source of the connection.  Otherwise, return NULL.
 galsc_parameter_connection get_galsc_parameter_connection(dd_list pconns, endp target, endp source) {
     if (pconns) {
         dd_list_pos pos;
