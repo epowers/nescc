@@ -527,7 +527,7 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write,
       array_ref are = CAST(array_ref, expr);
 
       /* Check for direct array uses. I'll ignore 1[a] for now */
-      if (is_identifier(are->arg1) && type_array(are->type) && !addressof_expr)
+      if (is_identifier(are->arg1) && type_array(are->arg1->type) && !addressof_expr)
 	{
 	  note_var_use(are->arg1, is_read, is_write);
 	  find_expression_vars(are->arg2, TRUE, FALSE, NULL);
