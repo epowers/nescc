@@ -230,8 +230,11 @@ static void print_called_functions(enum contexts context,
   if (graph_node_markedp(parent))
     {
       conc_debug("LOOP d' LOOP\n");
+#undef PRINT_LOOPS_FIXME
+#ifdef PRINT_LOOPS_FIXME
       warning("Found a loop in the call graph:");
       print_current_call_loop(fn, 4);
+#endif
       pop_f();
       return;
     }
