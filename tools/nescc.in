@@ -88,15 +88,15 @@ if ($print_version) {
 # Compute numeric version, assumes PACKAGE_VERSION is of the form a.b.cXXX
 # where XXX is any alphanumeric suffix, b, c are optional and between 0 and 9
 $_ = "@PACKAGE_VERSION@";
-if (/^(\d*)([a-zA-Z]\w*)?$/) {
+if (/^(\d*)([-a-zA-Z]\w*)?$/) {
     $v_a = $1;
     $v_b = 0;
     $v_c = 0;
-} elsif (/^(\d*)\.(\d)([a-zA-Z]\w*)?$/) {
+} elsif (/^(\d*)\.(\d)([-a-zA-Z]\w*)?$/) {
     $v_a = $1;
     $v_b = $2;
     $v_c = 0;
-} elsif (/^(\d*)\.(\d)\.(\d)([a-zA-Z]\w*)?$/) {
+} elsif (/^(\d*)\.(\d)\.(\d)([-a-zA-Z]\w*)?$/) {
     $v_a = $1;
     $v_b = $2;
     $v_c = $3;
