@@ -18,7 +18,7 @@ the TinyOS project.
 %setup -q
 
 %build
-./configure TOSDIR=/usr/local/src/tinyos-1.x/tos/
+./configure --prefix=/usr/local/galsc TOSDIR=/usr/local/src/tinyos-1.x/tos/
 make 
 
 %install
@@ -28,12 +28,13 @@ make install
 rm -rf $RPM_BUILD_DIR/%{name}-%{version}
 
 %files
-/usr/local/lib/ncc/
-/usr/local/bin/mig
-/usr/local/bin/ncg
-/usr/local/bin/ncc
-/usr/local/bin/nescc
-/usr/local/bin/nesdoc
+/usr/local/galsc/lib/ncc/
+/usr/local/galsc/bin/galscc
+/usr/local/galsc/bin/mig
+/usr/local/galsc/bin/ncc
+/usr/local/galsc/bin/ncg
+/usr/local/galsc/bin/nescc
+/usr/local/galsc/bin/nesdoc
 
 %defattr(-,root,root,-)
 %doc
