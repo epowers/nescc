@@ -107,6 +107,7 @@ struct data_declaration {
   declaration ast; /* Last declaration */
   expression initialiser; /* NULL if none */
 
+  bool printed;			/* symbol info already printed */
   bool islimbo; /* TRUE if comes from an extern declaration in an inner scope
 		   (also true for implicit function declarations) */
   bool isexternalscope; /* == TREE_PUBLIC   */

@@ -40,6 +40,7 @@ Boston, MA 02111-1307, USA. */
 
 /* The output file for unparsing */
 static FILE *of;
+static FILE *symf; /* for symbol info */
 static bool no_line_directives;
 static int indent_level;
 static struct location output_loc;
@@ -198,13 +199,18 @@ void output_string(const char *s)
   fwrite(s, strlen(s), 1, of);
 }
 
+void print_stripped_string(FILE *f, const char *s)
+{
+  if (strncmp(s, STRIP_PREFIX, STRIP_PREFIX_LEN) == 0)
+    fputs(s + STRIP_PREFIX_LEN, f);
+  else
+    fputs(s, f);
+}
+
 void output_stripped_string(const char *s)
 {
   output_indent_if_needed();
-  if (strncmp(s, STRIP_PREFIX, STRIP_PREFIX_LEN) == 0)
-    fputs(s + STRIP_PREFIX_LEN, of);
-  else
-    fputs(s, of);
+  print_stripped_string(of, s);
 }
 
 void output_stripped_string_dollar(const char *s)
@@ -358,9 +364,10 @@ void prt_regionof(expression e);
 
 static region unparse_region;
 
-void unparse_start(FILE *to)
+void unparse_start(FILE *to, FILE *symbols)
 {
   of = to;
+  symf = symbols;
   output_loc = *dummy_location;
   at_line_start = TRUE;
   no_line_directives = FALSE;
@@ -377,7 +384,7 @@ void unparse_end(void) deletes
 
 void unparse(FILE *to, declaration program) deletes
 {
-  unparse_start(to);
+  unparse_start(to, NULL);
   prt_toplevel_declarations(program);
   unparse_end();
 }
@@ -476,17 +483,79 @@ static type_element interesting_element(type_element elems)
 
 static pte_options prefix_decl(data_declaration ddecl)
 {
-  /* Hack to add static to all defined functions */
-  if (ddecl->kind == decl_function &&
-      ddecl->ftype != function_static && !ddecl->isexterninline &&
+  /* Hack to add static and inline where necessary */
+  if (ddecl->kind == decl_function && !ddecl->isexterninline &&
       !ddecl->spontaneous && ddecl->definition)
     {
-      output("static ");
+      if (ddecl->ftype != function_static)
+	output("static ");
       if (ddecl->makeinline)
 	output("inline ");
       return pte_noextern;
     }
   return 0;
+}
+
+void prt_symbol_name(FILE *f, data_declaration ddecl)
+{
+  if (!ddecl->Cname)
+    {
+      if (ddecl->container)
+	{
+	  print_stripped_string(f, ddecl->container->name);
+	  fputs(function_separator, f);
+	}
+      if (ddecl->kind == decl_function && ddecl->interface)
+	{
+	  print_stripped_string(f, ddecl->interface->name);
+	  fputs(function_separator, f);
+	}
+      if (!ddecl->defined && ddecl_is_command_or_event(ddecl))
+	fprintf(f, "default%s", function_separator);
+    }
+
+  print_stripped_string(f, ddecl->name);
+}
+
+void prt_attribute_for(data_declaration ddecl)
+{
+  output("__attribute__((section(\".nesc.");
+  prt_symbol_name(of, ddecl);
+  output("\"))) ");
+}
+
+void prt_symbol_info(data_declaration ddecl)
+{
+  if (!ddecl->printed)
+    {
+      ddecl->printed = TRUE;
+      prt_symbol_name(symf, ddecl);
+
+      if (ddecl->kind == decl_function)
+	{
+	  if (ddecl->makeinline || ddecl->isinline || ddecl->isexterninline)
+	    fprintf(symf, " FNINLINE\n");
+	  else
+	    fprintf(symf, " FN\n");
+	}
+      else
+	{
+	  assert(ddecl->kind == decl_variable);
+	  if (ddecl->initialiser)
+	    fprintf(symf, " DATA\n");
+	  else
+	    fprintf(symf, " BSS\n");
+	}
+    }
+}
+
+void prt_diff_info(data_declaration ddecl)
+{
+  if (symf && ddecl && ddecl->needsmemory)
+    {
+      prt_attribute_for(ddecl);
+      prt_symbol_info(ddecl);
+    }
 }
 
 void prt_data_decl(data_decl d)
@@ -515,6 +584,8 @@ void prt_data_decl(data_decl d)
 
 	  extraopts = prefix_decl(vdecl);
 	}
+
+      prt_diff_info(vdd->ddecl);
 
       prt_type_elements(d->modifiers, opts | extraopts);
       opts |= pte_duplicate;
@@ -554,6 +625,7 @@ void prt_function_decl(function_decl d)
 {
   if (d->ddecl->isused && !d->ddecl->suppress_definition)
     {
+      prt_diff_info(d->ddecl);
       prefix_decl(d->ddecl);
       prt_declarator(d->declarator, d->modifiers, d->attributes, d->ddecl,
 		     psd_print_default);
@@ -569,6 +641,7 @@ void prt_function_body(function_decl d)
 	 messages */
       current.function_decl = d;
 
+      prt_diff_info(d->ddecl);
       prefix_decl(d->ddecl);
       prt_declarator(d->declarator, d->modifiers, d->attributes, d->ddecl,
 		     psd_print_default);
@@ -615,9 +688,7 @@ void prt_plain_ddecl(data_declaration ddecl, psd_options options)
       if (ddecl->kind == decl_function && ddecl->interface)
 	output_stripped_string_dollar(ddecl->interface->name);
       if ((options & psd_print_default) &&
-	  (!ddecl->defined && ddecl->kind == decl_function &&
-	   (ddecl->ftype == function_event ||
-	    ddecl->ftype == function_command)))
+	  !ddecl->defined && ddecl_is_command_or_event(ddecl))
       {
         output("default");
         output_string(function_separator);
@@ -736,7 +807,12 @@ bool prt_simple_declarator(declarator d, data_declaration ddecl,
 	if (options & psd_rename_identifier)
 	  output("arg_%p", ddecl);
 	else if (ddecl)
-	  prt_ddecl_full_name(ddecl, options);
+	  {
+	    prt_ddecl_full_name(ddecl, options);
+	    /* check that we printed the symbol info (too late if we get
+	       here) */
+	    assert(!(symf && ddecl->needsmemory && !ddecl->printed));
+	  }
 	else
 	  output_stripped_cstring(CAST(identifier_declarator, d)->cstring);
 	return TRUE;
