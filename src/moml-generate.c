@@ -229,8 +229,9 @@ bool generate_momllib(dd_list nesccomponents, const char *inputpathname) {
                     exit(2);
                 }
             }
-        
-            unparse_start(output ? output : stdout);
+            
+            // FIXME: 2nd argument ok?
+            unparse_start(output ? output : stdout, NULL);
             disable_line_directives();
 
             // Print the standard .xml header
@@ -260,8 +261,9 @@ bool generate_momllib(dd_list nesccomponents, const char *inputpathname) {
                     exit(2);
                 }
             }
-            
-            unparse_start(output ? output : stdout);
+
+            // FIXME: 2nd argument ok?
+            unparse_start(output ? output : stdout, NULL);
             disable_line_directives();
             
             dd_list_pos nesccomponents_element;

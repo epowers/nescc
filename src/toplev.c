@@ -23,7 +23,12 @@ Boston, MA 02111-1307, USA. */
 #include <signal.h>
 #include <unistd.h>
 #include <stdlib.h>
+
+
+/* Darwin (OSX) doesn't support poll. */
+#ifndef __APPLE__
 #include <sys/poll.h>
+#endif
 
 #include "parser.h"
 #include "input.h"
@@ -368,8 +373,10 @@ int region_main(int argc, char **argv) deletes
   char *target = 0;
   int version_flag = 0;
   char *p;
-  char* waitforgdb;
 
+  /* Darwin/OS X does not support poll. */
+#ifndef __APPLE__
+  char* waitforgdb;
   /*
    * Check for an environment variable NCCGDB, and if set, block
    * calling poll(). When gdb attaches, it sends us a signal which
@@ -381,7 +388,8 @@ int region_main(int argc, char **argv) deletes
     fprintf(stderr, "ncc pid %d waiting for gdb attach\n", getpid());
     poll(0, 0, -1); // should return with EINTR
   }
-
+#endif
+  
   signal(SIGABRT, rcc_aborting);
   signal(SIGSEGV, rcc_aborting);
   signal(SIGBUS, rcc_aborting);
@@ -468,7 +476,10 @@ int region_main(int argc, char **argv) deletes
 		}
 	    }
 	  else if (!strcmp (str, "v"))
-	    flag_verbose = 1;
+	    {
+	      if (!flag_verbose) /* avoid overriding -fnesc-verbose */
+		flag_verbose = 1;
+	    }
 	  else if (!strcmp (str, "pedantic"))
 	    pedantic = 1;
 	  else if (!strcmp (str, "pedantic-errors"))

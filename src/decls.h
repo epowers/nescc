@@ -59,6 +59,9 @@ typedef struct tag_declaration {
   struct tag_declaration *shadowed; /* Any struct with the same tag defined in enclosing scope */
   bool defined, being_defined;
   bool fields_const, fields_volatile;
+#ifdef NETWORK
+  bool network_struct;
+#endif
   bool transparent_union;	/* transparent_union attribute is present */
   bool collapsed;		/* TRUE if this struct/union was collapsed
 				   into its parent. */
@@ -107,6 +110,7 @@ struct data_declaration {
   declaration ast; /* Last declaration */
   expression initialiser; /* NULL if none */
 
+  bool printed;			/* symbol info already printed */
   bool islimbo; /* TRUE if comes from an extern declaration in an inner scope
 		   (also true for implicit function declarations) */
   bool isexternalscope; /* == TREE_PUBLIC   */
@@ -136,6 +140,7 @@ struct data_declaration {
          function_event, function_command }
     ftype;
   bool isinline;
+  bool noinline;
   bool isexterninline;
   bool defined;			/* nesC: true if defined, false if used */
   bool suppress_definition;	/* Prevent code generation */

@@ -328,7 +328,8 @@ char *moml_java_filename(const char *orig_src_filename)
     perror("realpath");
     fatal("error expanding path for '%s'\n", orig_src_filename);
   }
-  
+
+  // FIXME: warning: assignment discards qualifiers from pointer target type
   // Get rid of the file name suffix (.nc)
   src_filename = element_pathandname(doc_region, buf);
 
@@ -556,7 +557,7 @@ static FILE *open_outfile(const char *outfile) {
     fatal("can't write to output file '%s'",outfile);
 
   // set up unparse routines
-  unparse_start(current_doc_outfile);
+  unparse_start(current_doc_outfile, NULL);
   disable_line_directives();
   set_function_separator(".");
   enable_documentation_mode();

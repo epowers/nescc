@@ -103,6 +103,14 @@ void handle_decl_attribute(attribute attr, data_declaration ddecl)
 	  ddecl->spontaneous = c_call_nonatomic;
 	}
     }
+  else if (!strcmp(name, "noinline"))
+    {
+      ddecl->noinline = TRUE;
+    }
+#ifdef NETWORK
+  else if (!strcmp(name, "network"))
+    ignored_attribute(attr);
+#endif
   else if (!(target->decl_attribute &&
 	     target->decl_attribute(attr, ddecl)) &&
 	   !handle_type_attribute(attr, &ddecl->type))
@@ -116,6 +124,10 @@ void handle_field_attribute(attribute attr, field_declaration fdecl)
 
   if (!strcmp(name, "packed") || !strcmp(name, "__packed__"))
     fdecl->packed = TRUE;
+#ifdef NETWORK
+  else if (!strcmp(name, "network"))
+    ignored_attribute(attr);
+#endif
   else if (!(target->field_attribute &&
 	     target->field_attribute(attr, fdecl)))
     /*ignored_attribute(attr)*/;
@@ -125,6 +137,14 @@ void handle_tag_attribute(attribute attr, tag_declaration tdecl)
 {
   const char *name = attr->word1->cstring.data;
 
+#ifdef NETWORK
+  if (!strcmp(name, "network")) 
+    {
+      tdecl->network_struct = TRUE;
+      //ignored_attribute(attr);
+    }
+  else
+#endif
   if (!strcmp(name, "transparent_union") ||
       !strcmp(name, "__transparent_union__"))
     {
@@ -158,6 +178,13 @@ bool handle_type_attribute(attribute attr, type *t)
 	handle_combine_attribute(attr->location, attr->word2->cstring.data, t);
       return TRUE;
     }
+#ifdef NETWORK
+  else if (!strcmp(name, "network"))
+    {
+      ignored_attribute(attr);
+      return TRUE;
+    }
+#endif
   else 
     return target->type_attribute && target->type_attribute(attr, t);
 }

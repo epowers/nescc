@@ -102,6 +102,8 @@ void yyerror();
 %token <u.itoken> BREAK CONTINUE RETURN GOTO ASM_KEYWORD TYPEOF ALIGNOF
 %token <u.itoken> ATTRIBUTE EXTENSION LABEL
 %token <u.itoken> REALPART IMAGPART VA_ARG OFFSETOF
+/* #ifdef NETWORK */
+%token <u.itoken> NETWORK_ATTRIBUTE
 
 /* Add precedence rules to solve dangling else s/r conflict */
 %nonassoc IF
@@ -128,6 +130,7 @@ void yyerror();
 
 %type <u.asm_operand> asm_operand asm_operands nonnull_asm_operands
 %type <u.asm_stmt> maybeasm
+%type <u.network> maybe_network_attribute
 %type <u.attribute> maybe_attribute attributes attribute attribute_list attrib
 %type <u.constant> CONSTANT
 %type <u.decl> datadecl datadecls datadef decl decls extdef extdefs fndef
@@ -308,7 +311,9 @@ static void push_declspec_stack(void)
   pstate.declspec_stack = news;
 }
 
-void parse(void) deletes
+static nesc_decl parsed_nesc_decl;
+
+nesc_decl parse(void) deletes
 {
   int result, old_errorcount = errorcount;
   struct parse_state old_pstate = pstate;
@@ -328,6 +333,8 @@ void parse(void) deletes
     fprintf(stderr, "Errors detected in input file (your bison.simple is out of date)");
 
   pstate = old_pstate;
+
+  return parsed_nesc_decl;
 }
 
 void refuse_asm(asm_stmt s)
@@ -1497,6 +1504,16 @@ maybe_attribute:
 		{ $$ = attribute_reverse($1); }
 	;
  
+/* #ifdef NETWORK 
+   NOT DONE
+   Stick this before start_decl and change the parameters */
+maybe_network_attribute:
+	  /* empty */
+  		{ $$ = FALSE; }
+	| NETWORK_ATTRIBUTE
+		{ $$ = TRUE; }
+	;
+
 eattributes:
 	  attributes { $$ = CAST(type_element, $1); }
 	;
@@ -2125,7 +2142,8 @@ stmt:
 		{ if (extra_warnings && stmt_count == $1.i)
 		    warning("empty body in an else-statement");
 		  $$ = $1.stmt;
-		  CAST(if_stmt, $$)->stmt2 = $4;
+		  if (is_if_stmt($$)) /* could be an error_stmt */
+		    CAST(if_stmt, $$)->stmt2 = $4;
 		}
 	| simple_if %prec IF
 		{ /* This warning is here instead of in simple_if, because we

@@ -24,6 +24,13 @@ open GCCV, "avr-gcc 2>&1 -v |";
 
 while (<GCCV>) {
   $version = $1 if (/^gcc version ([^ \n]+)/);
+  $noavrgcc = 1 if /command not found/;
+}
+if ($noavrgcc) {
+    print "avr-gcc not found, not installing special avr-as\n";
+    print "(if you are using avr-based motes, you will need to\n";
+    print "reinstall nesC after installing avr-gcc)\n";
+    exit 0;
 }
 die "Could not determine avr-gcc version" if !defined($version);
 

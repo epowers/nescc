@@ -100,6 +100,8 @@
 (deffield parent "node sameregion" ())
 (deffield parent_ptr "node sameregion *sameregion" ())
 (deffield tdecl tag_declaration ())
+; NETWORK, context inside the expression
+(deffield context context ())
 (deffield fdeclarator function_declarator ())
 (deffield lvalue bool ())
 (deffield bitfield bool ())
@@ -162,8 +164,12 @@ break in or out of an atomic statement.
 (Note: for nested atomic statements, CONTAINING_ATOMIC will point to a
 dangling node as we drop these nested statements from the AST)")
 
+; NETWORK original
+;(deftype expression node (lvalue side_effects cst bitfield isregister
+;			  type static_address parens)
+; NETWORK NEW (add context to the expression for r/w values)
 (deftype expression node (lvalue side_effects cst bitfield isregister
-			  type static_address parens)
+			  type static_address parens context)
   "Expression nodes are subtypes of this type.
 LVALUE is true if this expression can be used in a context requiring an lvalue.
 BITFIELD is true if this lvalue is a bitfield.
@@ -262,7 +268,7 @@ QUALIFIERS and ATTRIBUTEES are lists. ARG1 is an optional bitfield specifier")
   "Type or function qualifier ID (see qualifiers.h and type_quals in types.h)")
 
 (deftype tag_ref type_element (word1 attributes fields defined
-			       tdecl)
+                               tdecl)
   "struct/union/enum WORD1 { FIELDS; }  ATTRIBUTES
 ATTRIBUTES and FIELDS are lists.
 ATTRIBUTES is GCC specific. WORD1 is optional.

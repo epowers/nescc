@@ -38,6 +38,8 @@ typedef struct location
 
 extern location last_location, dummy_location;
 
+location new_location(const char *filename, int lineno);
+
 enum rid
 {
   RID_UNUSED,
@@ -47,6 +49,19 @@ enum rid
   RID_FLOAT,
   RID_DOUBLE,
   RID_VOID,
+
+#ifdef NETWORK
+  // leaving the stuff in below because it's in c-parse.gperf
+  // which doesn't allow ifdefs
+#endif
+  RID_NINT1,
+  RID_NINT2,
+  RID_NINT4,
+  RID_NINT8,
+  RID_NUINT1,
+  RID_NUINT2,
+  RID_NUINT4,
+  RID_NUINT8,
 
   RID_UNSIGNED,
   RID_SHORT,

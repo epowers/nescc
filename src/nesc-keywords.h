@@ -19,7 +19,6 @@ K(includes, INCLUDES, NORID)
 
 K(abstract, ABSTRACT, NORID)
 K(component, COMPONENT, NORID)
-K(delete, DELETE, NORID)
 K(extends, EXTENDS, NORID)
 K(generic, GENERIC, NORID)
 K(new, NEW, NORID)

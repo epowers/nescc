@@ -75,6 +75,7 @@ AC_OUTPUT(
 	tools/ncc
 	tools/nescc
 	tools/nesdoc
+	tools/nccdiff
 	tools/avr-as/Makefile
 	tools/avr-as/make-avr-as
 	tools/avr-as/install-avr-as

@@ -131,6 +131,10 @@ static void collect_uses_expr(expression expr, context c)
   if (!expr)
     return;
 
+#ifdef NETWORK
+  expr->context = c;
+#endif
+
   /* A read of an array-type expression actually takes the address
      of the container 
   XXX: test on type needed because we have some unhandled nodes such

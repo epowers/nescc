@@ -39,6 +39,19 @@ Boston, MA 02111-1307, USA. */
 #include "machine.h"
 #include "attributes.h"
 
+#ifdef KDEBUG
+static void dbg(const char *format, ...) 
+{ 
+    va_list args;
+    va_start(args, format); 
+    // XXX MDW - used to be vprintf 
+    vfprintf(stdout, format, args);
+    va_end(args);
+}
+#else
+#define dbg(...) { }
+#endif
+
 /* Storage specifier "flags" (inline, e.g.) */
 typedef enum {
   scf_inline = 1,
@@ -116,6 +129,7 @@ void init_data_declaration(data_declaration dd, declaration ast,
   dd->in_system_header = ast->location->in_system_header;
   dd->ftype = 0;
   dd->isinline = FALSE;
+  dd->noinline = FALSE;
   dd->isexterninline = FALSE;
   dd->oldstyle_args = NULL;
   dd->vtype = 0;
@@ -150,6 +164,7 @@ void init_data_declaration(data_declaration dd, declaration ast,
   dd->async_access = dd->async_write = FALSE;
   dd->norace = FALSE;
   dd->call_contexts = 0;
+  dd->printed = FALSE;
 }
 
 data_declaration lookup_id(const char *s, bool this_level_only)
@@ -675,7 +690,16 @@ void parse_declarator(type_element modifiers, declarator d, bool bitfield,
 	      case RID_FLOAT: newtype = float_type; break;
 	      case RID_DOUBLE: newtype = double_type; break;
 	      case RID_VOID: newtype = void_type; break;
-		
+#ifdef NETWORK
+              case RID_NINT1: newtype = nint1_type; break;
+              case RID_NINT2: newtype = nint2_type; break;
+              case RID_NINT4: newtype = nint4_type; break;
+              case RID_NINT8: newtype = nint8_type; break;
+              case RID_NUINT1: newtype = nuint1_type; break;
+              case RID_NUINT2: newtype = nuint2_type; break;
+              case RID_NUINT4: newtype = nuint4_type; break;
+              case RID_NUINT8: newtype = nuint8_type; break;
+#endif
 	      case RID_AUTO: case RID_STATIC: case RID_EXTERN:
 	      case RID_REGISTER: case RID_TYPEDEF: case RID_COMMAND:
 	      case RID_EVENT: case RID_TASK:
@@ -710,7 +734,7 @@ void parse_declarator(type_element modifiers, declarator d, bool bitfield,
 	  {
 	    qualifier q = CAST(qualifier, spec);
 	    int id = q->id;
-
+            
 	    check_duplicate_qualifiers1(loc, id, specquals);
 	    specquals |= id;
 	    break;
@@ -1533,6 +1557,11 @@ static int duplicate_decls(data_declaration newdecl, data_declaration olddecl,
     olddecl->isinline = TRUE;
   newdecl->isinline = olddecl->isinline;
 
+  /* If either of the decls says noinline, make sure that none of the
+     declerations are made inline. */
+  if (newdecl->noinline || olddecl->noinline) 
+    newdecl->noinline = olddecl->noinline = TRUE;
+
   if (different_binding_level)
     {
       /* newdecl must be a reference to something at file scope */
@@ -2334,6 +2363,26 @@ dd_list check_parameter(data_declaration dd,
   return extra_attr;
 }
 
+static bool error_signature(type fntype)
+/* Returns: TRUE if fntype is the "error in function declaration"
+     type signature (varargs with one argument of type error_type)
+*/
+{
+  typelist tl;
+  typelist_scanner stl;
+
+  if (!type_function_varargs(fntype))
+    return FALSE;
+
+  tl = type_function_arguments(fntype);
+
+  if (!tl || empty_typelist(tl))
+    return FALSE;
+
+  typelist_scan(tl, &stl);
+  return typelist_next(&stl) == error_type && !typelist_next(&stl);
+}
+
 /* Start definition of variable 'elements d' with attributes attributes, 
    asm specification astmt.
    If initialised is true, the variable has an initialiser.
@@ -2521,7 +2570,7 @@ declaration start_decl(declarator d, asm_stmt astmt, type_element elements,
 	    }
 
 	  if ((type_command(var_type) || type_event(var_type)) &&
-	      type_function_varargs(var_type))
+	      type_function_varargs(var_type) && !error_signature(var_type))
 	    error("varargs commands and events are not supported");
 
 	  check_function(&tempdecl, CAST(declaration, vd), class, scf,
@@ -2657,6 +2706,34 @@ declaration finish_decl(declaration decl, expression init)
 	     (this is set correctly for both strings and init_lists) */
 	  if (!type_array_size(dd->type))
 	    dd->type = init->type;
+	}
+    }
+  /* Check for a size */
+  if (type_array(dd->type))
+    {
+      /* Don't you love gcc code? */
+      int do_default
+	= (dd->needsmemory
+	   /* Even if pedantic, an external linkage array
+	      may have incomplete type at first.  */
+	   ? pedantic && !dd->isexternalscope
+	   : !dd->isfilescoperef);
+
+      if (!type_array_size(dd->type))
+	{
+	  if (do_default)
+	    error_with_decl(decl, "array size missing in `%s'",
+			    decl_printname(dd));
+	  /* This is what gcc has to say about the next line
+	     (see comment/question above):
+	     If a `static' var's size isn't known,
+	     make it extern as well as static, so it does not get
+	     allocated.
+	     If it is not `static', then do not mark extern;
+	     finish_incomplete_decl will give it a default size
+	     and it will get allocated.  */
+	  else if (!pedantic && dd->needsmemory && !dd->isexternalscope)
+	    dd->isfilescoperef = 1;
 	}
     }
 
@@ -2865,8 +2942,16 @@ type_element finish_struct(type_element t, declaration fields,
 
   s->fields = fields;
   s->attributes = attribs;
+
+  // NETWORK struct -- if attribute is provided, then 
+  // tdecl->network_struct would be TRUE             -kchang 040903
   handle_tag_attributes(attribs, tdecl);
   tdecl->fields = new_env(parse_region, NULL);
+
+#ifdef KDEBUG
+  dbg("finist_struct (tdecl->network_struct:%d)===>\n",
+      tdecl->network_struct);
+#endif
 
   scan_declaration (fdecl, fields)
     {
@@ -2937,6 +3022,7 @@ type_element finish_struct(type_element t, declaration fields,
 	{
 	  field_declaration fdecl = NULL;
 
+	  bitwidth = -1;
 	  if (anon_member)
 	    anon_member = FALSE;
 	  else
@@ -2959,6 +3045,24 @@ type_element finish_struct(type_element t, declaration fields,
 			       &class, &scf, NULL, &name, &tmpft,
 			       &defaulted_int, NULL, &extra_attr);
 	      field_type = tmpft;
+
+#ifdef NETWORK
+              if (tdecl->network_struct)
+		{
+		  declarator d = field->declarator;
+
+#ifdef KDEBUG
+		  dbg("  struct:%s field:%s must be network type, type:%d\n",
+		      tdecl->name, name, type_network(field_type));
+
+		  // field->declarator
+		  if (d /*&& d->kind != kind_identifier_declarator*/)
+		    dbg("\td->kind:%d\n", d->kind);
+#endif
+		  if (!type_network(field_type))
+		    error_with_location(floc, "field `%s' should be a network type", name, tdecl->name);
+		}
+#endif
 
 	      /* Grammar doesn't allow scspec: */
 	      assert(scf == 0 && class == 0);
@@ -2991,8 +3095,6 @@ type_element finish_struct(type_element t, declaration fields,
 	      handle_field_attributes(field->attributes, fdecl);
 	      handle_field_dd_attributes(extra_attr, fdecl);
 	      field_type = fdecl->type; /* attributes might change type */
-
-	      bitwidth = -1;
 	      if (field->arg1 && field->arg1->cst)
 		{
 		  known_cst cwidth = field->arg1->cst;
@@ -3079,6 +3181,11 @@ type_element finish_struct(type_element t, declaration fields,
 	      field = CAST(field_decl, field->next);
 	    }
 
+#ifdef NETWORK
+          // force alignment to be 1 if it's network type
+          if (tdecl->network_struct) 
+	    falign = alignment = BITSPERBYTE;
+#endif
 	  if (bitwidth == 0)
 	    {
 	      offset = align_to(offset, falign);
@@ -3110,6 +3217,27 @@ type_element finish_struct(type_element t, declaration fields,
 
 	  alignment = lcm(alignment, falign); /* Note: GCC uses max. Must be hoping for powers of 2 */
 
+
+#ifdef KDEBUG
+          if (fdecl) {
+            printf("\tfdecl->ZZZ name:%s bitwidth:%d offset:%d offset_cc:%d "
+                   "cc:%d\n",
+                   fdecl->name, fdecl->bitwidth, fdecl->offset, fdecl->offset_cc,
+                   type_size_cc(fdecl->type)
+                   );
+            printf("\tsize:%d alignment:%d\n",
+                   (int)type_size(fdecl->type), 
+                   type_alignment(fdecl->type));
+            // known_cst static_address
+            // check type_size_cc first, use type_size
+            if (type_array(fdecl->type) && type_size_cc(fdecl->type))
+              printf("\tarray, size:%d align:%d\n", 
+                     (int)type_size(fdecl->type),
+                     type_alignment(fdecl->type));
+          }
+          printf("\t... alignment:%d falign:%d fsize:%d bitwidth:%d offset:%d size:%d\n", 
+                 alignment, falign, fsize, (int)bitwidth, offset, size);
+#endif
 	}
     }
 
@@ -3125,6 +3253,50 @@ type_element finish_struct(type_element t, declaration fields,
   tdecl->size = align_to(size, alignment) / BITSPERBYTE;
   tdecl->alignment = alignment / BITSPERBYTE;
   tdecl->size_cc = size_cc;
+
+#ifdef KDEBUG
+  printf("\tSIZE:%d alignment:%d BITSPERBYTE:%d<----\n",
+         size, alignment, BITSPERBYTE);
+  printf("\tdecl->size(bytes):%d tdecl->align:%d tdecl->size_cc:%d <===\n",
+         (int)tdecl->size, tdecl->alignment, tdecl->size_cc);
+  {
+    declaration d;
+    scan_declaration (d, s->fields) {
+      data_decl dd = CAST(data_decl, d);
+      type_element em;
+      declaration fd;
+
+      // dd->modifiers
+      scan_type_element (em, dd->modifiers) {
+        if (is_typename(em)) {
+          typename tname = CAST(typename, em);
+          data_declaration tdecl2 = tname->ddecl;
+
+          if (tdecl->network_struct) {
+              printf("typenameHere3:%s qualifiers:%d size:%d kind:X align:%d\n", 
+                     tdecl2->name,
+                     type_qualifiers(tdecl2->type),
+                     (int)type_size(tdecl2->type),
+                     //tdecl2->type->kind,
+                     type_alignment(tdecl2->type));
+          }
+        }
+      }
+
+      scan_declaration (fd, dd->decls) {
+        // CAST(field_decl, fd);
+        field_decl fdd = CAST(field_decl, fd);
+        printf("(field_here,kind:%d)", fdd->declarator->kind);
+        if (fdd->declarator->kind == kind_identifier_declarator)
+          printf("%s", 
+                 (CAST(identifier_declarator, fdd->declarator))->cstring.data);
+        if (fd->next) printf(", ");
+      }
+      printf("\n");
+    }
+    printf("---\n");
+  }
+#endif
 
   return t;
 }
@@ -3453,6 +3625,16 @@ static char *rid_name_int(int id)
     case RID_FLOAT: return "float";
     case RID_DOUBLE: return "double";
     case RID_VOID: return "void";
+#ifdef NETWORK
+    case RID_NINT1: return "n_int8_t";
+    case RID_NINT2: return "n_int16_t";
+    case RID_NINT4: return "n_int32_t";
+    case RID_NINT8: return "n_int64_t";
+    case RID_NUINT1: return "n_uint8_t";
+    case RID_NUINT2: return "n_uint16_t";
+    case RID_NUINT4: return "n_uint32_t";
+    case RID_NUINT8: return "n_uint64_t";
+#endif
     case RID_UNSIGNED: return "unsigned";
     case RID_SHORT: return "short";
     case RID_LONG: return "long";

@@ -26,7 +26,7 @@ Boston, MA 02111-1307, USA. */
 extern char *nido_mote_number;
 
 void unparse(FILE *to, declaration program) deletes;
-void unparse_start(FILE *to);
+void unparse_start(FILE *to, FILE *symbols);
 void unparse_end(void) deletes;
 void enable_line_directives(void);
 void disable_line_directives(void);
@@ -88,6 +88,9 @@ typedef enum {
 } pte_options;
 
 void prt_type_elements(type_element elements, pte_options options);
+#ifdef NETWORK
+void prt_tag_ref_helper(tag_ref tr, pte_options options, bool network_struct);
+#endif
 
 typedef enum {
   psd_need_paren_for_star = 1,
@@ -108,5 +111,7 @@ void prt_ddecl_full_name(data_declaration ddecl, psd_options options);
 void prt_plain_ddecl(data_declaration ddecl, psd_options options);
 
 void prt_function_body(function_decl d);
+
+void prt_diff_info(data_declaration ddecl);
 
 #endif
