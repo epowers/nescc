@@ -270,6 +270,12 @@ static size_t statement_size(statement stmt)
       sum += 1 + expression_size(rs->arg1);
       break;
     }
+    case kind_atomic_stmt: {
+      atomic_stmt as = CAST(atomic_stmt, stmt);
+
+      sum += 1 + statement_size(as->stmt);
+      break;
+    }
     default: assert(0);
     }
 

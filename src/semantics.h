@@ -192,7 +192,7 @@ struct semantic_state
   function_decl function_decl;	/* The function currently being defined */
   tag_ref pending_invalid_xref;	/* Internal use */
   bool component_requires;	/* FALSE if in provides section, TRUE in requires */
-
+  unsigned in_atomic;		/* >0 while lexically within an atomic section */
   char *preprocessed_file;	/* Temp file holding preprocessor output */
 };
 

@@ -323,6 +323,7 @@ void prt_return_stmt(return_stmt s);
 void prt_goto_stmt(goto_stmt s);
 void prt_computed_goto_stmt(computed_goto_stmt s);
 void prt_empty_stmt(empty_stmt s);
+void prt_atomic_stmt(atomic_stmt s);
 
 void prt_label(label l);
 void prt_id_label(id_label l);
@@ -1450,6 +1451,7 @@ void prt_statement(statement s)
       PRTCASE(goto_stmt, s);
       PRTCASE(computed_goto_stmt, s);
       PRTCASE(empty_stmt, s);
+      PRTCASE(atomic_stmt, s);
     default: assert(0); return;
     }
 }
@@ -1733,6 +1735,12 @@ void prt_empty_stmt(empty_stmt s)
 {
   set_location(s->location);
   outputln(";");
+}
+
+void prt_atomic_stmt(atomic_stmt s)
+{
+  set_location(s->location);
+  prt_statement(s->stmt);
 }
 
 void prt_label(label l)

@@ -3651,5 +3651,6 @@ void start_semantics(source_language l, nesc_declaration container,
   current.function_decl = NULL;
   current.pending_invalid_xref = NULL;
   current.container = container;
+  current.in_atomic = 0;
 }
 
