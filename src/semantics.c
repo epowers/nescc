@@ -3329,6 +3329,8 @@ declaration make_enumerator(location loc, cstring id, expression value)
 
   CAST(enumerator, ast)->ddecl = ddecl;
 
+  fprintf(stderr,"MDW: make_enumerator: '%s'\n", id.data);
+
   return ast;
 }
 

@@ -490,7 +490,7 @@ abstract_param_decl:
 	    make_cstring(pr, NESC_INSTANCENUM_LITERAL, sizeof(NESC_INSTANCENUM_LITERAL)));
 	  type_element elt = CAST(type_element, new_rid(pr, $1.location, RID_INT));
 	  declaration dl1 = declare_parameter(d, elt, NULL, FALSE);
-	  $$ = declaration_chain(dl1, NULL);
+	  $$ = declaration_chain(dl1, $2);
 	}
 	;
 
@@ -589,15 +589,24 @@ interface_ref:
 		$$ = new_interface_ref(pr, $1.location, $3, $5, NULL, mod); }
 	;
 
-iconfiguration:
-	  IMPLEMENTATION { $<u.env>$ = start_implementation(); } 
-	  '{'
-	  uses
-	  connection_list
-	  '}'
-		{ $$ = CAST(implementation, new_configuration(pr, $1.location, $<u.env>2, component_ref_reverse($4), connection_reverse($5)));
-		}
-	;
+iconfiguration:  IMPLEMENTATION 
+          { $<u.env>$ = start_implementation(); }
+	  {
+            /* Add magic "_NUMINSTANCES" to static variables */
+	    declaration dl;
+     	    declarator d = make_identifier_declarator($1.location, 
+	    make_cstring(pr, NESC_NUMINSTANCES_LITERAL, sizeof(NESC_NUMINSTANCES_LITERAL)));
+	    type_element elt = CAST(type_element, new_rid(pr, $1.location, RID_INT));
+	    elt = type_element_chain(elt, CAST(type_element, new_rid(pr, $1.location, RID_STATIC)));
+	    push_declspec_stack();
+	    dl = start_decl(d, NULL, elt, 0, NULL);
+	    dl = finish_decl(dl, NULL);
+	    $<u.decl>$ = make_data_decl(elt, dl);
+	  } 
+	  '{' uses connection_list '}' 
+           { $$ = CAST(implementation, new_configuration(pr, $1.location, $<u.env>2, component_ref_reverse($5), connection_reverse($6)));
+           }
+	  ;
 
 uses:     /* empty */ { $$ = NULL; }
 	| uses cuses { $$ = component_ref_chain($2, $1); }

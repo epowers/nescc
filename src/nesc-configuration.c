@@ -285,7 +285,7 @@ static void eval_const_expr(declaration parent_aparms, expression expr) {
     bin->cst = fold_binary(bin->type, CAST(expression, bin));
 
   } else if (is_identifier(expr)) {
-    /* Only allowed identifiers are in parent_aparms */
+    /* Only allowed identifiers are in parent_aparms or global */
     identifier id = CAST(identifier, expr);
     declaration d;
     variable_decl found_vd = NULL;
@@ -301,12 +301,24 @@ static void eval_const_expr(declaration parent_aparms, expression expr) {
 	break;
       }
     }
-    if (!found_vd) {
-      error("cannot find `%s' in abstract parameters");
-      return;
+
+    if (found_vd) {
+      fprintf(stderr,"MDW: eval_const_expr: identifier assigned from vd 0x%lx ('%s')\n", (unsigned long)found_vd, found_vd->ddecl->name);
+      expr->cst = found_vd->arg1->cst; 
+
+    } else {
+      // Look in global level
+      data_declaration ddecl = lookup_global_id(id->cstring.data);
+      if (ddecl == NULL) {
+	error("cannot find `%s' in abstract parameters");
+	return;
+      }
+      if (!ddecl->value) {
+	error("cannot use non-constant variable `%s' in abstract initializer");
+	return;
+      }
+      expr->cst = ddecl->value;
     }
-    fprintf(stderr,"MDW: eval_const_expr: identifier assigned from vd 0x%lx ('%s')\n", (unsigned long)found_vd, found_vd->ddecl->name);
-    expr->cst = found_vd->arg1->cst; 
 
   } else {
     error_with_location(expr->location, "XXX MDW XXX: eval_const_expr: Cannot handle expr kind %d\n", expr->kind);
@@ -323,11 +335,15 @@ static declaration copy_declaration_list(region r, declaration dl) {
   data_decl dd, newdd;
   variable_decl vd, newvd;
 
+  fprintf(stderr,"MDW: copy_declaration_list start\n");
+
   scan_declaration(d, dl) {
     assert(d->kind == kind_data_decl);
     dd = CAST(data_decl, d);
     assert(dd->decls->kind == kind_variable_decl);
     vd = CAST(variable_decl, dd->decls);
+
+    fprintf(stderr,"MDW: copy_declaration_list: Copying vdecl %s\n", vd->ddecl->name);
 
     newvd = new_variable_decl(r, vd->location, vd->declarator, vd->attributes, vd->arg1, vd->asm_stmt, vd->ddecl);
     newdd = new_data_decl(r, dd->location, dd->modifiers, CAST(declaration, newvd));
@@ -341,6 +357,8 @@ static declaration copy_declaration_list(region r, declaration dl) {
       tail = CAST(declaration, tail->next);
     }
   }
+
+  fprintf(stderr,"MDW: copy_declaration_list done\n");
   return newl;
 }
 
@@ -358,9 +376,9 @@ static bool resolve_abstract_parameters(declaration parent_aparms, nesc_configur
   fprintf(stderr,"\nMDW: resolve_abstract_parameters: comp %s instance %d\n", cref->comp->cdecl->name, cref->instance_number);
   fprintf(stderr,"\nMDW: aparms ptr is 0x%lx\n", (unsigned long)aparms);
 
-  // Start head of aparms list, skipping _INSTANCENUM and _NUMINSTANCES
-  assert(aparms != NULL && aparms->next != NULL);
-  aparm = CAST(declaration, aparms->next->next);
+  // Start head of aparms list, skipping _INSTANCENUM 
+  assert(aparms != NULL);
+  aparm = CAST(declaration, aparms->next);
   if (aparm == NULL) {
     error_with_location(args->location, "too few initialization parameters for abstract component");
     return FALSE;
@@ -381,7 +399,7 @@ static bool resolve_abstract_parameters(declaration parent_aparms, nesc_configur
 
     eval_const_expr(parent_aparms, arg);
     if (!arg->cst) {
-      error_with_location(arg->location, "constant expression expected");
+      error_with_location(arg->location, "constant expression expected (MDW: resolve_abstract_parameters)");
       return FALSE;
     } 
 
@@ -976,6 +994,7 @@ bool process_abstract_params(nesc_configuration_instance cinst) {
 	  if (d->kind != kind_data_decl) continue;
 	  dd = CAST(data_decl, d);
 	  vd = CAST(variable_decl, dd->decls);
+	  if (vd == NULL) continue;
 	  fprintf(stderr,"MDW: process_abstract_params: scanning '%s'\n", vd->ddecl->name);
 	  if (!strcmp(vd->ddecl->name, NESC_NUMINSTANCES_LITERAL)) {
 	    fprintf(stderr,"MDW: process_abstract_params: Setting _NUMINSTANCES to %d\n", mod->cdecl->abstract_instance_count);

@@ -483,6 +483,8 @@ void prt_data_decl(data_decl d)
       data_declaration vdecl = vdd->ddecl;
       pte_options extraopts = 0;
 
+      fprintf(stderr,"MDW: prt_data_decl '%s'\n", vdecl?vdecl->name:"null");
+
       if (vdecl) /* because of build_declaration */
 	{
 	  /* Ignore unused non-local declarations 
@@ -495,6 +497,8 @@ void prt_data_decl(data_decl d)
 
 	  extraopts = prefix_decl(vdecl);
 	}
+
+      fprintf(stderr," MDW: ** printing\n");
 
       prt_type_elements(d->modifiers, opts | extraopts);
       opts |= pte_duplicate;
@@ -1188,16 +1192,15 @@ static bool prt_interface_deref_initargs(interface_deref id);
 static void prt_fncall_arguments(function_call e) {
   bool started = FALSE;
 
-  output("(");
-
   if (is_generic_call(e->arg1)) {
-    generic_call gc = CAST(generic_call, e->arg1);
-    prt_expressions(gc->arg1, P_CALL);
+    // Generic call already started the argument list
     started = TRUE;
-
   } else if (is_interface_deref(e->arg1)) {
     interface_deref id = CAST(interface_deref, e->arg1);
+    output("(");
     started = prt_interface_deref_initargs(id);
+  } else {
+    output("(");
   }
 
   prt_expressions(e->args, !started);

@@ -101,12 +101,14 @@ gnode endpoint_lookup(cgraph cg, endp ep)
 {
   ep_table_entry gep;
 
-  //print_endp("MDW: endpoint_lookup for ", ep);
+  print_endp("MDW: endpoint_lookup for ", ep);
 
   gep = dhlookup(cg->ep_table, ep);
 
   if (gep)
     return gep->n;
+
+  fprintf(stderr,"  MDW: creating new endpoint!\n");
 
   gep = ralloc(regionof(cg), struct ep_table_entry);
   gep->ep = *ep;
@@ -127,6 +129,7 @@ gnode fn_lookup(cgraph cg, data_declaration fndecl, int instance_num)
   // or is part of a static interface
   if (!fndecl->container || !fndecl->container->is_abstract ||
       !fndecl->interface || fndecl->interface->static_interface) {
+   //   (fndecl->interface && fndecl->interface->static_interface)) {
     ep.instance = -1;
   } else {
     ep.instance = instance_num;

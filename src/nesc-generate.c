@@ -631,7 +631,7 @@ static void prt_nesc_connection_function(data_declaration fn, endp ep)
   print_endp("    * MDW: prt_nesc_connection_function: ", ep);
   output("/* MDW: prt_nesc_connection_function on %s */\n", c->called->name);
   output("/* MDW: EP instance is %d */\n", ep->instance);
-  if (fn->container && fn->container->is_abstract && !fn->interface->static_interface) {
+  if (fn->container && fn->container->is_abstract && (!fn->interface || !fn->interface->static_interface)) {
     output("/* MDW: Call is ");
     if (dd_is_empty(c->normal_calls))
       prt_ncf_default_call(c, return_type,
@@ -641,7 +641,7 @@ static void prt_nesc_connection_function(data_declaration fn, endp ep)
     output(" --MDW */\n");
   }
 
-  if (fn->container && fn->container->is_abstract && !fn->interface->static_interface && ep->instance != 0) {
+  if (fn->container && fn->container->is_abstract && (fn->interface && !fn->interface->static_interface) && ep->instance != 0) {
     // Only emit one instance
     fprintf(stderr, "    * MDW: returning early\n");
     return;
@@ -649,7 +649,7 @@ static void prt_nesc_connection_function(data_declaration fn, endp ep)
   prt_ncf_header(c, return_type);
 
   num_instances = num_abstract_instances(fn);
-  if (num_instances > 0 && !fn->interface->static_interface) {
+  if (num_instances > 0 && (fn->interface && !fn->interface->static_interface)) {
     int instance;
 
     output("switch (");
@@ -737,14 +737,21 @@ void prt_toplevel_module_declarations(nesc_declaration mod) {
     }
 
     scan_declaration (d, dlist) {
+      output("/* MDW: prt_toplevel_module_declarations: kind %d */\n", d->kind);
       if (d->kind == kind_data_decl) {
 	data_decl dd = CAST(data_decl, d);
 	declaration vd;
-	scan_declaration (vd, dd->decls) {
-	  variable_decl vdd = CAST(variable_decl, vd);
-	  data_declaration vdecl = vdd->ddecl;
-	  if (!is_instance_variable(vdecl)) { 
-	    prt_data_decl(dd);
+        output("/* MDW: prt_toplevel_module_declarations: decls 0x%lx */\n", (unsigned long)dd->decls);
+	if (dd->decls == NULL) 
+	  prt_toplevel_declaration(d);
+	else {
+	  scan_declaration (vd, dd->decls) {
+	    variable_decl vdd = CAST(variable_decl, vd);
+	    data_declaration vdecl = vdd->ddecl;
+	    output("/* MDW: prt_toplevel_module_declarations: vdecl %s */\n", vdecl->name);
+	    if (!is_instance_variable(vdecl)) { 
+	      prt_data_decl(dd);
+	    } 
 	  }
 	}
       } else {        
@@ -753,8 +760,10 @@ void prt_toplevel_module_declarations(nesc_declaration mod) {
     }
 
   } else {
-    scan_declaration (d, dlist)
+    scan_declaration (d, dlist) {
+      output("/* MDW: prt_toplevel_module_declarations: kind %d */\n", d->kind);
       prt_toplevel_declaration(d);
+    }
   }
 }
 
@@ -762,6 +771,7 @@ void prt_nesc_module(cgraph cg, nesc_declaration mod)
 {
   output("/* MDW: begin: prt_nesc_module(%s) */\n", mod->name);
   prt_nesc_called_function_headers(cg, mod);
+  output("/* MDW: prt_toplevel_module_declarations(%s) */\n", mod->name);
   prt_toplevel_module_declarations(mod);
   output("/* MDW: end: prt_nesc_module(%s) */\n", mod->name);
 }
@@ -875,7 +885,7 @@ void find_function_connections(data_declaration fndecl, void *data)
       region r = parse_region;
       struct connections *connections;
 
-      fprintf(stderr,"MDW: find_function_connections: NOT DEFINED\n");
+      fprintf(stderr,"MDW: find_function_connections: fndecl '%s' NOT DEFINED\n", fndecl->name);
       if (fndecl->container) {
         fprintf(stderr,"MDW: container is %s (0x%lx) is_abstract %d aic %d interface %s static_interface %d\n", 
 	    fndecl->container->name,
@@ -887,7 +897,9 @@ void find_function_connections(data_declaration fndecl, void *data)
       }
 
       num_instances = num_abstract_instances(fndecl);
-      if (!num_instances || !fndecl->interface || fndecl->interface->static_interface) num_instances = 1;
+      if (!num_instances || 
+	  (fndecl->interface && fndecl->interface->static_interface)) 
+      	num_instances = 1;
 
       /* XXX MDW: Try doing this once */
       fndecl->connections = connections = ralloc(r, struct connections);
@@ -900,7 +912,7 @@ void find_function_connections(data_declaration fndecl, void *data)
       last_normal_calls_length = 0;
       for (instance = 0; instance < num_instances; instance++) {
 	bool foundany = find_connected_functions(connections, 
-	    (!fndecl->interface || fndecl->interface->static_interface)?(-1):(instance));
+	    (fndecl->interface && fndecl->interface->static_interface)?(-1):(instance));
 
   	/* a function is uncallable if it has no default definition and
    	 * non-generic: no connections
