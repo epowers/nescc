@@ -520,9 +520,15 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write, e
       if( is_identifier(fce->arg1) && strcmp(CAST(identifier,fce->arg1)->cstring.data,"dbg")==0 )
         break;
 
-      // don't follow identifiers
-      if( !is_identifier(fce->arg1) )
-        find_expression_vars(fce->arg1, TRUE, FALSE, NULL);
+      // don't count direct fn calls as refs
+      if (!(is_interface_deref(fce->arg1) ||
+	    is_generic_call(fce->arg1) ||
+	    (is_identifier(fce->arg1) &&
+	     CAST(identifier, fce->arg1)->ddecl->kind == decl_function)))
+	{
+	  warning_with_location(fce->location, "call via function pointer");
+	  find_expression_vars(fce->arg1, TRUE, FALSE, NULL);
+	}
 
       scan_expression (e, fce->args) {
         if( type_pointer(e->type) || type_array(e->type) )
