@@ -756,6 +756,10 @@ static void prt_galsc_port_struct(dd_list ports) {
 // GALSC_params_t GALSC_params;
 // GALSC_params_t GALSC_params_buffer;
 static void prt_galsc_parameter_struct(dd_list parameters) {
+    // Don't print out param stuff if not used.
+    if (dd_is_empty(parameters))
+        return;
+    
     outputln("typedef struct _GALSC_params_t GALSC_params_t;");
     
     outputln("struct _GALSC_params_t {");
@@ -925,11 +929,14 @@ static void prt_galsc_sched_start_function(dd_list appstart) {
 // void GALSC_copy_params(void) {
 //     GALSC_params = GALSC_params_buffer;
 // }
-static void prt_galsc_copy_params() {
+static void prt_galsc_copy_params(dd_list parameters) {
     outputln("void GALSC_copy_params(void) {");
     indent();
 
-    outputln("GALSC_params = GALSC_params_buffer;");
+    // Don't print out param stuff if not used.
+    if (!dd_is_empty(parameters)) {
+        outputln("GALSC_params = GALSC_params_buffer;");
+    }
     
     unindent();
     outputln("}");
@@ -1062,7 +1069,7 @@ void galsc_generate_c_code(nesc_declaration program, const char *target_name,
 
     // Print the GALSC_copy_params() function, which copies the
     // parameters from the buffer into the parameters.
-    prt_galsc_copy_params();
+    prt_galsc_copy_params(parameters);
 
     unparse_end();
     
