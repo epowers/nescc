@@ -65,10 +65,6 @@ static region fv_region = NULL;
 static data_declaration current_function = NULL;
 static const char *current_module_name = NULL;
 
-static env fv_current_env = NULL;
-static env fv_module_env = NULL;
-
-
 // whether or not we are currently in an atomic statement
 bool in_atomic = FALSE;
 
@@ -166,6 +162,7 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write)
       break;
     }
     case kind_compound_expr:
+      /* BUG: last statement is "read" */
       find_statement_vars(CAST(compound_expr, expr)->stmt);
       break;
 
@@ -225,17 +222,21 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write)
       break;
     }
     // binary updates
-    case kind_assign:  case kind_plus_assign:  case kind_minus_assign:  case kind_times_assign:  
+    case kind_assign: case kind_plus_assign:  case kind_minus_assign:  case kind_times_assign:  
     case kind_divide_assign:  case kind_modulo_assign:  case kind_lshift_assign:  case kind_rshift_assign:  
     case kind_bitand_assign:  case kind_bitor_assign:  case kind_bitxor_assign: {
       binary be = CAST(binary, expr);
-      find_expression_vars(be->arg1, is_read, TRUE);
+      find_expression_vars(be->arg1, is_read || expr->kind != kind_assign, TRUE);
       find_expression_vars(be->arg2, TRUE, FALSE);
 
       // special case for assignment to a pointer
       // FIXME: need this when the rvalue is an array.  Are there other times?
       break;
     }
+    /* BUG: gcc allows (int)x = 2 (i.e., cast as lvalue) */
+    /*      gcc allows (1, x) = 2 (i.e., comma lists as lvalues) */
+    /*      gcc allows (x ? x : x) = 2 (i.e., ?: as lvalue) */
+    /* Note that ({x;}) = 2 is an error at least ;-) */
     default:
       // FIXME: are these read/write flags reasonable?
       if (is_unary(expr)) {
@@ -268,10 +269,6 @@ static void find_statement_vars(statement stmt)
       compound_stmt cs = CAST(compound_stmt, stmt);
       statement s;
       declaration d;
-      env temp_env;
-
-      temp_env = fv_current_env;
-      fv_current_env = cs->env->id_env;
 
       // go through initializers
       scan_declaration (d, cs->decls)
@@ -286,8 +283,6 @@ static void find_statement_vars(statement stmt)
 
       scan_statement (s, cs->stmts)
 	find_statement_vars(s);
-
-      fv_current_env = temp_env;
 
       break;
     }
@@ -505,6 +500,8 @@ static void note_pointer_use(expression e, bool is_read, bool is_write)
   alias_list_entry a;
   var_use u;
 
+  /* BUG: this is too early. Aliases are not yet known.
+     (i.e., the note_address_of has to happen in an earlier pass) */
   // find an entry for this type of pointer
   a = get_alias_list_entry( type_points_to(e->type) );
 
@@ -538,6 +535,8 @@ static void note_address_of(expression e)
         top = CAST(binary,top)->arg1;
         break;
       case kind_dereference:
+	/* BUG &*x, &(*x).y, etc do not take the address of x */
+	error_with_location(e->location, "alias bug");
         top = CAST(unary,top)->arg1;
         break;
       default:
@@ -560,16 +559,6 @@ static void note_address_of(expression e)
 //////////////////////////////////////////////////////////////////////
 // manage the global list of variables
 //////////////////////////////////////////////////////////////////////
-
-// returns TRUE if the var belongs to a local scope
-static inline bool is_local_variable(identifier id)
-{
-  if( env_lookup_stop(fv_current_env, id->cstring.data, fv_module_env) )
-    return TRUE;
-
-  return FALSE;
-}
-
 
 static var_list_entry new_var_list_entry(const char *module, const char *name)
 {
@@ -605,7 +594,7 @@ static void note_var_use(expression e, bool is_read, bool is_write)
   //return;
 
   // ignore local variables
-  if(is_local_variable(id) ) {
+  if(id->ddecl->islocal) {
     //printf(" -         : %s.%s\n", current_module_name, id->cstring.data);
     return; 
   }
@@ -856,10 +845,8 @@ void find_function_vars(data_declaration fn)
 
   current_function = fn;
   if( fn->container ) {
-    fv_current_env = fv_module_env = fn->container->impl->ienv->id_env;
     current_module_name = fn->container->name;
   } else {
-    fv_current_env = fv_module_env = global_env->id_env;
     current_module_name = NULL;
   }
 
@@ -869,8 +856,6 @@ void find_function_vars(data_declaration fn)
 
   current_function = NULL;
   current_module_name = NULL;
-  fv_current_env = NULL;
-  fv_module_env = NULL;
 }
 
 
