@@ -37,7 +37,6 @@ Boston, MA 02111-1307, USA. */
    independently of the whole interface */
 //#define NO_FUNCTION_INTERFACE_MATCHING
 
-// FIXMEa: comment
 // Creates a reference to a port (only once for each port).  This is
 // called from the parser (see c-parse.y).
 //
@@ -62,7 +61,6 @@ void declare_port_ref(port_ref iref, declaration gparms,
     ddecl = declare(current.env, &tempdecl, FALSE);
 }
 
-// FIXMEa: comment
 // Connect the end points for a TinyGUYS GET or GET/PUT connection.
 //
 // See connect_function() in nesc-configuration.c
@@ -70,7 +68,6 @@ static void connect_parameter_get(cgraph cg, struct endp from, struct endp to) {
     gnode gfrom = endpoint_lookup(cg, &from), gto = endpoint_lookup(cg, &to);
 
     // FIXME should we just use connect_function with no assert?
-    // FIXME no assert
     
     graph_add_edge(gfrom, gto, NULL);
 
@@ -82,7 +79,6 @@ static void connect_parameter_get(cgraph cg, struct endp from, struct endp to) {
         graph_add_edge(gto, fn_lookup(cg, to.function), NULL);
 }
 
-// FIXMEa: comment
 // Connect the end points for a TinyGUYS PUT connection.
 //
 // See connect_function() in nesc-configuration.c
@@ -91,7 +87,6 @@ static void connect_parameter_put(cgraph cg, struct endp from, struct endp to) {
 
     // Check that [(from.port ^ from.function) && to.parameter]
     assert(((from.port != 0) ^ (from.function != 0)) && (to.parameter));
-    // FIXME should we just use connect_function with no assert?
     
     graph_add_edge(gfrom, gto, NULL);
 
@@ -103,7 +98,6 @@ static void connect_parameter_put(cgraph cg, struct endp from, struct endp to) {
         graph_add_edge(gto, fn_lookup(cg, to.function), NULL);
 }
 
-// FIXMEa: comment
 // Make the connection between a function and a port in the graph.
 //
 // See connect_function() in nesc-configuration.c
@@ -121,7 +115,6 @@ static void connect_function(cgraph cg, struct endp from, struct endp to) {
         graph_add_edge(gto, fn_lookup(cg, to.function), NULL);
 }
 
-// FIXMEa: comment
 // Make the connection between a port and a port in the graph.
 //
 // See connect_function() in nesc-configuration.c
@@ -139,20 +132,17 @@ static void connect_port(cgraph cg, struct endp from, struct endp to) {
         graph_add_edge(gto, fn_lookup(cg, to.function), NULL);
 }
 
-// FIXMEa: comment
 // Extract the source endp for a TinyGUYS GET connection.  The
 // "endpoint_list" is the list of "endpoint" corresponding to the
 // source of the connection to check.  The "configuration_env" is the
 // environment of the connection.  This function will fill "p" with
 // the following:
 //
-//   1. - A port x (and its args) and the first parameter, or
-//      - A function x (and its component, interface, and args) and the
-//        first parameter
+//   1. - A port x (and its args), or
+//      - A function x (and its component, interface, and args)
 //   2. p.x.ep and p.x.configuration_env will contain the endpoint_list
 //      and environment of the connection that contains this parameter.
-//static void extract_parameter_get_connection_source(location l, endpoint endpoint_list, environment configuration_env, endp p) {
-static void extract_parameter_get_connection_source(connection conn, environment configuration_env, endp p) {
+static void extract_parameter_get_connection_trigger(connection conn, environment configuration_env, endp p) {
     endpoint endpoint_list = conn->ep2;
     
     endpoint ep;
@@ -161,15 +151,10 @@ static void extract_parameter_get_connection_source(connection conn, environment
     int port_count = 0;
     int function_count = 0;
 
-    // Find the trigger port or function and the first parameter in
-    // the endpoint_list.
+    // Find the trigger port or function in the endpoint_list.
     scan_endpoint (ep, endpoint_list) {
         if (lookup_endpoint(configuration_env, ep, &temp)) {
             if (temp.parameter) {
-                // Just save the first parameter.
-                if (parameter_count == 0) {
-                    p->parameter = temp.parameter;
-                }
                 parameter_count++;
             } else if (temp.port) {
                 p->port = temp.port;
@@ -194,21 +179,14 @@ static void extract_parameter_get_connection_source(connection conn, environment
             (p->port && p->function)) {
         error_with_location(conn->location, "more than one trigger for this connection");
     } else {
-        assert(p->parameter);
+        assert(parameter_count > 0);
 
         data_declaration trigger = (p->function) ? p->function : p->port;
         if (!trigger) {
             error_with_location(conn->location, "missing trigger");
         } else {
-            //assert(trigger);
-
-        // FIXME: make sure the above doesn't get overwritten if the
-        // trigger is also part of another connection.
-        //assert(!trigger->ep); // FIXME delete this
-
-        // FIXME parse_region
             if (!trigger->parameters) {
-                trigger->parameters = dd_new_list(parse_region);
+                trigger->parameters = dd_new_list(regionof(trigger));
             }
 
             // Save the connection in the trigger so that we know the
@@ -217,19 +195,13 @@ static void extract_parameter_get_connection_source(connection conn, environment
             pconn->conn = conn;
             pconn->configuration_env = configuration_env;
             dd_add_last(regionof(trigger->parameters), trigger->parameters, pconn);
-            
-        
-
-        //        trigger->ep = endpoint_list;
-        //trigger->configuration_env = configuration_env;
         }
     }
 }
 
-// FIXMEa: comment
 // Check port directions for the following type of connection:
-// l X p
-bool match_parameter_port(struct endp parameter, struct endp port) {
+// [l X p], [l X (p, l)]
+static bool match_parameter_port(struct endp parameter, struct endp port) {
     assert(parameter.parameter && port.port);
     assert(!parameter.function && !parameter.port);
     assert(!port.function);
@@ -241,44 +213,26 @@ bool match_parameter_port(struct endp parameter, struct endp port) {
     return FALSE;
 }
 
-// FIXMEa: comment
 // Check port directions for the following type of connection:
-// l X (p, l)
-bool match_parameter_portparameter(struct endp parameter, struct endp portparameter) {
-    assert(parameter.parameter && portparameter.port && portparameter.parameter);
-    assert(!parameter.function && !parameter.port);
-    assert(!portparameter.function);
-
-    // Just check port direction.  Type checking is done at global level.
-    if (portparameter.port->in) {
-        return TRUE;
-    }
-    return FALSE;
-}
-
-// FIXMEa: comment
-// Check port directions for the following type of connection:
-// p X (p, l)
-bool match_port_portparameter(struct endp port, struct endp portparameter) {
-    assert(port.port && portparameter.port && portparameter.parameter);
-    assert(!port.function && !port.parameter);
-    assert(!portparameter.function);
+// [p X p], [p X (p, l)]
+static bool match_port_port(struct endp port_target, struct endp port_source) {
+    assert(port_target.port && port_source.port);
+    assert(!port_target.function && !port_target.parameter);
+    assert(!port_source.function);
 
     // Just check port directions.  Type checking is done at global level.
-    if (!port.port->in && portparameter.port->in) {
+    if (!port_target.port->in && port_source.port->in) {
         return TRUE;
     }
     return FALSE;
 }
 
-// FIXMEa: comment
 // Check port directions for the following type of connection:
-// p X (f, l)
-bool match_port_functionparameter(struct endp port, struct endp functionparameter) {
-    assert(port.port && functionparameter.function &&
-            functionparameter.parameter);
+// [p X f], [p X (f, l)]
+static bool match_port_function(struct endp port, struct endp function) {
+    assert(port.port && function.function);
     assert(!port.function && !port.parameter);
-    assert(!functionparameter.port);
+    assert(!function.port);
 
     // Just check port direction.  Type checking is done at global level.
     if (!port.port->in) {
@@ -287,31 +241,28 @@ bool match_port_functionparameter(struct endp port, struct endp functionparamete
     return FALSE;
 }
 
-// FIXMEa: comment
 // Check port directions for the following type of connection:
-// f X (p, l)
-bool match_function_portparameter(struct endp function, struct endp portparameter) {
-    assert(function.function && portparameter.port && portparameter.parameter);
+// [f X p], [f X (p, l)]
+static bool match_function_port(struct endp function, struct endp port) {
+    assert(function.function && port.port);
     assert(!function.port && !function.parameter);
-    assert(!portparameter.function);
+    assert(!port.function);
     
     // Just check port directions.  Type checking is done at global level.
-    if (portparameter.port->in) {
+    if (port.port->in) {
         return TRUE;
     }
     return FALSE;
 }
 
-// FIXMEa: comment
-// Check a TinyGUYS GET connection.  If the connection contains no
-// ports, we can do full type checking.  However, if the connection
-// contains ports, only check the port directions.  Full type checking
-// is deferred until the global level.
+// Check a TinyGUYS GET or GET/PUT connection [(x,l) -> x].  If the
+// connection contains no ports, we can do full type checking.
+// However, if the connection contains ports, only check the port
+// directions.  Full type checking is deferred until the global level.
 //
 // The connection has the following format:
-// target X source, where X is <-
-// conn->ep1 X conn->ep2
-// l|p|f X (p|f) (l)*
+// conn->ep1 X conn->ep2, where X is <-
+// Connection formats allowed: l|p|f X (p|f) (l)*
 static void process_parameter_get_connection(cgraph cg, connection conn,
         actor_implementation c) {
     bool match = FALSE;
@@ -322,35 +273,31 @@ static void process_parameter_get_connection(cgraph cg, connection conn,
     // Get the target endp.
     struct endp p1;
     if (lookup_endpoint(c->ienv, conn->ep1, &p1)) {
-        // Get the source endp.
+        // Get the source (trigger) endp.
         struct endp p2;
         init_endp(&p2);
-        extract_parameter_get_connection_source(conn, c->ienv, &p2);
+        extract_parameter_get_connection_trigger(conn, c->ienv, &p2);
 
-        if (p1.parameter) {  // TinyGUYS GET and PUT
+        if (p1.parameter) {       // TinyGUYS GET and PUT
             if (p2.port) {
-                match = match_parameter_portparameter(p1, p2);    // l X (p, l)
+                match = match_parameter_port(p1, p2);    // l X (p, l)
             } else if (p2.function) {
-                match = match_parameter_getput(&p1, &p2);         // l X (f, l)
+                match = match_parameter_getput(&p1, &p2);// l X (f, l)
             }
-        } else if (p1.port) {  // TinyGUYS GET
+        } else if (p1.port) {     // TinyGUYS GET
             if (p2.port) {
-                match = match_port_portparameter(p1, p2);         // p X (p, l)
+                match = match_port_port(p1, p2);         // p X (p, l)
             } else if (p2.function) {
-                match = match_port_functionparameter(p1, p2);     // p X (f, l)
+                match = match_port_function(p1, p2);     // p X (f, l)
             }
         } else if (p1.function) { // TinyGUYS GET
             if (p2.port) {
-                match = match_function_portparameter(p1, p2);     // f X (p, l)
+                match = match_function_port(p1, p2);     // f X (p, l)
             } else if (p2.function) {
-                match = match_parameter_get(&p1, &p2);            // f X (f, l)
+                match = match_parameter_get(&p1, &p2);   // f X (f, l)
             }
         }
         if (match) {
-            // For TinyGUYS GET connections, get rid of the parameter
-            // in the endp because this can be rederived from p.x.ep
-            // and p.x.configuration_env
-            p2.parameter = NULL;
             connect_parameter_get(cg, p2, p1);
         } else {
             error_with_location(conn->location, "TinyGUYS GET connection must be of the form: [(trigger, parameter) -> target], where trigger is a port or a function, and target is either a port, function, or parameter.");
@@ -358,11 +305,12 @@ static void process_parameter_get_connection(cgraph cg, connection conn,
     }
 }
 
-// FIXMEa: comment
 // Check a TinyGUYS PUT connection.  If the connection contains no
 // ports, we can do full type checking.  However, if the connection
 // contains ports, only check the port directions.  Full type checking
-// is deferred until the global level.
+// is deferred until the global level.  Connections have the following
+// format:
+//     p1 X p2, where X is <-
 static void process_parameter_put_connection(cgraph cg, connection conn,
         struct endp p1, struct endp p2) {
     bool match = FALSE;
@@ -380,33 +328,29 @@ static void process_parameter_put_connection(cgraph cg, connection conn,
     }
 }
 
-// FIXMEa: comment
 // Check the port directions in a port connection and make the
 // connection.  Full type checking is deferred until the global level.
+// Connections have the following format:
+//     target X source, p1 <- p2
 //
 // Called from process_connections() in galsc-actor.c
 //
 // See process_connection() in nesc-configuration.c
 static void process_port_connection(cgraph cg, connection conn,
         struct endp p1, struct endp p2) {
-    // target X source
-    // p1 <- p2
     assert(p1.port || p2.port);
 
     bool matches = FALSE;
-    if (p1.port && p2.function) { // p X f
-        if (!p1.port->in) { // p2 (function) -> p1 (port)
-            matches = TRUE;
+    if (p1.port && p2.function) {        // p X f
+        if ((matches = match_port_function(p1, p2))) {
             connect_function(cg, p2, p1);
         }
     } else if (p2.port && p1.function) { // f X p
-        if (p2.port->in && p1.function) { // p2 (port) -> p1 (function)
-            matches = TRUE;
+        if ((matches = match_function_port(p1, p2))) {
             connect_function(cg, p2, p1);
         }
-    } else if (p1.port && p2.port) { // p X p
-        if (p2.port->in && !p1.port->in) { // p2 (port) -> p1 (port)
-            matches = TRUE;
+    } else if (p1.port && p2.port) {     // p X p
+        if ((matches = match_port_port(p1, p2))) {
             connect_port(cg, p2, p1);
         }
     }
@@ -416,7 +360,6 @@ static void process_port_connection(cgraph cg, connection conn,
     }
 }
 
-// FIXMEa: comment
 // Similar to process_connections() in nesc-configuration.c
 //
 // Make a graph for the connections between components in this actor.
@@ -436,7 +379,8 @@ static void process_connections(actor_implementation c) {
         // The connection is of the form:
         // '(' endpoint_list ')' POINTSAT endpoint ';'
         if (is_tg_get_connection(conn)) {
-            // TinyGUYS GET or GET/PUT connections
+            // TinyGUYS GET or GET/PUT connections [(x, l) -> x]
+            // 
             // GET
             // p X (p, l)
             // p X (f, l)
@@ -464,7 +408,9 @@ static void process_connections(actor_implementation c) {
                We also have:
                l X p, l X f
                
-               We first resolve the case where one of the endpoints is a port.
+               We first resolve the case where one of the endpoints is
+               a parameter.  Then we resolve the case where one of the
+               endpoints is a port.
                
                We first resolve the c X c case, which can lead to
                multiple connections, then handle all remaining cases
@@ -491,7 +437,6 @@ static void process_connections(actor_implementation c) {
     }
 }
 
-// FIXMEa: comment
 // Process the entries in the actorControl list in the implementation
 // body c of this actor.  The main purpose of this list is so that
 // internal components that have a StdControl interface can be
@@ -603,7 +548,6 @@ static void process_actorcontrollist(region r, actor_implementation c) {
     }
 }
 
-// FIXMEa: comment
 // Body of function is same as require_components() in
 // nesc-configuration.c
 //
@@ -641,7 +585,6 @@ static void require_components(region r, actor_implementation c) {
     }
 }
 
-// FIXMEa: comment
 // Data structure used to transfer information to
 // check_function_connected(), used with component_functions_iterate()
 struct cfc_data {
@@ -650,7 +593,6 @@ struct cfc_data {
     data_declaration intf_last_error;
 };
 
-// FIXMEa: comment
 // Check that all ports and functions in actor interface are connected.
 // If this is a port, then
 // - If outport, there is an incoming edge
@@ -676,14 +618,13 @@ static void check_function_connected(data_declaration fndecl, void *data) {
         return;
 #endif
 
-    if (fndecl->kind == decl_port_ref) {
-        epnode = port_lookup(d->cg, fndecl);
-    } else if (fndecl->kind == decl_function) {
+    if (fndecl->kind == decl_function) {        // function
         epnode = fn_lookup(d->cg, fndecl);
-    } else if (fndecl->kind == decl_variable) {
-        // TinyGUYS
+    } else if (fndecl->kind == decl_port_ref) { // port
+        epnode = port_lookup(d->cg, fndecl);
+    } else if (fndecl->kind == decl_variable) { // parameter
+        // Parameter need not be connected to anything.
         epnode = parameter_lookup(d->cg, fndecl);
-        // Does not necessarily have to be connected to anything.
     } else {
         assert(0);
     }
@@ -709,7 +650,6 @@ static void check_function_connected(data_declaration fndecl, void *data) {
     }
 }
 
-// FIXMEa: comment
 // Checks that all external interfaces/functions of the configuration
 // are connected somewhere in cg.
 //
@@ -724,7 +664,6 @@ static void check_complete_connection(actor_implementation c)
   component_functions_iterate(c->cdecl, check_function_connected, &d);
 }
 
-// FIXMEa: comment
 // Loads the components inside this actor, then creates the connection
 // graph between the components and between the components and the
 // ports of the actor.  Also processes the actorControl section and
@@ -745,7 +684,6 @@ static void process_actor_implementation(region r, actor_implementation c) {
         check_complete_connection(c);
 }
 
-// FIXMEa: comment
 // Creates a connection graph for the interface of this actor and
 // loads in internal components and creates the connection graph for
 // them.

@@ -21,6 +21,65 @@ Boston, MA 02111-1307, USA. */
 #include "c-parse.h" // FIXME only needed for parse_region
 #include "galsc-a.h"
 
+// Construct and return the argument list for the source trigger in
+// 'pconn'.
+static typelist get_sourceargs(galsc_parameter_connection pconn) {
+    assert(pconn);
+    endpoint trigger_ep = pconn->conn->ep2;
+    environment trigger_configuration_env = pconn->configuration_env;
+    
+    // FIXME parse_region
+    typelist sourceargs = new_typelist(parse_region);
+    endpoint ep;
+    struct endp temp;
+    scan_endpoint(ep, trigger_ep) {
+        if (lookup_endpoint(trigger_configuration_env, ep, &temp)) {
+            // FIXME: what about args for functions?
+            if (temp.parameter) {
+                typelist_append(sourceargs, temp.parameter->type);
+            } else {
+                typelist_scanner scanargs;
+                type argt;
+
+                type temptype = (temp.function) ?
+                    temp.function->type : temp.port->type;
+                assert(temptype);
+                
+                typelist_scan(type_function_arguments(temptype), &scanargs);
+
+                // FIXME what if void type
+                while ((argt = typelist_next(&scanargs))) {
+                    typelist_append(sourceargs, argt);
+                }
+            }
+        }
+    }
+    return sourceargs;
+}
+
+// Check the put return type of the parameter (target).  If the
+// parameter does not already have a put return type, copy it from the
+// source.  Otherwise, check to see if the parameter put return type
+// is compatible with the source.
+static bool match_parameter_return_type(endp target, endp source) {
+    assert(target->parameter != NULL);
+
+    if (!target->parameter->parameter_put_type) {
+        if (source->parameter) {
+            target->parameter->parameter_put_type = source->parameter->parameter_put_type;
+        } else {
+            data_declaration trigger = source->port ? source->port : source->function;
+            target->parameter->parameter_put_type = trigger->type;
+        }
+        return TRUE;
+    } else {
+        type target_return_type = type_function_return_type(get_actual_function_type(target->parameter->parameter_put_type));
+        type source_return_type = type_function_return_type(get_actual_function_type(source->parameter->parameter_put_type));
+        assert(target_return_type && source_return_type);
+        return type_compatible(target_return_type, source_return_type);
+    }
+}
+
 // Type check a TinyGUYS GET connection.  The connection can be one of
 // the following formats:
 // p X (p, l)
@@ -31,6 +90,8 @@ Boston, MA 02111-1307, USA. */
 // [target X (trigger, l)], where "target" is a port or function, and
 // "source" consists of a trigger port or function and a list of
 // parameters.
+//
+// Assumes that ports have already been assigned types.
 //
 // Returns TRUE if the end points of the connection match.
 bool match_parameter_get(endp target, endp source) {
@@ -52,46 +113,20 @@ bool match_parameter_get(endp target, endp source) {
     // Get the argument list for the target function or port.
     typelist targetargs = type_function_arguments(targettype);
 
-    // Construct the argument list for the source.
-    // FIXME parse_region
-    typelist sourceargs = new_typelist(parse_region);
-    endpoint ep;
-    struct endp temp;
-
     // Get the connection information for the trigger.
     galsc_parameter_connection pconn = get_galsc_parameter_connection(trigger->parameters, target, NULL);
-    assert(pconn);
-    endpoint trigger_ep = pconn->conn->ep2;
-    environment trigger_configuration_env = pconn->configuration_env;
     
-    scan_endpoint(ep, trigger_ep) {
-        if (lookup_endpoint(trigger_configuration_env, ep, &temp)) {
-            // FIXME: what about args for functions?
-            if (temp.parameter) {
-                typelist_append(sourceargs, temp.parameter->type);
-            } else {
-                typelist_scanner scanargs;
-                type argt;
+    // Construct the argument list for the source.
+    typelist sourceargs = get_sourceargs(pconn);
 
-                type temptype = (temp.function) ?
-                    temp.function->type : temp.port->type;
-                assert(temptype);
-                
-                typelist_scan(type_function_arguments(temptype), &scanargs);
-
-                while ((argt = typelist_next(&scanargs))) {
-                    typelist_append(sourceargs, argt);
-                }
-            }
-        }
+    // Type check the argument lists and return types.
+    if (type_lists_compatible(targetargs, sourceargs) &&
+            type_compatible(type_function_return_type(targettype),
+                    type_function_return_type(trigger->type))) {
+            return TRUE;
     }
 
-    // Type check the argument lists.
-    if (type_lists_compatible(targetargs, sourceargs)) {
-        return TRUE;
-    }
-
-    // FIXME what about return types?
+    // FIXME check command/event types
     
     return FALSE;
 }
@@ -122,38 +157,13 @@ bool match_parameter_getput(endp target, endp source) {
     // Construct the argument list for the source.  The source of a
     // GET/PUT connection must have exactly one trigger and one
     // parameter.
-    typelist sourceargs = new_typelist(parse_region);
-    // FIXME parse_region
-    endpoint ep;
-    struct endp temp;
 
     // Get the connection information for the trigger.
     galsc_parameter_connection pconn = get_galsc_parameter_connection(trigger->parameters, target, NULL);
-    assert(pconn);
     endpoint trigger_ep = pconn->conn->ep2;
-    environment trigger_configuration_env = pconn->configuration_env;
-    
     if (chain_length(CAST(node, trigger_ep)) == 2) {
-        scan_endpoint(ep, trigger_ep) {
-            if (lookup_endpoint(trigger_configuration_env, ep, &temp)) {
-                // FIXME: args
-                if (temp.parameter) {
-                    typelist_append(sourceargs, temp.parameter->type);
-                } else {
-                    typelist_scanner scanargs;
-                    type argt;
-                    
-                    type temptype = (temp.function) ?
-                        temp.function->type : temp.port->type;
-                    assert(temptype);
-                    
-                    typelist_scan(type_function_arguments(temptype), &scanargs);
-                    while ((argt = typelist_next(&scanargs))) {
-                        typelist_append(sourceargs, argt);
-                    }
-                }
-            }
-        }
+        typelist sourceargs = get_sourceargs(pconn);
+
         // Check that there is exactly one source parameter.  (The
         // trigger has no arguments).
         if (chain_length(CAST(node, sourceargs)) == 1) {
@@ -167,14 +177,13 @@ bool match_parameter_getput(endp target, endp source) {
             // about matching top level qualifiers (like const).  Use
             // this for variable assignment.
             if (type_compatible_unqualified(target->parameter->type,
-                        sourcearg)) {
+                        sourcearg) &&
+                    match_parameter_return_type(target, source)) {
                 return TRUE;
             }
         }
     }
     return FALSE;
-
-    // FIXME what about return type
 }
 
 // Type check a TinyGUYS PUT connection.  The connection can be one of
@@ -193,8 +202,8 @@ bool match_parameter_put(endp target, endp source) {
     // "source" is either a function or a port.
     assert( (source->function != NULL) ^ (source->port != NULL) );
 
-    // Trigger is the source function or port, and must not contain a
-    // parameter list.
+    // 'trigger' is the source function or port, and must not contain
+    // a parameter list.
     data_declaration trigger = (source->function) ? source->function : source->port;
     assert( !(trigger->parameters) && trigger->type );
 
@@ -203,26 +212,14 @@ bool match_parameter_put(endp target, endp source) {
 
     // Construct an argument list consisting only of the type of the
     // target parameter.
-    typelist parameter_type = new_typelist(parse_region);
     // FIXME parse_region
+    typelist parameter_type = new_typelist(parse_region);
     typelist_append(parameter_type, target->parameter->type);
 
-    if (type_lists_compatible(fn_args, parameter_type)) {
-
-        // Check that return types of all connected triggers match.
-        if (target->parameter->parameter_put_type) {
-            type param_return_type = type_function_return_type(get_actual_function_type(target->parameter->parameter_put_type));
-            type trigger_return_type = type_function_return_type(get_actual_function_type(trigger->type));
-            if (type_compatible(param_return_type, trigger_return_type)) {
-                return TRUE;
-            }
-        } else {
-            target->parameter->parameter_put_type = trigger->type;
-            return TRUE;
-        }
+    if (type_lists_compatible(fn_args, parameter_type) &&
+            match_parameter_return_type(target, source)) {
+        return TRUE;
     }
-
-    // FIXME what about return type
     
     return FALSE;
 }
@@ -233,11 +230,10 @@ bool match_parameter_put(endp target, endp source) {
 //
 // See find_reachable_functions()
 static bool galsc_find_source(region r, gnode n, dd_list sources) {
-    //endp ep = NODE_GET(endp, n);
-
     if (graph_node_markedp(n)) {
         // We've already seen this node; there is a cycle in the graph.
         return FALSE;
+        // FIXME should allow cycles around actors.
     } else {
         gedge connection;
         graph_mark_node(n);
@@ -333,6 +329,7 @@ static bool galsc_type_check_port_chain(region r, gnode n, gnode badnode) {
     if (graph_node_markedp(n) || badnode) {
         // Cycle in the graph or a node that doesn't type check.
         return FALSE;
+        // FIXME should allow cycles around actors.
     } else {
         // Mark the node to detect cycles.
         graph_mark_node(n);
@@ -366,37 +363,8 @@ static bool galsc_type_check_port_chain(region r, gnode n, gnode badnode) {
                     // Port type takes the same type as its trigger. 
                     if (trigger_pconn) { // (x, l) -> p
 
-                        // FIXME: copied from match_parameter_get()
-                        endpoint trigger_ep = trigger_pconn->conn->ep2;
-                        environment trigger_configuration_env = trigger_pconn->configuration_env;
-
-                        typelist sourceargs = new_typelist(r);
-                        endpoint ep;
-                        struct endp temp;
-
-                        scan_endpoint(ep, trigger_ep) {
-                            if (lookup_endpoint(trigger_configuration_env, ep, &temp)) {
-                                // FIXME: what about args for functions?
-                                if (temp.parameter) {
-                                    typelist_append(sourceargs, temp.parameter->type);
-                                } else {
-                                    typelist_scanner scanargs;
-                                    type argt;
-                                    
-                                    type temptype = (temp.function) ?
-                                        temp.function->type : temp.port->type;
-                                    assert(temptype);
-                                    
-                                    typelist_scan(type_function_arguments(temptype), &scanargs);
-                                    
-                                    // FIXME what if void type
-                                    while ((argt = typelist_next(&scanargs))) {
-                                        typelist_append(sourceargs, argt);
-                                    }
-                                }
-                            }
-                        }
-
+                        // Construct the argument list for the source.
+                        typelist sourceargs = get_sourceargs(trigger_pconn);
                         type t = trigger->type;
 
                         if (type_command(t)) {
@@ -450,7 +418,6 @@ static bool galsc_type_check_port_chain(region r, gnode n, gnode badnode) {
     return TRUE;
 }
 
-
 // Type check the global parameters.  Assumes that "master" is the
 // connection graph for the entire application.  Assumes that the
 // ports in the connection graph have already been assigned types by
@@ -476,31 +443,24 @@ static bool galsc_type_check_parameter(region r, gnode n) {
         // Local parameter will have a put type only if it is being used for
         // a put call.
         if (source->parameter->parameter_put_type) {
-
             // If the global parameter does not already have a put
             // return type, copy it from the local parameter.
-            // Otherwise, check to see if the local parameter has the
-            // same put return type as the global parameter put return
+            // Otherwise, check to see if the local parameter matches
+            // the put return type as the global parameter put return
             // type.
-            if (!target->parameter->parameter_put_type) {
-                target->parameter->parameter_put_type = source->parameter->parameter_put_type;
-            } else {
-                type global_return_type = type_function_return_type(get_actual_function_type(target->parameter->parameter_put_type));
-                type local_return_type = type_function_return_type(get_actual_function_type(source->parameter->parameter_put_type));
-                if (!type_compatible(global_return_type, local_return_type)) {
-                    match = FALSE;
-                }
+            if (match) { // Don't overwrite previous bad matches.
+                match = match_parameter_return_type(target, source);
             }
         }
     }
     return match;
 }
 
-// FIXME comment
-// Type check all port connections in the application.  Assumes that
-// "master" is the connection graph for the entire application.
-// "ports" should contain the ports (data_declaration) for the
-// connections to be checked.
+// Type check all port chains and parameter PUT chains in the
+// application.  Assumes that:
+// - "master" contains the connection graph for the entire application.
+// - "ports" contains the ports (data_declaration) for the
+//    connections to be checked.
 //
 // See find_connected_functions() in nesc-generate.c
 void galsc_type_check(region r, cgraph master, dd_list ports, dd_list parameters) {

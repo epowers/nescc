@@ -29,7 +29,7 @@ Boston, MA 02111-1307, USA. */
 #include "config.h"
 
 #ifdef GALSC
-// We have two new types of files: actor and application.
+// There are two new types of files for galsC: actor and application.
 typedef enum { l_c, l_interface, l_component, l_implementation, l_actor, l_application } source_language;
 #else
 typedef enum { l_c, l_interface, l_component, l_implementation } source_language;

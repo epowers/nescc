@@ -38,8 +38,8 @@ Boston, MA 02111-1307, USA. */
 #include "galsc-generate.h"
 #include "galsc-a.h"
 
-// The string to use to separate substrings in
-// functions/variables/names of ports.
+// The string to use to separate substrings in the generated
+// port-related functions/variables/names.
 static char *galsc_separator = "$";
 #endif
 
@@ -133,6 +133,7 @@ static full_connection new_full_connection(region r, endp ep, expression cond,
 }
 
 #ifdef GALSC
+// Initialize 'fconn' to NULL.
 void init_full_connection(full_connection fconn) {
     fconn->ep = NULL;
     fconn->cond = NULL;
@@ -197,7 +198,6 @@ static bool prt_arguments(declaration parms, bool first)
     }
   return first;
 }
-
 
 #ifdef GALSC
 // FIXME comment
@@ -376,6 +376,7 @@ bool prt_ncf_direct_calls(struct connections *c,
   dd_list_pos call;
   bool first_call = TRUE;
 #ifdef GALSC
+  // FIXME comment
   function_declarator called_fd = NULL;
   if (!(c->called->kind == decl_port_ref))
       called_fd = ddecl_get_fdeclarator(c->called);
@@ -389,6 +390,7 @@ bool prt_ncf_direct_calls(struct connections *c,
 
       assert(!ccall->cond);
 #ifdef GALSC
+      // FIXME comment
       if (c->called->kind == decl_port_ref && c->called->in) {
           // Print the call to the get() function.
           prt_ncf_direct_call(c, ccall, first_call, psd_galsc_print_port_get_call, return_type, called_fd);

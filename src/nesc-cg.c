@@ -25,6 +25,7 @@ Boston, MA 02111-1307, USA. */
 #include "utils.h"
 
 #ifdef GALSC
+// Initialize 'endp' data structure with all NULL pointers.
 void init_endp(endp ep) {
     ep->parameter =
         ep->actor =
@@ -35,6 +36,7 @@ void init_endp(endp ep) {
     ep->args = NULL;
 }
 
+// Returns true if p1 and p2 hash to the same value.
 bool endp_compare(endp p1, endp p2) {
     return p1->function == p2->function &&
         p1->parameter == p2->parameter &&
@@ -53,8 +55,7 @@ typedef struct ep_table_entry
 {
   struct endp ep; /* ep.function is the key */
 #ifdef GALSC
-    // ep.parameter is also part of the key
-    // ep.port (and ep.args) is also part of the key.
+    // ep.parameter and ep.port (and ep.args) are also part of the key.
 #endif
   gnode n;
 } *ep_table_entry;

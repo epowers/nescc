@@ -32,19 +32,19 @@ static void galsc_connect_graph(cgraph master, cgraph component, dd_list ports, 
     gnode n;
     gedge connection;
 
-    // Add all edges from component to master
+    // Add all edges from component to master.
     graph_scan_nodes (n, cg) {
         endp from = NODE_GET(endp, n);
         gnode mfrom = endpoint_lookup(master, from);
         
-        // Add to master port list if this is a port
+        // Add to master port list if this is a port.
         if (from->port) {
             if (!dd_find(ports, from->port)) {
                 dd_add_last(regionof(ports), ports, from->port);
             }
         } else if (from->parameter) {
             if (!dd_find(parameters, from->parameter)) {
-                // Just add global parameters
+                // Just add global parameters.
                 if (from->parameter->container->kind == l_application) {
                     dd_add_last(regionof(parameters), parameters, from->parameter);
                 }
@@ -87,12 +87,12 @@ static void galsc_connect(nesc_declaration cdecl,
             // GALSC FIXME: is it ok to add actor to components list?
             if (!dd_find(components, adecl)) {
                 dd_add_last(regionof(components), components, adecl);
-                // connect internals of actor
+                // Connect internals of actor.
                 galsc_connect_graph(cg, adecl->connections, ports, parameters);
                 
                 component_ref comp;
                 actor_implementation actor = CAST(actor_implementation, adecl->impl);
-                // connect internals of internal components of actor
+                // Connect internals of internal components of actor.
                 scan_component_ref (comp, actor->components) {
                     connect(comp->cdecl, cg, modules, components);
                 }
@@ -136,8 +136,9 @@ static void process_appstart(nesc_declaration cdecl, dd_list appstart) {
 
 }
 
-// Make the master connection graph and process the appstart section
-// of the application declaration (the initial tokens for the ports).
+// Make the master connection graph, do global type checking, and
+// process the appstart section of the application declaration (the
+// initial tokens for the ports).
 //
 // See connect_graphs() in nesc-main.c
 void galsc_connect_graphs(region r, nesc_declaration program,

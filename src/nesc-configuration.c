@@ -259,6 +259,7 @@ static bool lookup_endpoint(environment configuration_env, endpoint ep,
   environment lookup_env = configuration_env;
 
 #ifdef GALSC
+  // Initialize 'lep' to NULL.
   init_endp(lep);
 #else
   lep->component = lep->interface = lep->function = NULL;

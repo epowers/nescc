@@ -267,8 +267,6 @@ nesc_decl dummy_nesc_decl(source_language sl, location loc, const char *name)
         // application or actor so that the compiler can continue
         // without a segfault.
     case l_application: {
-        // FIXME
-        //        implementation impl = CAST(implementation, new_application_implementation(parse_region, dummy_location, NULL, NULL, NULL, NULL, NULL));
         implementation impl = CAST(implementation, new_application_implementation(parse_region, dummy_location, NULL, NULL, NULL, NULL));
         nd = CAST(nesc_decl, new_application(parse_region, dummy_location, wname, NULL, NULL, impl));
         break;
@@ -309,8 +307,8 @@ void build(nesc_declaration decl, nesc_decl ast)
   switch (decl->kind)
     {
 #ifdef GALSC
-        // After parsing (decl is the resulting AST), build one of the
-        // following: application, actor, interface, component
+        // After parsing ('decl' is the resulting AST), build one of
+        // the following: application, actor, interface, component
         // (configuration or module).
     case l_application:
         build_application(parse_region, decl);

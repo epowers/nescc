@@ -24,6 +24,10 @@ Boston, MA 02111-1307, USA. */
 #include "nesc-concurrency.h"
 #include "nesc-semantics.h"
 
+#ifdef GALSC
+// FIXME: async should be modified for port/parameter boundaries
+#endif
+
 static inline bool is_call_edge(gedge e)
 {
   return (EDGE_GET(use, e)->c & c_fncall) != 0;
@@ -34,12 +38,10 @@ static void rec_async(gnode n, bool async_caller)
   gedge edge;
 
 #ifdef GALSC
-  // FIXME is this async stuff right for ports and parameters?
   endp ep = NODE_GET(endp, n);
   data_declaration fn = (ep->function) ? ep->function : (ep->port ? ep->port : ep->parameter);
   assert(fn);
 #else
-  
   data_declaration fn = NODE_GET(endp, n)->function;
 #endif
   bool async = fn->async || fn->actual_async || async_caller;
@@ -93,7 +95,6 @@ void check_async(cgraph callgraph)
     graph_scan_nodes (n, cg)
       {
 #ifdef GALSC
-          // FIXME is this async stuff right for ports and parameters?
           endp ep = NODE_GET(endp, n);
           data_declaration fn = (ep->function) ? ep->function : (ep->port ? ep->port : ep->parameter);
           assert(fn);
@@ -120,7 +121,6 @@ static dd_list find_async_variables(region r, cgraph callgraph)
   graph_scan_nodes (n, cg)
     {
 #ifdef GALSC
-        // FIXME is this async stuff right for ports and parameters?
         endp ep = NODE_GET(endp, n);
         data_declaration fn = (ep->function) ? ep->function : (ep->port ? ep->port : ep->parameter);
         assert(fn);
@@ -156,7 +156,6 @@ static void rec_contexts(gnode n, int call_contexts)
 {
   gedge edge;
 #ifdef GALSC
-  // FIXME is this async stuff right for ports and parameters?
   endp ep = NODE_GET(endp, n);
   data_declaration fn = (ep->function) ? ep->function : (ep->port ? ep->port : ep->parameter);
   assert(fn);

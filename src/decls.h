@@ -79,7 +79,7 @@ typedef enum { decl_variable, decl_constant, decl_function,
 	       decl_typedef, decl_error, decl_magic_string,	
 	       decl_magic_function,
 #ifdef GALSC
-               // For use with "struct data_declaration".
+               // For use with "struct data_declaration" in decls.h.
                decl_actor_ref,
                decl_port_ref,
 #endif
@@ -213,8 +213,8 @@ struct data_declaration {
 
  /* For TinyGUYS connections */
     // List of galsc_parameter_connection.  Filled if this
-    // data_declaration is the source of a TinyGUYS GET or GET/PUT
-    // connection.
+    // data_declaration is the trigger (source) for a TinyGUYS GET or
+    // GET/PUT connection.
     dd_list parameters;
 
     // Return type of a TinyGUYS parameter that is used for PUT.

@@ -80,12 +80,11 @@ bool lookup_endpoint(environment configuration_env, endpoint ep,
 	    default:
 	      error_with_location(l, "cannot find `%s'", idname);
 	      return FALSE; /* prevent cascading error messages */
-            case decl_variable:
-                // TinyGUYS
-                assert(!lep->parameter);
-                lep->parameter = d;
-                lookup_env = NULL;
-                break;
+            case decl_variable: // TinyGUYS
+              assert(!lep->parameter);
+              lep->parameter = d;
+              lookup_env = NULL;
+              break;
             case decl_actor_ref:
               assert(!lep->actor);
 	      lep->actor = d;

@@ -674,9 +674,6 @@ bool prt_simple_declarator(declarator d, data_declaration ddecl,
 	{
 	  function_declarator fd = CAST(function_declarator, d);
 #ifdef GALSC
-          // FIXME this is a hack on ddecl
-          data_declaration ddecl_orig = ddecl;
-
           if (options &
                       (psd_galsc_print_port_struct
                       | psd_galsc_print_port_get_function
@@ -684,10 +681,8 @@ bool prt_simple_declarator(declarator d, data_declaration ddecl,
                       | psd_galsc_print_port_put_function_header
                       | psd_galsc_print_port_put_function_body
                       | psd_galsc_print_sched_init)) {
-              ddecl = NULL;
-          }
+          } else
 #endif
-          
 	  prt_simple_declarator(fd->declarator, ddecl,
 				options | psd_need_paren_for_star |
 				psd_need_paren_for_qual);
@@ -700,9 +695,9 @@ bool prt_simple_declarator(declarator d, data_declaration ddecl,
                       | psd_galsc_print_port_put_function_body
                       | psd_galsc_print_sched_init)) {
               galsc_prt_parameters(fd->gparms ? fd->gparms :
-			 ddecl ? ddecl_get_gparms(ddecl) : NULL,
+			 NULL ? ddecl_get_gparms(NULL) : NULL,
 			 fd->parms,
-			 options | psd_rename_parameters, ddecl_orig);
+			 options | psd_rename_parameters, ddecl);
           }
           else
 #endif

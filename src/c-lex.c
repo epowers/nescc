@@ -141,8 +141,8 @@ int check_newline(void);
 
 
 #ifdef GALSC
+// Keep track of galsC keywords
 static char *galsc_keywords[] = {
-    // Add the keywords for galsC
 #define GK(name, token, rid) #name,
 #include "galsc-keywords.h"
 NULL
@@ -203,26 +203,18 @@ init_lex (void)
 
 #ifdef GALSC
 // Returns true if the current file being parsed is a galsC file.
-bool is_galsc_language() {
+static bool is_galsc_language() {
     switch (current.language) {
-    case l_c:
-        return FALSE;
-    case l_interface:
-        return FALSE;
-    case l_component:
+    case l_c: case l_interface: case l_component:
         return FALSE;
     case l_implementation:
         switch((current.container)->kind) {
-        case l_actor:
-            return TRUE;
-        case l_application:
+        case l_actor: case l_application:
             return TRUE;
         default:
             return FALSE;
         }
-    case l_actor:
-        return TRUE;
-    case l_application:
+    case l_actor: case l_application:
         return TRUE;
     default:
         return FALSE;
@@ -230,7 +222,7 @@ bool is_galsc_language() {
 }
 
 // Returns true if the reserved word "resword" is a galsC keyword.
-bool is_galsc_reserved_word(struct resword *resword) {
+static bool is_galsc_reserved_word(struct resword *resword) {
     int i;
     for (i = 0; galsc_keywords[i]; i++) {
         if(!strcmp(galsc_keywords[i], resword->name)) {
@@ -1383,8 +1375,7 @@ yylex(struct yystype *lvalp)
 	  {
 
 #ifdef GALSC
-              // If we are not lexing a galsC file, ignore galsC-only
-              // keywords.
+              // If we are not lexing a galsC file, ignore galsC keywords.
               if (!is_galsc_language() && is_galsc_reserved_word(ptr)) {
                   ptr = 0;
               } else {
@@ -1888,8 +1879,9 @@ yylex(struct yystype *lvalp)
 		{ value = POINTSAT; goto done; }
 	      break;
 #ifdef GALSC
-              // Create a token for the connection between ports (=>),
-              // which appears in the application declaration.
+              // Create a token for the symbol for the connection
+              // between ports (=>), which appears in the application
+              // declaration.
 	    case '=':
 	      if (c1 == '>')
 		{ value = POINTSAT_GALSC; goto done; }
@@ -1919,8 +1911,9 @@ yylex(struct yystype *lvalp)
 	    if (c1 == '-')
 	      value = TASTNIOP;
 #ifdef GALSC
-            // Create a token for the connection between ports (<=),
-            // which appears in the application declaration.
+            // Create a token for symbol for the the connection
+            // between ports (<=), which appears in the application
+            // declaration.
 	    else if (c1 == '=')
 	      value = TASTNIOP_GALSC;
 #endif

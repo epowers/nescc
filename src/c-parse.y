@@ -58,7 +58,9 @@ Boston, MA 02111-1307, USA. */
 #include "nesc-module.h"
 #include "nesc-env.h"
 
+#ifdef GALSC
 #include "galsc-actor.h"
+#endif
 
 int yyparse(void) deletes;
 
@@ -208,11 +210,12 @@ void yyerror();
 %type <u.fields> fieldlist
 
 /* the dispatching (fake) tokens */
-%token <u.itoken> DISPATCH_C DISPATCH_GALSC DISPATCH_NESC
+%token <u.itoken> DISPATCH_C DISPATCH_NESC
 
 /* begin galsC-specific code */
 
 /* galsC reserved words */
+%token <u.itoken> DISPATCH_GALSC 
 %token <u.itoken> APPLICATION ACTOR
 %token <u.itoken> POINTSAT_GALSC TASTNIOP_GALSC
 %token <u.itoken> APPSTART
@@ -232,7 +235,7 @@ void yyerror();
 %type <u.ep> actorControl_decl actorControl_decl_list actorControl
 %type <u.decl> tinyguys tinyguys_decls
 %type <u.ep> endpoint_list
-                        
+
 /* end galsC-specific code */
 
 /* nesC reserved words */
@@ -477,6 +480,7 @@ include_list:
 	;
 
 /* begin galsC-specific code */
+
 /*************************** begin application ***************************/
 
 /* See configuration: */
@@ -588,7 +592,9 @@ start_function_call:
         ;
 
 /*************************** end application *****************************/
+
 /*************************** begin actor     *****************************/
+
 /* See configuration: */
 actor:
         includes_list
@@ -712,6 +718,7 @@ local_connection:
                 { $$ = CAST(connection, new_tg_get_connection(pr, $2.location, $1, endpoint_reverse($4))); }
 	;
 
+// For TinyGUYS
 endpoint_list:
           endpoint_list ',' endpoint { $$ = endpoint_chain($3, $1); }
         | endpoint
@@ -735,6 +742,7 @@ actorControl_decl:
 	;
 
 /*************************** end actor ***********************************/
+
 /* end galsC-specific code */
 
 interface: 

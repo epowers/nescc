@@ -67,11 +67,10 @@ struct yystype {
       // See nodetypes.def for AST field definitions.
       // See c-parse.y for usage of these fields in building the AST.
       //   Example: %type <u.start> ...
-    start_function_call start;
-      //global_connection gconn;
-    actor_ref aref;
-    port_ref pref;
-    port_interface portlist;
+      start_function_call start;   // Ports with initial tokens.
+      actor_ref aref;              // References to actors.
+      port_ref pref;               // References to ports.
+      port_interface portlist;     // List of ports in an actor.
 #endif
       
     struct {

@@ -35,30 +35,24 @@ Boston, MA 02111-1307, USA. */
 #include "galsc-application.h"
 #include "galsc-env.h"
 
-// FIXMEa: comment
+// The name of the "Main" component.
 static const char *galsc_main = NULL;
 
-// FIXMEa: comment
 // Set the name of the "Main" component, which is external to all actors.
 void set_galsc_main(const char *name) {
     galsc_main = name;
 }
 
-// FIXMEa: comment
+// Get the name of the "Main" component.
 static const char *get_galsc_main() {
     return galsc_main;
 }
 
-
-
-// FIXMEa: comment
 // Connect the end points in an application level TinyGUYS connection.
 // See connect_function() in nesc-configuration.c
 static void connect_parameters(cgraph cg, struct endp from, struct endp to) {
     gnode gfrom = endpoint_lookup(cg, &from), gto = endpoint_lookup(cg, &to);
 
-    // GALSC FIXME: we are currently allowing multiple functions to connect
-    // to an inport and multiple functions to connect to an outport.
     assert(from.parameter && to.parameter);
 
     graph_add_edge(gfrom, gto, NULL);
@@ -69,10 +63,11 @@ static void connect_parameters(cgraph cg, struct endp from, struct endp to) {
         graph_add_edge(gto, fn_lookup(cg, to.function), NULL);
 }
 
-// FIXMEa: comment
 // Similar to connect_function() in nesc-configuration.c, except we do
 // not check for a function implementation since we are connecting
 // ports together.
+//
+// Called from process_port_connection() in galsc-application.c
 static void connect_function(cgraph cg, struct endp from, struct endp to) {
     gnode gfrom = endpoint_lookup(cg, &from), gto = endpoint_lookup(cg, &to);
 
@@ -88,12 +83,11 @@ static void connect_function(cgraph cg, struct endp from, struct endp to) {
         graph_add_edge(gto, fn_lookup(cg, to.function), NULL);
 }
 
-// FIXMEa: comment
-// Called from process_interface_connection() in galsc-application.c
-//
 // Same as connect_interface() in nesc-configuration.c.  Needed
 // because connect_interface() calls connect_function(), which has
 // been modified to not check for the function implementation.
+//
+// Called by process_interface_connection() in galsc-application.c
 static void connect_interface(cgraph cg, struct endp from, struct endp to,
 			      bool reverse) {
     env_scanner scanfns;
@@ -118,7 +112,6 @@ static void connect_interface(cgraph cg, struct endp from, struct endp to,
     }
 }
 
-// FIXMEa: comment
 // Same as process_interface_connection() in nesc-configuration.c.
 // Needed because a modified connect_function() is called downstream.
 //
@@ -165,9 +158,9 @@ static void process_interface_connection(cgraph cg, connection conn,
     }
 }
 
-// FIXMEa: comment
-// Process a TinyGUYS application level connection.  Make a connection
-// from the local parameter name to the global parameter name.
+// Process a TinyGUYS application level connection.  Check the types,
+// and make a connection from the local parameter name to the global
+// parameter name.
 static void process_parameter_connection(cgraph cg, connection conn, struct endp p1, struct endp p2) {
     bool match = FALSE;
 
@@ -198,7 +191,6 @@ static void process_parameter_connection(cgraph cg, connection conn, struct endp
     }
 }
 
-// FIXMEa: comment
 // Check the port directions in a port connection and make the
 // connection.  Full type checking is deferred until the global level.
 //
@@ -207,10 +199,9 @@ static void process_parameter_connection(cgraph cg, connection conn, struct endp
 // See process_connection() in nesc-configuration.c
 static void process_port_connection(cgraph cg, global_connection conn,
         struct endp p1, struct endp p2) {
-    // target X source
-    // p1 <- p2
     assert(p1.port && p2.port);
 
+    // p1 <- p2
     if (p1.port->in && !p2.port->in) {
         p1.port->portsize_definition = conn->args;
         connect_function(cg, p2, p1);
@@ -219,7 +210,6 @@ static void process_port_connection(cgraph cg, global_connection conn,
     }
 }
 
-// working here
 // Make a graph for the connections between actors (port to port,
 // global parameter to local parameter) in this application.
 //
@@ -232,8 +222,8 @@ static void process_connections(application_implementation c) {
     scan_connection (conn, c->connections) {
         if (lookup_endpoint(c->ienv, conn->ep1, &p1) &&
                 lookup_endpoint(c->ienv, conn->ep2, &p2)) {
-
-            if (p1.port && p2.port) { // port2 => port1
+            // FIXME: need to implement [(p, g) -> p] connections.
+            if (p1.port && p2.port) {                  // port2 => port1
                 process_port_connection(cg, CAST(global_connection, conn), p1, p2);
             } else if (p1.parameter && p2.parameter) { // param2 = param1
                 process_parameter_connection(cg, conn, p1, p2);
@@ -244,7 +234,6 @@ static void process_connections(application_implementation c) {
     }
 }
 
-// FIXMEa: comment
 // Make connections from external component x to internal actor a for
 // all matching interfaces.
 //
@@ -257,7 +246,7 @@ static void process_application_component(region r, application_implementation a
     connection connections = NULL;
     connection conn;
                                 
-    // Look at each external component x.
+    // Look at each external component x (e.g. Main).
     scan_component_ref(comp, app->external_components) {
         // from component_functions_iterate()
         nesc_declaration c1 = comp->cdecl;
@@ -321,7 +310,7 @@ static void process_application_component(region r, application_implementation a
         }
     }
 
-    // Connect the endpoints
+    // Connect the endpoints in the new connections.
     // From process_connections()
     scan_connection (conn, connections) {
         struct endp p1, p2;

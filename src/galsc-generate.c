@@ -33,10 +33,12 @@ Boston, MA 02111-1307, USA. */
 #include "galsc-a.h"
 #include "galsc-generate.h"
 
+// FIXMEa: comment
 // The string to use to separate substrings in
 // functions/variables/names of ports/parameters.
 static char *galsc_separator = "$";
 
+// FIXMEa: comment
 // Print the full port name (using the galsc_separator string) when
 // given an endp.
 //
@@ -48,6 +50,7 @@ static void prt_galsc_port_name(endp ep) {
     output_string(ep->port->name);
 }
 
+// FIXMEa: comment
 // Print the full name (using the galsc_separator string) when given a
 // data_declaration.
 //
@@ -139,9 +142,6 @@ int galsc_prt_parameter_get_call(struct connections *c,
     }
     return first_arg;
 }
-
-
-        
 
 // FIXME comment
 static bool galsc_prt_parameter(declaration d, data_declaration ddecl, psd_options options, bool first, int numargs) {
@@ -450,7 +450,7 @@ void prt_galsc_parameter_function_declarations(dd_list parameters) {
     }
 }
 
-
+// FIXMEa: comment
 // Print the header for the  port queue get() function.
 //
 // void GALSC__MyLeds$display$get()
@@ -466,7 +466,7 @@ void prt_galsc_port_get_function_header(data_declaration p) {
     output_string("get() ");
 }
     
-
+// FIXMEa: comment
 // Print the port queue get() function.
 //
 // void GALSC__MyLeds$display$get() {
@@ -514,6 +514,7 @@ void prt_galsc_port_get_function(data_declaration p) {
     outputln("}");
 }
 
+// FIXMEa: comment
 // Print the header for the port queue put() function.
 //
 // static result_t GALSC__MyLeds$display$put(uint16_t arg_0x85020f0)
@@ -630,6 +631,7 @@ void prt_galsc_port_put_function(data_declaration p) {
     }
 }
 
+// FIXMEa: comment
 // For each inport, print the port size:
 //
 //  enum {
@@ -694,6 +696,7 @@ static void prt_galsc_port_sizes(dd_list ports) {
     outputln("};");
 }
 
+// FIXMEa: comment
 // This function is for use with prt_galsc_ports to print the
 // following type of line for each parameter in the xparms declaration
 // list:
@@ -766,7 +769,6 @@ static void prt_galsc_parameter_struct(dd_list parameters) {
     outputln("};");
 }
 
-
 // FIXME comment
 // Print put() and get() function for each port.
 void prt_galsc_port_function_declarations(dd_list ports) {
@@ -782,7 +784,6 @@ void prt_galsc_port_function_declarations(dd_list ports) {
     }
 }
 
-
 // FIXME comment
 // Print put() and get() function for each port.
 void prt_galsc_port_functions(dd_list ports) {
@@ -796,7 +797,7 @@ void prt_galsc_port_functions(dd_list ports) {
     }
 }
 
-
+// FIXMEa: comment
 // Print the GALSC_sched_init() function, which initializes the galsC
 // scheduler data structures.
 //
@@ -875,6 +876,7 @@ static void prt_galsc_sched_init_function(dd_list ports, dd_list parameters) {
     outputln("}");
 }
 
+// FIXMEa: comment
 // Print the GALSC_sched_start() function, which places initial tokens in port.
 //
 // void GALSC_sched_start(void) {
@@ -908,6 +910,7 @@ static void prt_galsc_sched_start_function(dd_list appstart) {
     outputln("}");
 }
 
+// FIXMEa: comment
 // Top level function for generating C code for a galsC application.
 //
 // Called from nesc_compile in nesc-main.c

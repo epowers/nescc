@@ -155,15 +155,11 @@ void init_data_declaration(data_declaration dd, declaration ast,
   dd->call_contexts = 0;
 
 #ifdef GALSC
-  // See decls.h
-
+  // See definition of 'struct data_declaration' in decls.h
   dd->actor = NULL;
   dd->in = FALSE;
   dd->portsize_definition = NULL;
   dd->parameters = NULL;
-  //dd->param_target = NULL;
-  // FIXME not used
-
   dd->parameter_put_type = NULL;
 #endif
 }

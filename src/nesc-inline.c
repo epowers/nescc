@@ -295,9 +295,9 @@ static ggraph make_ig(region r, cgraph callgraph)
   graph_scan_nodes (n, cg)
     {
 #ifdef GALSC
-        // FIXME is this inline stuff right for ports and parameters?
         endp ep = NODE_GET(endp, n);
-        data_declaration fn = (ep->function) ? ep->function : (ep->port ? ep->port : ep->parameter);
+        data_declaration fn = (ep->function) ? ep->function :
+            (ep->port ? ep->port : ep->parameter);
         if (ep->parameter)
             continue;
         assert(fn);
@@ -311,9 +311,9 @@ static ggraph make_ig(region r, cgraph callgraph)
   graph_scan_nodes (n, cg)
     {
 #ifdef GALSC
-        // FIXME is this inline stuff right for ports and parameters?
         endp ep = NODE_GET(endp, n);
-        data_declaration fn = (ep->function) ? ep->function : (ep->port ? ep->port : ep->parameter);
+        data_declaration fn = (ep->function) ? ep->function :
+            (ep->port ? ep->port : ep->parameter);
         if (ep->parameter)
             continue;
         assert(fn);

@@ -29,9 +29,9 @@ struct endp
     
   data_declaration 
 #ifdef GALSC
-      parameter, // TinyGUYS
-      actor,     // actor and port fields for a node in the connection graph.
-      port,
+      parameter, // parameter (TinyGUYS) for a node in the connection graph.
+      actor,     // actor for a node in the connection graph.
+      port,      // port for a node in the connection graph.
 #endif
       component, interface, function;
 

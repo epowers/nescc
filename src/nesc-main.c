@@ -207,6 +207,7 @@ bool nesc_option(char *p)
       doc_use_graphviz(TRUE);
     }
 #ifdef GALSC
+  // Pass in the name of the 'Main' component.
   else if (!strncmp (p, "fgalsc-main=", strlen("fgalsc-main=")))
     {
         set_galsc_main(p + strlen("fgalsc-main="));
@@ -322,7 +323,8 @@ void nesc_compile(const char *filename, const char *target_name)
               dd_list appstart;
 
               // Create a master connection graph for all elements
-              // (functions, ports, parameters) in the system.
+              // (functions, ports, parameters) in the system and do
+              // global typechecking.
 	      galsc_connect_graphs(parse_region, program, &cg, &modules, &components, &ports, &parameters, &appstart);
 	      if (!generate_docs(filename, cg))
                   // Generate the actual C code.

@@ -184,8 +184,8 @@ const char *find_nesc_file(region r, source_language l, const char *name)
   switch (l)
     {
 #ifdef GALSC
-        // When looking for "name", if it should be an application or
-        // an actor, use the .gc suffix for the file name.
+        // When looking for an application or actor named "name", use
+        // the .gc suffix for the file name.
     case l_application: strcat(filename, ".gc"); break;
     case l_actor: strcat(filename, ".gc"); break;
 #endif
