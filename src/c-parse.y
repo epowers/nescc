@@ -317,6 +317,8 @@ void parse(void) deletes
   pstate.declspec_stack = NULL;
   pstate.ds_region = newsubregion(parse_region);
   result = yyparse();
+  if (result)
+    parsed_nesc_decl = NULL;
   deleteregion_ptr(&pstate.ds_region);
 
   if (result != 0 && errorcount == old_errorcount)

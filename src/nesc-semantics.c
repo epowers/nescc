@@ -274,7 +274,6 @@ nesc_declaration load(source_language sl, location l,
   /* We don't get duplicates as we only load on demand */
   nesc_declare(decl);
 
-  parsed_nesc_decl = NULL;
   compile(l, sl, name, name_is_path, decl, global_env);
   if (!parsed_nesc_decl)
     parsed_nesc_decl = dummy_nesc_decl(sl, element);
