@@ -347,8 +347,11 @@ static void c_decode_option(char *p)
 static void rcc_aborting(int s)
 {
   signal(SIGABRT, 0);
-  // GALSC FIXME: galsc error message?
+#ifdef GALSC
+  fprintf(stderr, "galsC: Internal error. Please send a bug report to the galsC bug mailing list\nat galsc-bugs@lists.sourceforge.net\n");
+#else
   fprintf(stderr, "nesC: Internal error. Please send a bug report to the nesC bug mailing list\nat nescc-bugs@lists.sourceforge.net\n");
+#endif
   if (getenv("RCCDEBUG"))
     abort();
   else
