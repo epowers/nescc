@@ -2422,12 +2422,6 @@ declaration start_decl(declarator d, asm_stmt astmt, type_element elements,
 	     declare_interface_ref */
 	  bool nested = !current.env->global_level && class == RID_AUTO;
 
-          if (concurrency_spec == RID_TASK_ONLY)
-            tempdecl.task_only = TRUE;
-          else if (concurrency_spec == RID_UNINTERRUPTABLE)
-            tempdecl.uninterruptable = TRUE;
-
-
 	  assert(fdeclarator);
 	  if (initialised)
 	    error("function `%s' is initialized like a variable",
@@ -2461,6 +2455,11 @@ declaration start_decl(declarator d, asm_stmt astmt, type_element elements,
 
 	  check_function(&tempdecl, CAST(declaration, vd), class, inlinep,
 			 name, var_type, nested, TRUE, defaulted_int);
+
+          if (concurrency_spec == RID_TASK_ONLY)
+            tempdecl.task_only = TRUE;
+          else if (concurrency_spec == RID_UNINTERRUPTABLE)
+            tempdecl.uninterruptable = TRUE;
 	}
       else
 	{

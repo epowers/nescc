@@ -1066,13 +1066,16 @@ void check_for_conflicts(void)
       int na_read, na_write, na_aread, na_awrite;
       summarize_var_use(v->refs, &na_read, &na_write, &na_aread, &na_awrite, FALSE);
 
-      printf("%s:%ld:  VAR SUMMARY:  %s   conflict: %s   rw: %d,%d  atomic rw: %d,%d   pointer rw: %d,%d  atomic pointer rw: %d,%d\n",
-             v->ddecl->ast->location->filename, v->ddecl->ast->location->lineno, 
-             ddecl_name(v->ddecl), 
-             conflict ? "yes" : "no",
-             na_read, na_write, na_aread, na_awrite,
-             read-na_read, write-na_write, aread-na_aread, awrite-na_awrite);
+      if (conflict) {
+	printf("%s:%ld:  VAR SUMMARY:  %s   conflict: %s   rw: %d,%d  atomic rw: %d,%d   pointer rw: %d,%d  atomic pointer rw: %d,%d\n",
+	       v->ddecl->ast->location->filename, v->ddecl->ast->location->lineno, 
+	       ddecl_name(v->ddecl), 
+	       conflict ? "yes" : "no",
+	       na_read, na_write, na_aread, na_awrite,
+	       read-na_read, write-na_write, aread-na_aread, awrite-na_awrite);
+      }
     }
+      
  
     if( conflict ) 
       print_var_conflict_error_message( v );
