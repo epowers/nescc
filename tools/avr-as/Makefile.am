@@ -25,7 +25,7 @@ as$(EXEEXT): make-avr-as
 	perl make-avr-as $(EXEEXT)
 
 install-exec-local: as$(EXEEXT)
-	perl install-avr-as $(ncclibdir)
+	install as$(EXEEXT) $(ncclibdir)/avr/`avr-gcc -dumpversion`/as
 
 EXTRA_DIST =					\
 	gas-2.11.2-avr-dollar-patch.tar.bz2 	\
