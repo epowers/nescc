@@ -69,7 +69,9 @@ void save_option(const char *option)
 }
 
 static char kwd_macros[] = "/tmp/nesccppkXXXXXX";
-static char cpp_macros[] = "/tmp/nesccppmXXXXXX";
+static char cpp_macros1[] = "/tmp/nesccppm1XXXXXX";
+static char cpp_macros2[] = "/tmp/nesccppm2XXXXXX";
+static char *cpp_macros = cpp_macros1;
 
 static char *nesc_keywords[] = {
 #define K(name, token, rid) #name,
@@ -255,7 +257,8 @@ static FILE *exec_gcc(char *gcc_output_template, bool redirect_errors,
 
 void preprocess_cleanup(void)
 {
-  cpp_unlink(cpp_macros);
+  cpp_unlink(cpp_macros1);
+  cpp_unlink(cpp_macros2);
   cpp_unlink(kwd_macros);
 }
 
@@ -324,7 +327,8 @@ void preprocess_init(void)
 {
   atexit(preprocess_cleanup);
 
-  mktempfile(cpp_macros);
+  mktempfile(cpp_macros1);
+  mktempfile(cpp_macros2);
   mktempfile(kwd_macros);
 
   create_nesc_keyword_macros(kwd_macros);
@@ -401,6 +405,10 @@ FILE *preprocess(const char *filename, source_language l)
 	 don't reenter the parser when parsing a C file) */
       if (l == l_c)
 	{
+	  if (cpp_macros == cpp_macros1)
+	    cpp_macros = cpp_macros2;
+	  else
+	    cpp_macros = cpp_macros1;
 	  macros_file = fopen(cpp_macros, macros_mode);
 	  if (!macros_file)
 	    error("failed to create temporary file");
