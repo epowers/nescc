@@ -53,8 +53,6 @@ void component_functions_iterate(nesc_declaration c,
   while (env_next(&scanifs, &ifname, &ifentry))
     {
       data_declaration idecl = ifentry;
-      fprintf(stderr,"MDW: component_functions_iterate: %s (kind %d)\n", idecl->name, idecl->kind);
-
       if (idecl->kind == decl_interface_ref)
 	{
 	  env_scanner scanfns;

@@ -26,6 +26,7 @@ Boston, MA 02111-1307, USA.  */
 #define NESC_INSTANCENUM_LITERAL "_INSTANCENUM"
 
 void output_instancetype(nesc_declaration mod);
+void output_thisptr(nesc_declaration module);
 
 void generate_c_code(nesc_declaration program, const char *target_name,
 		     cgraph cg, dd_list modules);

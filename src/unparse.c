@@ -179,7 +179,7 @@ void output_instancetype(nesc_declaration module) {
   output(NESC_INSTANCETYPE_LITERAL);
 }
 
-static void output_thisptr(nesc_declaration module) {
+void output_thisptr(nesc_declaration module) {
   output(NESC_THISPTR_LITERAL);
 }
 
