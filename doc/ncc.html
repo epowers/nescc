@@ -207,12 +207,18 @@ nesC components.
 gcc(1), avr-gcc(1)
 </blockquote>
 
-<h3>NOTE</h3>
+<h3>NOTES</h3>
 
 ncc is built over nescc, which handles the non-TinyOS-specific
 functionality of ncc. Users of nesC in a non-TinyOS context may
 prefer to use nescc (see the source code of ncc and nescc for
 details).
+
+The warnings for the new nesC 1.1 features (see <code>-Wnesc-all</code>)
+are off by default to increase compatibility with nesC 1.0 code. To match
+the language specification in the nesC 1.1 reference manual, you should
+compile with <code>-Wnesc-all</code> and <code>-Wnesc-error</code>. These
+options will become the default in future releases.
 
 </body>
 </html>
