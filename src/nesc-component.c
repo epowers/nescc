@@ -222,6 +222,9 @@ void build_component(region r, nesc_declaration cdecl)
   the_component->implementation->cdecl = cdecl;
   cdecl->impl = the_component->implementation;
   cdecl->is_abstract = the_component->is_abstract;
+  if (cdecl->is_abstract) {
+    fprintf(stderr,"** MDW: component %s is abstract\n\n", cdecl->name);
+  }
   set_aparm_types(the_component->abs_param_list);
   cdecl->abs_param_list = make_gparm_typelist(the_component->abs_param_list);
 
@@ -231,10 +234,14 @@ void build_component(region r, nesc_declaration cdecl)
      endpoints) */
   cdecl->connections = build_external_graph(r, cdecl);
 
-  if (is_configuration(cdecl->impl))
-    process_configuration(CAST(configuration, cdecl->impl));
-  else
+  if (is_configuration(cdecl->impl)) {
+    configuration conf = CAST(configuration, cdecl->impl);
+    nesc_configuration_instance cinst = ralloc(r, struct nesc_configuration_instance);
+    init_configuration_instance(cinst, conf);
+    process_configuration(conf, cinst);
+  } else {
     process_module(CAST(module, cdecl->impl));
+  }
 
   fprintf(stderr,"** MDW: done building %s\n\n", cdecl->name);
 }

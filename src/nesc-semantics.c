@@ -342,16 +342,12 @@ expression make_instance_ref(location loc, expression index, cstring field)
   data_declaration fdecl;
   cstring fieldstr = field;
 
-  fprintf(stderr,"MDW: make_instance_ref: field %s\n", field.data);
-
   fdecl = lookup_id(fieldstr.data, FALSE);
   if (!fdecl) {
     error("module has no instance variable named `%s'", fieldstr.data);
     result->type = error_type;
     return CAST(expression, result);
   }
-
-  fprintf(stderr,"MDW: fdecl kind %d\n", fdecl->kind);
 
   if (fdecl->kind == decl_interface_ref) {
     // Call

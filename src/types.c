@@ -1687,7 +1687,6 @@ type make_interface_type(data_declaration itype)
 
 bool type_interface(type t)
 {
-  fprintf(stderr,"MDW: type_interface: kind %d\n", t->kind);
   return t->kind == tk_iref;
 }
 

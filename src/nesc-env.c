@@ -23,6 +23,7 @@ Boston, MA 02111-1307, USA.  */
 #include "nesc-c.h"
 #include "nesc-decls.h"
 #include "nesc-semantics.h"
+#include "nesc-configuration.h"
 #include "c-parse.h"
 #include "semantics.h"
 
@@ -70,8 +71,19 @@ nesc_declaration require(source_language sl, location l, const char *name)
 {
   nesc_declaration d = nesc_lookup(name);
 
-  if (!d)
+  if (d) {
+    // If this is a configuration that has already been loaded,
+    // process it again to instantiate embedded abstract components
+    fprintf(stderr,"MDW: require(%s): already loaded\n", name);
+    if (d->kind == l_component && is_configuration(d->impl)) {
+      nesc_configuration_instance cinst = ralloc(parse_region, struct nesc_configuration_instance);
+      configuration conf = CAST(configuration, d->impl);
+      init_configuration_instance(cinst, conf);
+      process_configuration(conf, cinst);
+    }
+  } else {
     d = load(sl, l, name, FALSE);
+  }
 
   if (sl != d->kind)
     {

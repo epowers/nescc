@@ -18,8 +18,14 @@ Boston, MA 02111-1307, USA.  */
 #ifndef NESC_CONFIGURATION_H
 #define NESC_CONFIGURATION_H
 
-void process_configuration(configuration c);
+typedef struct nesc_configuration_instance {
+  configuration configuration;
+  int instance_number;
+  environment ienv;
+} *nesc_configuration_instance;
 
+void init_configuration_instance(nesc_configuration_instance cinst, configuration conf);
+void process_configuration(configuration c, nesc_configuration_instance cinst);
 void component_scan(data_declaration cref, env_scanner *scan);
 
 #endif

@@ -33,6 +33,15 @@ Boston, MA 02111-1307, USA.  */
    component -> component connections */
 #define NO_COMPONENT_MATCHING
 
+void init_configuration_instance(nesc_configuration_instance cinst, configuration conf) {
+  cinst->configuration = conf;
+  //cinst->ienv = new_environment(parse_region, conf->ienv, TRUE, FALSE);
+  cinst->ienv = new_environment(parse_region, conf->ienv->parent, TRUE, FALSE);
+  cinst->instance_number = 
+    conf->cdecl->is_abstract?(conf->cdecl->abstract_instance_count++):(-1);
+  current.env = cinst->ienv;
+}
+
 void component_scan(data_declaration cref, env_scanner *scan)
 {
   env_scan(cref->ctype->env->id_env, scan);
@@ -85,7 +94,7 @@ static type endpoint_type(endp p)
 }
 
 static void connect_interface(cgraph cg, struct endp from, struct endp to,
-			      bool reverse)
+			      bool reverse, bool match_instances)
 {
   env_scanner scanfns;
   const char *fnname;
@@ -103,6 +112,21 @@ static void connect_interface(cgraph cg, struct endp from, struct endp to,
       assert(fndecl->kind == decl_function);
       to.function = fndecl;
       from.function = env_lookup(from.interface->functions->id_env, fndecl->name, TRUE);
+
+      // XXX MDW: This isn't needed: lookup_endpoint() correctly
+      // initializes the instance number of the interface reference
+//      if (match_instances) {
+//	if (!reverse) {
+ // 	  fprintf(stderr,"MDW: setting from.instance (%d) = to.instance (%d)\n",
+  //	      from.instance, to.instance);
+  //	  from.instance = to.instance;
+   //	} else {
+  //	  fprintf(stderr,"MDW: setting to.instance (%d) = from.instance (%d)\n",
+  //	      to.instance, from.instance);
+  //	  to.instance = from.instance;
+   //	}
+    //  }
+
       if (fndecl->defined ^ reverse)
 	connect_function(cg, from, to);
       else
@@ -290,14 +314,16 @@ static void check_abstract_parameters(expression args, typelist aparms)
 
 static int MDW_LEP_COUNT = 0;
 
-static bool lookup_endpoint(environment configuration_env, endpoint ep,
-			    endp lep)
+static bool lookup_endpoint(nesc_configuration_instance cinst, endpoint ep, endp lep)
 {
   parameterised_identifier pid;
-  environment lookup_env = configuration_env;
+  environment lookup_env = cinst->ienv;
+  // XXX MDW: Don't think I need this
+  //if (cinst->instance_number == -1) lookup_env = cinst->configuration->ienv;
 
   lep->component = lep->interface = lep->function = NULL;
-  lep->instance = -1;
+  // The default instance is the instance number of the enclosing configuration 
+  lep->instance = cinst->instance_number;
   lep->args = NULL;
   lep->MDW_hack_count = MDW_LEP_COUNT; MDW_LEP_COUNT++;
 
@@ -306,7 +332,7 @@ static bool lookup_endpoint(environment configuration_env, endpoint ep,
       const char *idname = pid->word1->cstring.data;
       location l = pid->location;
 
-      //fprintf(stderr,"MDW: lookup_endpoint %s\n", idname);
+      fprintf(stderr,"MDW: lookup_endpoint %s\n", idname);
 
       if (!lookup_env)
 	error_with_location(l, "unexpected identifier `%s'", idname);
@@ -327,12 +353,13 @@ static bool lookup_endpoint(environment configuration_env, endpoint ep,
 	      }
 	      if (!d)
 		{
-		  error_with_location(l, "cannot find `%s'", idname);
+		  error_with_location(l, "cannot find `%s' (MDW:lookup_endpoint 1)", idname);
 		  return FALSE; /* prevent cascading error messages */
 		}
 	    } 
 
-	  //fprintf(stderr,"MDW: lookup_endpoint got decl %s\n", d->name);
+	  fprintf(stderr,"MDW: lookup_endpoint got decl %s kind %d\n", 
+	      d->name, d->kind);
 
 	  if (args)
 	    {
@@ -344,7 +371,7 @@ static bool lookup_endpoint(environment configuration_env, endpoint ep,
 	  switch (d->kind)
 	    {
 	    default:
-	      error_with_location(l, "cannot find `%s'", idname);
+	      error_with_location(l, "cannot find `%s' (MDW:lookup_endpoint 2)", idname);
 	      return FALSE; /* prevent cascading error messages */
 
 	    case decl_component_ref:
@@ -414,16 +441,16 @@ static void process_interface_connection(cgraph cg, connection conn,
 	  if (p1.interface->required == p2.interface->required)
 	    error_with_location(l, "external to external connections must be between provided and used interfaces");
 	  else
-	    connect_interface(cg, p1, p2, TRUE);
+	    connect_interface(cg, p1, p2, TRUE, TRUE);
 	}
       else
 	{
 	  if (p1.interface->required != p2.interface->required)
 	    error_with_location(l, "external to internal connections must be both provided or both used");
 	  else if (!p1.component)
-	    connect_interface(cg, p1, p2, FALSE);
+	    connect_interface(cg, p1, p2, FALSE, TRUE);
 	  else
-	    connect_interface(cg, p2, p1, FALSE);
+	    connect_interface(cg, p2, p1, FALSE, TRUE);
 	  /* Note: connect_interface takes care of choosing the right edge
 	     direction. There are two cases:
 	     - the interface is provided: then we want edges from outside in,
@@ -440,7 +467,7 @@ static void process_interface_connection(cgraph cg, connection conn,
 	error_with_location(l, "target of '<-' interface must be provided");
       else if (!p2.interface->required)
 	error_with_location(l, "source of '<-' interface must be required");
-      else connect_interface(cg, p2, p1, FALSE);
+      else connect_interface(cg, p2, p1, FALSE, FALSE);
     }
 }
 
@@ -596,7 +623,7 @@ static void process_component_connection(cgraph cg, connection conn,
     error_with_location(conn->location, "no match");
 }
 
-static void process_connections(configuration c)
+static void process_connections(configuration c, nesc_configuration_instance cinst)
 {
   connection conn;
   struct endp p1, p2;
@@ -605,8 +632,8 @@ static void process_connections(configuration c)
   fprintf(stderr, "\nMDW: process_connections for configuration %s\n", c->cdecl->name);
 
   scan_connection (conn, c->connections)
-    if (lookup_endpoint(c->ienv, conn->ep1, &p1) &&
-	lookup_endpoint(c->ienv, conn->ep2, &p2))
+    if (lookup_endpoint(cinst, conn->ep1, &p1) &&
+	lookup_endpoint(cinst, conn->ep2, &p2))
       {
 	/* There are a lot of kinds of connections here.
 	   lookup_endpoint has already resolved pseudo-interfaces to functions
@@ -617,8 +644,8 @@ static void process_connections(configuration c)
 	   connections, then handle all remaining cases in process_connection
 	*/
 	//fprintf(stderr,"MDW: Matching\n");
-       	//print_endp("MDW: process_connections: p1: ", &p1);
-	//print_endp("MDW: process_connections: p2: ", &p2);
+       	print_endp("MDW: process_connections: p1: ", &p1);
+	print_endp("MDW: process_connections: p2: ", &p2);
 
 	if (!p1.interface && !p2.interface && !p1.function && !p2.function)
 	  process_component_connection(cg, conn, p1, p2);
@@ -627,12 +654,13 @@ static void process_connections(configuration c)
       }
 }
 
-static void require_components(region r, configuration c)
+static void require_components(region r, configuration c, nesc_configuration_instance cinst)
 {
   component_ref comp;
   nesc_declaration cdecl = c->cdecl;
+  bool new_conf = (cinst->instance_number < 1);
 
-  cdecl->connections = new_cgraph(r);
+  if (new_conf) cdecl->connections = new_cgraph(r);
 
   scan_component_ref (comp, c->components)
     {
@@ -643,11 +671,22 @@ static void require_components(region r, configuration c)
       const char *asname =
 	(comp->word2 ? comp->word2 : comp->word1)->cstring.data;
 
+      fprintf(stderr,"MDW: Component %s requires %s\n",
+	  cdecl->name, cname);
       comp->cdecl = require(l_component, comp->location, cname);
 
       if (comp->cdecl->is_abstract) {
-	comp->instance_number = instance_number = comp->cdecl->abstract_instance_count;
-	comp->cdecl->abstract_instance_count++;
+	if (is_module(comp->cdecl->impl)) {
+	  // Only increment instance count for modules; for configurations
+	  // this is done before process_configuration
+	  comp->instance_number = instance_number = comp->cdecl->abstract_instance_count;
+	  comp->cdecl->abstract_instance_count++;
+	  fprintf(stderr,"MDW: AIC for %s incremented to %d\n",
+	      comp->cdecl->name, comp->cdecl->abstract_instance_count);
+	} else {
+	  // For configurations, the instance number has already been incremented
+	  comp->instance_number = instance_number = comp->cdecl->abstract_instance_count - 1;
+	}
 
 	/* Check abstract parameters */
 	if (comp->args) {
@@ -666,7 +705,7 @@ static void require_components(region r, configuration c)
       fprintf(stderr,"MDW: require_components: %s has instance num %d\n",
 	  tempdecl.ctype->name, tempdecl.instance_number);
 
-      current.env = c->ienv;
+      current.env = cinst->ienv;
       old_decl = lookup_id(asname, TRUE);
       if (!old_decl)
 	{
@@ -675,7 +714,7 @@ static void require_components(region r, configuration c)
 	}
       if (old_decl)
 	error_with_location(comp->location, "redefinition of `%s'", asname);
-      declare(c->ienv, &tempdecl, FALSE);
+      declare(cinst->ienv, &tempdecl, FALSE);
     }
 }
 
@@ -696,9 +735,12 @@ static void check_function_connected(data_declaration fndecl, void *data)
   struct cfc_data *d = data;
   gnode epnode;
   data_declaration idecl = fndecl->interface;
-  int num_instances, instance;
+  int instance;
 
   assert(fndecl->kind == decl_function);
+
+  fprintf(stderr,"MDW: check_function_connected: %s interface %s\n",
+      fndecl->name, (idecl?idecl->name:"null"));
 
 #ifdef NO_FUNCTION_INTERFACE_MATCHING
   /* Avoid duplicate error messages: if one function not connected in
@@ -707,27 +749,35 @@ static void check_function_connected(data_declaration fndecl, void *data)
     return;
 #endif
 
-  num_instances = num_abstract_instances(fndecl);
-  if (!num_instances) num_instances = 1;
+  // Note: container->abstract_instance_count is only incremented by the 
+  // configuration *requiring* this configuration, yet we need to ensure 
+  // that everything is connected here. So, if we are abstract, we look 
+  // for connections to instance 0 (the only instance in existence when 
+  // this configuration is being built), assuming that all (future) 
+  // instances will be wired identically (which is true as long as
+  // we don't introduce conditional wirings).
 
-  for (instance = 0; instance < num_instances; instance++) {
-    epnode = fn_lookup(d->cg, fndecl, instance);
+  if (fndecl->container && fndecl->container->is_abstract) instance = 0;
+  else instance = -1;
 
-    if ((fndecl->defined && !graph_first_edge_out(epnode)) ||
-	(!fndecl->defined && !graph_first_edge_in(epnode)))
-    {
-      d->intf_last_error = idecl;
+  epnode = fn_lookup(d->cg, fndecl, instance);
 
-      if (idecl)
+  print_endp("MDW: check_function_connected: ep ", NODE_GET(endp, epnode));
+
+  if ((fndecl->defined && !graph_first_edge_out(epnode)) ||
+      (!fndecl->defined && !graph_first_edge_in(epnode)))
+  {
+    d->intf_last_error = idecl;
+
+    if (idecl)
 #ifdef NO_FUNCTION_INTERFACE_MATCHING
-	error_with_location(d->loc, "`%s' not connected (MDW:configuration)", idecl->name);
+      error_with_location(d->loc, "`%s' not connected (MDW:configuration 1)", idecl->name);
 #else
-      error_with_location(d->loc, "`%s.%s' not connected (MDW:configuration)",
-	  idecl->name, fndecl->name);
+    error_with_location(d->loc, "`%s.%s' not connected (MDW:configuration 2)",
+	idecl->name, fndecl->name);
 #endif
-      else
-	error_with_location(d->loc, "`%s' not connected (MDW:configuration)", fndecl->name);
-    }
+    else
+      error_with_location(d->loc, "`%s' not connected (MDW:configuration 3)", fndecl->name);
   }
 }
 
@@ -743,17 +793,21 @@ static void check_complete_connection(configuration c)
   component_functions_iterate(c->cdecl, check_function_connected, &d);
 }
 
-void process_configuration(configuration c)
+void process_configuration(configuration c, nesc_configuration_instance cinst)
 {
   int old_errorcount = errorcount;
 
-  fprintf(stderr,"MDW: require_components for %s\n", c->cdecl->name);
+  fprintf(stderr,"MDW: process_configuration for %s instance %d\n", c->cdecl->name, cinst->instance_number);
 
-  require_components(parse_region, c);
+  fprintf(stderr,"MDW: require_components for %s instance %d\n", c->cdecl->name, cinst->instance_number);
 
-  fprintf(stderr,"MDW: process_connections for %s\n", c->cdecl->name);
+  require_components(parse_region, c, cinst);
 
-  process_connections(c);
+  fprintf(stderr,"MDW: process_connections for %s instance %d\n", c->cdecl->name, cinst->instance_number);
+
+  process_connections(c, cinst);
+
+  fprintf(stderr,"MDW: check_complete_connection for %s instance %d\n", c->cdecl->name, cinst->instance_number);
 
   /* Don't give error messages for missing connections if we found
      errors in the connections (to avoid duplicate errors) */

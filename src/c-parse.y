@@ -473,7 +473,15 @@ component:
 
 /* Abstract component parameter declaration */
 abstract_param_decl:
-	'(' ')' { $$ = NULL; }
+	'(' ')' 
+	{ 
+	  /* Add magic "_INSTANCENUM" to initialization parameters */
+	  declarator d = make_identifier_declarator($1.location, 
+	    make_cstring(pr, "_INSTANCENUM", sizeof("_INSTANCENUM")));
+	  type_element elt = CAST(type_element, new_rid(pr, $1.location, RID_INT));
+	  declaration dl = declare_parameter(d, elt, NULL, FALSE);
+	  $$ = declaration_chain(dl, NULL);
+	}
 	| '(' parms ')' 
 	{ 
 	  /* Add magic "_INSTANCENUM" to initialization parameters */
@@ -482,7 +490,6 @@ abstract_param_decl:
 	  type_element elt = CAST(type_element, new_rid(pr, $1.location, RID_INT));
 	  declaration dl = declare_parameter(d, elt, NULL, FALSE);
 	  $$ = declaration_chain(dl, $2);
-
 	}
 	;
 
@@ -1030,13 +1037,8 @@ primary:
 		{ $$ = make_va_arg($1.location, $3, $5); }
 	| OFFSETOF '(' typename ',' fieldlist ')'
 		{ $$ = make_offsetof($1.location, $3, $5); }
-/*	| INSTANCE '(' expr_no_commas ')' '.' fieldref
-		{ fprintf(stderr,"MDW: making instance using primary.identifier\n");
-		  $$ = make_instance_ref($2.location, $3, $6); }
-		  */
 	| INSTANCE '(' expr_no_commas ')' '.' identifier
-		{ fprintf(stderr,"MDW: making instance using identifier\n");
-		  $$ = make_instance_ref($2.location, $3, $6.id); }
+		{ $$ = make_instance_ref($2.location, $3, $6.id); }
 	| primary '[' nonnull_exprlist ']' 
 		{ $$ = make_array_ref($2.location, $1, $3); }
         | primary '.' identifier 

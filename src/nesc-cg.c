@@ -126,7 +126,7 @@ gnode fn_lookup(cgraph cg, data_declaration fndecl, int instance_num)
   ep.args = NULL;
 
   // Override 'instance_num' if this is in fact not an abstract component
-  if (!num_abstract_instances(fndecl)) ep.instance = -1;
+  if (!fndecl->container || !fndecl->container->is_abstract) ep.instance = -1;
   else ep.instance = instance_num;
 
   return endpoint_lookup(cg, &ep);

@@ -963,7 +963,7 @@ void prt_parameters(declaration gparms, declaration parms, data_declaration fnde
       forward = prt_parameter(d, first, forward, options);
       first = FALSE;
     }
-  if (!gparms && !parms)
+  if (!gparms && !parms && first)
     output("void");
   output(")");
 }
@@ -1284,6 +1284,9 @@ void prt_instance_ref(instance_ref e, int context_priority)
     output(".");
     output_stripped_string_dollar(e->ddecl->container->name);
     output_stripped_cstring(e->cstring);
+
+    if (use_nido && is_module_variable(e->ddecl))
+      output("[tos_state.current_node]");
 
   } else {
 
