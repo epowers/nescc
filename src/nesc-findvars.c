@@ -96,26 +96,13 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write)
     return;
 
   // skip constant expressions that are neither pointers nor arrays
-  // FIXME: there's more to this.
-  //if(expr->cst &&  !(is_identifier(expr) && (type_array(expr->type) || type_pointer(expr->type))) )
   if(expr->cst &&  !type_array(expr->type) && !type_pointer(expr->type))
     return;
 
-#if 1
-  if (expr->cst) {
-    set_unparse_outfile(stdout);
-    if( is_identifier(expr) )
-       printf("###");
-    prt_expression(expr,TRUE);
-    printf("\n");
-  }
-#endif
-  
 
   switch (expr->kind)
     {
     case kind_identifier:
-      // default for identifiers: read access to the specified variable
       note_var_use(expr, is_read, is_write);
       break;
 
@@ -223,6 +210,10 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write)
     case kind_address_of: {
       expression arg = CAST(unary, expr)->arg1;
       note_address_of(arg);
+
+      // FIXME: might be better to count this as an RW access, since
+      // the var _could_ be accessed after this.  This would at least
+      // help the programmer decide where to put atomic statements, etc. 
       find_expression_vars(arg, FALSE, FALSE);
     }
     // unary updates
@@ -769,13 +760,13 @@ void print_alias_debug_summary(alias_list_entry a, bool conflict)
   char *ftype;
   data_declaration d,f;
 
-  printf("  %c  %c  %c  %c  %c   : alias for type %p\n",
+  printf("  %c  %c  %c  %c  %c   : alias for type %s\n",
          conflict ? 'X' : ' ',
          a->flags.read ? 'r' : ' ',
          a->flags.write ? 'w' : ' ',
          a->flags.read_in_atomic ? 'r' : ' ',
          a->flags.write_in_atomic ? 'w' : ' ',
-         a->pointer_type);
+         type_name(fv_region, a->pointer_type));
 
   
   s = dhscan(a->funcs);
