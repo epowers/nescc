@@ -148,8 +148,7 @@ static void collect_uses_expr(expression expr, context c)
       else if (c & c_read)
 	c = (c & ~c_read) | c_addressed;
     }
-
-  if (expr->cst)
+  else if (expr->cst)
     c |= c_constant;
 
   switch (expr->kind)

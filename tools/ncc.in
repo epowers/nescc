@@ -126,7 +126,6 @@ if (!$nostdinc) {
     push @includes, "%T/interfaces";
     push @includes, "%T/types";
     push @includes, "%T/system";
-    push @includes, "%T/lib";
 }
 
 foreach $idir (@includes) {

@@ -234,11 +234,12 @@ sub gen() {
 	  print "     * WARNING: This field is not byte-aligned (bit offset $offset).\n";
 	}
 	print "     */\n";
+
 	print "    public static int offset_$javafield($argspec) {\n";
 	if ($isarray) {
-	  printoffset($base + $offset, $amax, $abitsize, $aoffset, 0);
+	    printoffset($base + $offset, $amax, $abitsize, $aoffset, 0);
 	} else {
-	  print "        return ($offset / 8);\n";
+	    print "        return ($offset / 8);\n";
 	}
 	print "    }\n\n";
 
