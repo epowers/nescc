@@ -113,6 +113,8 @@ with /**) are seen.
 
 <li><b>all</b>: Turns on <b>fnptr</b>, <b>async</b>, <b>combine</b> and
 <b>data-race</b>.
+<li><b>error</b>: Turns the <b>fnptr</b>, <b>async</b>, <b>combine</b> and
+<b>data-race</b> warnings into errors.
 </blockquote>
 
 <p>
@@ -175,6 +177,9 @@ When <b>-nostdinc</b> is specified, the search path is simply:
 ncc defines the following preprocessor symbols:
 
 <ul>
+<li>
+NESC (since v1.1) set to XYZ where x.yz is the nesC version
+
 <li>
 PLATFORM_<u>target</u> (where <u>target</u> is the selected target name,
 converted to upper case)
