@@ -1,4 +1,4 @@
-// $Id: NDReader.java,v 1.2 2004/12/24 00:48:59 idgay Exp $
+// $Id: NDReader.java,v 1.3 2005/01/11 23:27:52 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -78,6 +78,10 @@ public class NDReader extends DefaultHandler
 	return makeElementIn(standardPkg, name);
     }
 
+    public NDElement parent() {
+	return activeElements.elementAt(activeElements.length() - 2);
+    }
+
     public void startElement(String uri, String localName, String qName,
 			     Attributes attrs) {
 	NDElement element = null;
@@ -99,7 +103,7 @@ public class NDReader extends DefaultHandler
 
 	if (current == null)
 	    return;
-	current = current.end();
+	current = current.end(this);
 	if (current == null)
 	    return;
 
@@ -107,7 +111,7 @@ public class NDReader extends DefaultHandler
 	    top = current; /* top level element */
 	else {
 	    NDElement parent = (NDElement)activeElements.peek();
-	    parent.child(current);
+	    parent.child(this, current);
 	}
     }
 

@@ -1,4 +1,4 @@
-// $Id: Xfield.java,v 1.1 2005/01/07 22:17:50 idgay Exp $
+// $Id: Xfield.java,v 1.2 2005/01/11 23:27:53 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -11,6 +11,7 @@
 
 package net.tinyos.nesc.dump.xml;
 
+import net.tinyos.nesc.dump.*;
 import org.xml.sax.*;
 import java.util.*;
 
@@ -30,7 +31,7 @@ public class Xfield extends Definition
 	name = attrs.getValue("field");
     }
 
-    public synchronized NDElement start(Attribute attrs) {
+    public synchronized NDElement start(Attributes attrs) {
 	Xfield me = (Xfield)defs.define(attrs.getValue("ref"), attrs, this);
 	me.bitOffset = Constant.decode(attrs.getValue("bit-offset"));
 	me.packed = boolDecode(attrs.getValue("packed"));

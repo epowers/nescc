@@ -1,4 +1,4 @@
-// $Id: Xtype_interface.java,v 1.1 2005/01/07 22:17:51 idgay Exp $
+// $Id: Xtype_interface.java,v 1.2 2005/01/11 23:27:53 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -15,10 +15,10 @@ import org.xml.sax.*;
 
 public class Xtype_interface extends Type
 {
-    public Xinterface interface;
+    public Xinterface intf;
 
     public void child(NDElement subElement) {
 	if (subElement instanceof Xinterface)
-	    interface = (Xinterface)subElement;
+	    intf = (Xinterface)subElement;
     }
 }

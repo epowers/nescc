@@ -1,4 +1,4 @@
-// $Id: Xinterface.java,v 1.3 2005/01/07 22:17:51 idgay Exp $
+// $Id: Xinterface.java,v 1.4 2005/01/11 23:27:53 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -11,6 +11,7 @@
 
 package net.tinyos.nesc.dump.xml;
 
+import java.util.*;
 import org.xml.sax.*;
 
 public class Xinterface extends DataDefinition

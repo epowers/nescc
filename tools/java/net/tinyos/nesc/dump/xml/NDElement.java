@@ -1,4 +1,4 @@
-// $Id: NDElement.java,v 1.4 2005/01/07 22:17:50 idgay Exp $
+// $Id: NDElement.java,v 1.5 2005/01/11 23:27:53 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -10,6 +10,8 @@
  */
 
 package net.tinyos.nesc.dump.xml;
+
+import net.tinyos.nesc.dump.*;
 import org.xml.sax.*;
 
 abstract public class NDElement {
@@ -25,7 +27,7 @@ abstract public class NDElement {
     }
 
     public void child(NDReader reader, NDElement subElement) {
-	return child(subElement);
+	child(subElement);
     }
 
     public NDElement end() {
@@ -46,17 +48,17 @@ abstract public class NDElement {
     static public long numberDecode(String s, long def) {
 	if (s != null) {
 	    try {
-		return Long.decode(s);
+		return Long.decode(s).longValue();
 	    }
 	    catch (NumberFormatException e) { }
 	}
 	return def;
     }
 
-    static public long realDecode(String s, double def) {
+    static public double realDecode(String s, double def) {
 	if (s != null) {
 	    try {
-		return Double.decode(s);
+		return Double.valueOf(s).doubleValue();
 	    }
 	    catch (NumberFormatException e) { }
 	}

@@ -1,4 +1,4 @@
-// $Id: Xatrribute_ref.java,v 1.1 2005/01/07 18:29:16 idgay Exp $
+// $Id: WiringPosition.java,v 1.1 2005/01/11 23:27:53 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -11,11 +11,13 @@
 
 package net.tinyos.nesc.dump.xml;
 
-import org.xml.sax.*;
-
-public class Xattribute_ref extends NDElement
+public class WiringPosition
 {
-    public NDElement start(NDReader reader, Attributes attrs) {
-	return TagDefinition.lookup(reader, attrs, "attribute");
+    public WiringNode node;
+    public Xarguments args;
+
+    public void copy(WiringPosition from) {
+	node = from.node;
+	args = from.args;
     }
 }

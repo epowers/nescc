@@ -1,4 +1,4 @@
-// $Id: DefinitionTable.java,v 1.2 2005/01/07 18:29:16 idgay Exp $
+// $Id: DefinitionTable.java,v 1.3 2005/01/11 23:27:53 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -11,6 +11,7 @@
 
 package net.tinyos.nesc.dump.xml;
 
+import net.tinyos.nesc.dump.*;
 import org.xml.sax.*;
 import java.util.*;
 
@@ -34,7 +35,7 @@ class DefinitionTable
 	return me;
     }
 
-    synchronized Definition define(Object key, Attribute attrs, Definition def) {
+    synchronized Definition define(Object key, Attributes attrs, Definition def) {
 	Definition me = (Definition)allDefinitions.get(this);
 	if (me == null) {
 	    me = def;

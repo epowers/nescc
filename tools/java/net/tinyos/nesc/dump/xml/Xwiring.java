@@ -1,4 +1,4 @@
-// $Id: Xwiring.java,v 1.1 2005/01/07 22:17:51 idgay Exp $
+// $Id: Xwiring.java,v 1.2 2005/01/11 23:27:53 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -13,6 +13,16 @@ package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
 
-public class Xwiring extends NDList
+public class Xwiring extends NDElement
 {
+    public static WiringGraph wg = new WiringGraph();
+
+    public void child(NDElement subElement) {
+	Xwire wire = (Xwire)subElement;
+
+	WiringEndpoint from = wg.lookup(wire.from.entity);
+	WiringEndpoint to = wg.lookup(wire.to.entity);
+
+	wg.addEdge(from, wire.arguments, to, to.arguments);
+    }
 }

@@ -1,4 +1,4 @@
-// $Id: Xstructured_element.java,v 1.2 2005/01/07 22:17:51 idgay Exp $
+// $Id: Xstructured_element.java,v 1.3 2005/01/11 23:27:53 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -11,11 +11,12 @@
 
 package net.tinyos.nesc.dump.xml;
 
+import net.tinyos.nesc.dump.*;
 import org.xml.sax.*;
 
 public class Xstructured_element extends NDElement
 {
-    public Field field;
+    public Xfield field;
     public Value value;
 
     public NDElement start(NDReader reader, Attributes attrs) {

@@ -1,4 +1,4 @@
-// $Id: DataDefinition.java,v 1.4 2005/01/07 22:17:50 idgay Exp $
+// $Id: DataDefinition.java,v 1.5 2005/01/11 23:27:53 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -11,6 +11,7 @@
 
 package net.tinyos.nesc.dump.xml;
 
+import net.tinyos.nesc.dump.*;
 import org.xml.sax.*;
 import java.util.*;
 
@@ -29,11 +30,11 @@ public class DataDefinition extends CDefinition
 	/* ignoring scoped for now */
     }
 
-    public synchronized NDElement start(Attribute attrs) {
+    public synchronized NDElement start(Attributes attrs) {
 	return defs.define(attrs.getValue("ref"), attrs, this);
     }
 
-    static synchronized Definition lookup(NDReader reader, Attribute attrs, 
+    static synchronized Definition lookup(NDReader reader, Attributes attrs, 
 					  String elementName) {
 	return defs.lookup(reader, attrs.getValue("ref"), attrs, elementName);
     }
