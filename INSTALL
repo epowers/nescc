@@ -1,4 +1,4 @@
-To build nesC: in this directory
+To build galsC: in this directory
 ./configure TOSDIR=<location of your TinyOS tos directory>
   (note: if you don't specify TOSDIR, configure will try and find a directory
          named ../tos, then ../../tos, then $HOME/nest/tos before failing)
@@ -9,3 +9,6 @@ make install
 
 To install a nesC editor mode (currently, emacs, vim, kde):
 Read <installdir>/lib/ncc/editor-modes/<your-editor-name>/readme.txt
+
+To install a galsC editor mode (currently, emacs):
+Read <installdir>/lib/ncc/editor-modes/<your-editor-name>/readme-galsc.txt

@@ -1,11 +1,11 @@
 This is the 0.1 release of galsC.
 
-<More info goes here>
+This release of galsC is based on the version of nesC whose README is
+included below.
 
-This release of galsC is based on the nesC <version number> release,
-whose README is included below.
+All installation instructions for galsC are the same as those for nesC.
 
-======================================================================
+===========================================================================
 This is the 1.1.1 release of nesC. 
 
 Installation instructions are in INSTALL. Note that nesC includes a patched

@@ -280,6 +280,8 @@ void nesc_compile(const char *filename, const char *target_name)
   init_semantics();
   init_nesc_env(parse_region);
 #ifdef GALSC
+  // Initialize the environment that keeps track of loaded actors and
+  // loads them on demand.
   init_galsc_env(parse_region);
 #endif
   init_nesc_paths_end();
@@ -294,8 +296,8 @@ void nesc_compile(const char *filename, const char *target_name)
     require_c(&toplevel, includes->name);
 
 #ifdef GALSC
-  // Do galsC processing!
-  // See section below for original nesC processing
+  // Process a galsC application.
+  // See section below #endif for processing a normal nesC application.
   
   // Check for a .gc file
   if (galsc_filename(filename)) {
@@ -318,9 +320,12 @@ void nesc_compile(const char *filename, const char *target_name)
               dd_list ports;
               dd_list parameters;
               dd_list appstart;
-              
+
+              // Create a master connection graph for all elements
+              // (functions, ports, parameters) in the system.
 	      galsc_connect_graphs(parse_region, program, &cg, &modules, &components, &ports, &parameters, &appstart);
 	      if (!generate_docs(filename, cg))
+                  // Generate the actual C code.
 		galsc_generate_c_code(program, target_name, cg, modules, ports, parameters, appstart);
 	    }
 	  else /* generate docs for interfaces if requested */

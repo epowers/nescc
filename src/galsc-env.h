@@ -26,7 +26,6 @@ Boston, MA 02111-1307, USA. */
 /* Top-level galsc environment. Keeps track of loaded interfaces and
    components, loads them on demand */
 
-
 void init_galsc_env(region r);
 env get_galsc_env(void);
 void galsc_declare(nesc_declaration d);

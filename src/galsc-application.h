@@ -26,8 +26,6 @@ Boston, MA 02111-1307, USA. */
 #define GALSC_APPLICATION_H
 
 void set_galsc_main(const char *name);
-
 void build_application(region r, nesc_declaration cdecl);
-void process_application_implementation(region r, application_implementation c);
 
 #endif

@@ -364,14 +364,58 @@ static bool galsc_type_check_port_chain(region r, gnode n, gnode badnode) {
             if ((target->port != NULL) ^ (target->function != NULL)) {
                 if (target->port && !target->port->type) {
                     // Port type takes the same type as its trigger. 
-                    target->port->type = trigger->type;
+                    if (trigger_pconn) { // (x, l) -> p
+
+                        // FIXME: copied from match_parameter_get()
+                        endpoint trigger_ep = trigger_pconn->conn->ep2;
+                        environment trigger_configuration_env = trigger_pconn->configuration_env;
+
+                        typelist sourceargs = new_typelist(r);
+                        endpoint ep;
+                        struct endp temp;
+
+                        scan_endpoint(ep, trigger_ep) {
+                            if (lookup_endpoint(trigger_configuration_env, ep, &temp)) {
+                                // FIXME: what about args for functions?
+                                if (temp.parameter) {
+                                    typelist_append(sourceargs, temp.parameter->type);
+                                } else {
+                                    typelist_scanner scanargs;
+                                    type argt;
+                                    
+                                    type temptype = (temp.function) ?
+                                        temp.function->type : temp.port->type;
+                                    assert(temptype);
+                                    
+                                    typelist_scan(type_function_arguments(temptype), &scanargs);
+                                    
+                                    // FIXME what if void type
+                                    while ((argt = typelist_next(&scanargs))) {
+                                        typelist_append(sourceargs, argt);
+                                    }
+                                }
+                            }
+                        }
+
+                        type t = trigger->type;
+
+                        if (type_command(t)) {
+                            target->port->type = make_command_type(type_function_return_type(t), sourceargs, type_function_varargs(t));
+                        } else if (type_event(t)) {
+                            target->port->type = make_event_type(type_function_return_type(t), sourceargs, type_function_varargs(t));
+                        } else {
+                            assert(0);
+                        }
+                    } else {             // x -> p
+                        target->port->type = trigger->type;
+                    }
                 } else {
-                    if (trigger_pconn) { // TinyGUYS GET
+                    if (trigger_pconn) { // (x, l) -> f
                         if (!match_parameter_get(target, source)) {
                             badnode = n;
                             return FALSE;
                         }
-                    } else { // Regular function maching.
+                    } else {             // x -> f
                         if (!galsc_match_endpoints(target, source, NULL)) {
                             badnode = n;
                             return FALSE;
@@ -379,12 +423,12 @@ static bool galsc_type_check_port_chain(region r, gnode n, gnode badnode) {
                     }
                 }
             } else if (target->parameter) {
-                if (trigger_pconn) { // TinyGUYS GETPUT
+                if (trigger_pconn) {     // (x, l) -> l
                     if (!match_parameter_getput(target, source)) {
                         badnode = n;
                         return FALSE;
                     }
-                } else { // TinyGUYS PUT
+                } else {                 // x -> l
                     if (!match_parameter_put(target, source)) {
                         badnode = n;
                         return FALSE;
@@ -491,22 +535,41 @@ void galsc_type_check(region r, cgraph master, dd_list ports, dd_list parameters
 
         // Type check the function call chain that starts with this source.
         if (!galsc_type_check_port_chain(r, n, badnode)) {
-            endp ep = NODE_GET(endp, badnode);
-            data_declaration ep_data = NULL;
-            if (ep->function)
-                ep_data = ep->function;
-            else if (ep->port)
-                ep_data = ep->port;
-            else if (ep->parameter)
-                ep_data = ep->parameter;
-            else
-                assert(0);
-            error_with_location(ep_data->ast->location,
-                    "Connection (for %s%s%s.%s) does not type check",
-                    ep_data->container->name,
-                    ep_data->interface ? "." : "",
-                    ep_data->interface ? ep_data->interface->name : "",
-                    ep_data->name);
+            if (badnode) {
+                endp ep = NODE_GET(endp, badnode);
+                data_declaration ep_data = NULL;
+                if (ep->function)
+                    ep_data = ep->function;
+                else if (ep->port)
+                    ep_data = ep->port;
+                else if (ep->parameter)
+                    ep_data = ep->parameter;
+                else
+                    assert(0);
+                error_with_location(ep_data->ast->location,
+                        "Connection (for %s%s%s.%s) does not type check",
+                        ep_data->container->name,
+                        ep_data->interface ? "." : "",
+                        ep_data->interface ? ep_data->interface->name : "",
+                        ep_data->name);
+            } else {
+                endp ep = NODE_GET(endp, n);
+                data_declaration ep_data = NULL;
+                if (ep->function)
+                    ep_data = ep->function;
+                else if (ep->port)
+                    ep_data = ep->port;
+                else if (ep->parameter)
+                    ep_data = ep->parameter;
+                else
+                    assert(0);
+                error_with_location(ep_data->ast->location,
+                        "Connection (for %s%s%s.%s) does not type check",
+                        ep_data->container->name,
+                        ep_data->interface ? "." : "",
+                        ep_data->interface ? ep_data->interface->name : "",
+                        ep_data->name);
+            }
         }
     }
 

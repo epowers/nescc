@@ -37,30 +37,7 @@ Boston, MA 02111-1307, USA. */
    independently of the whole interface */
 //#define NO_FUNCTION_INTERFACE_MATCHING
 
-// Creates a connection graph for the interface of this actor and
-// loads in internal components and creates the connection graph for
-// them.
-//
-// Called from build() in nesc-semantics.c, which has already parsed
-// the file for this actor and created an AST for it.
-//
-// See build_component() in nesc-component.c
-void build_actor(region r, nesc_declaration cdecl) {
-    actor the_actor = CAST(actor, cdecl->ast);
-
-    the_actor->implementation->cdecl = cdecl;
-    cdecl->impl = the_actor->implementation;
-
-    AST_set_parents(CAST(node, cdecl->ast));
-    
-    // Build the default connection graph (just nodes for the external
-    // endpoints)
-    cdecl->connections = build_external_graph(r, cdecl);
-
-    process_actor_implementation(r, CAST(actor_implementation, cdecl->impl));
-}
-
-
+// FIXMEa: comment
 // Creates a reference to a port (only once for each port).  This is
 // called from the parser (see c-parse.y).
 //
@@ -85,6 +62,7 @@ void declare_port_ref(port_ref iref, declaration gparms,
     ddecl = declare(current.env, &tempdecl, FALSE);
 }
 
+// FIXMEa: comment
 // Connect the end points for a TinyGUYS GET or GET/PUT connection.
 //
 // See connect_function() in nesc-configuration.c
@@ -104,7 +82,7 @@ static void connect_parameter_get(cgraph cg, struct endp from, struct endp to) {
         graph_add_edge(gto, fn_lookup(cg, to.function), NULL);
 }
 
-
+// FIXMEa: comment
 // Connect the end points for a TinyGUYS PUT connection.
 //
 // See connect_function() in nesc-configuration.c
@@ -125,6 +103,7 @@ static void connect_parameter_put(cgraph cg, struct endp from, struct endp to) {
         graph_add_edge(gto, fn_lookup(cg, to.function), NULL);
 }
 
+// FIXMEa: comment
 // Make the connection between a function and a port in the graph.
 //
 // See connect_function() in nesc-configuration.c
@@ -142,6 +121,7 @@ static void connect_function(cgraph cg, struct endp from, struct endp to) {
         graph_add_edge(gto, fn_lookup(cg, to.function), NULL);
 }
 
+// FIXMEa: comment
 // Make the connection between a port and a port in the graph.
 //
 // See connect_function() in nesc-configuration.c
@@ -159,6 +139,7 @@ static void connect_port(cgraph cg, struct endp from, struct endp to) {
         graph_add_edge(gto, fn_lookup(cg, to.function), NULL);
 }
 
+// FIXMEa: comment
 // Extract the source endp for a TinyGUYS GET connection.  The
 // "endpoint_list" is the list of "endpoint" corresponding to the
 // source of the connection to check.  The "configuration_env" is the
@@ -216,31 +197,36 @@ static void extract_parameter_get_connection_source(connection conn, environment
         assert(p->parameter);
 
         data_declaration trigger = (p->function) ? p->function : p->port;
-        assert(trigger);
+        if (!trigger) {
+            error_with_location(conn->location, "missing trigger");
+        } else {
+            //assert(trigger);
 
         // FIXME: make sure the above doesn't get overwritten if the
         // trigger is also part of another connection.
         //assert(!trigger->ep); // FIXME delete this
 
         // FIXME parse_region
-        if (!trigger->parameters) {
-            trigger->parameters = dd_new_list(parse_region);
-        }
+            if (!trigger->parameters) {
+                trigger->parameters = dd_new_list(parse_region);
+            }
 
-        // Save the connection in the trigger so that we know the
-        // order of the arguments that should be passed to the target.
-        galsc_parameter_connection pconn = new_galsc_parameter_connnection(parse_region);
-        pconn->conn = conn;
-        pconn->configuration_env = configuration_env;
-        dd_add_last(regionof(trigger->parameters), trigger->parameters, pconn);
-
+            // Save the connection in the trigger so that we know the
+            // order of the arguments that should be passed to the target.
+            galsc_parameter_connection pconn = new_galsc_parameter_connnection(parse_region);
+            pconn->conn = conn;
+            pconn->configuration_env = configuration_env;
+            dd_add_last(regionof(trigger->parameters), trigger->parameters, pconn);
+            
         
 
         //        trigger->ep = endpoint_list;
         //trigger->configuration_env = configuration_env;
+        }
     }
 }
 
+// FIXMEa: comment
 // Check port directions for the following type of connection:
 // l X p
 bool match_parameter_port(struct endp parameter, struct endp port) {
@@ -255,6 +241,7 @@ bool match_parameter_port(struct endp parameter, struct endp port) {
     return FALSE;
 }
 
+// FIXMEa: comment
 // Check port directions for the following type of connection:
 // l X (p, l)
 bool match_parameter_portparameter(struct endp parameter, struct endp portparameter) {
@@ -269,6 +256,7 @@ bool match_parameter_portparameter(struct endp parameter, struct endp portparame
     return FALSE;
 }
 
+// FIXMEa: comment
 // Check port directions for the following type of connection:
 // p X (p, l)
 bool match_port_portparameter(struct endp port, struct endp portparameter) {
@@ -283,6 +271,7 @@ bool match_port_portparameter(struct endp port, struct endp portparameter) {
     return FALSE;
 }
 
+// FIXMEa: comment
 // Check port directions for the following type of connection:
 // p X (f, l)
 bool match_port_functionparameter(struct endp port, struct endp functionparameter) {
@@ -298,6 +287,7 @@ bool match_port_functionparameter(struct endp port, struct endp functionparamete
     return FALSE;
 }
 
+// FIXMEa: comment
 // Check port directions for the following type of connection:
 // f X (p, l)
 bool match_function_portparameter(struct endp function, struct endp portparameter) {
@@ -312,6 +302,7 @@ bool match_function_portparameter(struct endp function, struct endp portparamete
     return FALSE;
 }
 
+// FIXMEa: comment
 // Check a TinyGUYS GET connection.  If the connection contains no
 // ports, we can do full type checking.  However, if the connection
 // contains ports, only check the port directions.  Full type checking
@@ -367,6 +358,7 @@ static void process_parameter_get_connection(cgraph cg, connection conn,
     }
 }
 
+// FIXMEa: comment
 // Check a TinyGUYS PUT connection.  If the connection contains no
 // ports, we can do full type checking.  However, if the connection
 // contains ports, only check the port directions.  Full type checking
@@ -388,6 +380,7 @@ static void process_parameter_put_connection(cgraph cg, connection conn,
     }
 }
 
+// FIXMEa: comment
 // Check the port directions in a port connection and make the
 // connection.  Full type checking is deferred until the global level.
 //
@@ -423,6 +416,7 @@ static void process_port_connection(cgraph cg, connection conn,
     }
 }
 
+// FIXMEa: comment
 // Similar to process_connections() in nesc-configuration.c
 //
 // Make a graph for the connections between components in this actor.
@@ -497,6 +491,7 @@ static void process_connections(actor_implementation c) {
     }
 }
 
+// FIXMEa: comment
 // Process the entries in the actorControl list in the implementation
 // body c of this actor.  The main purpose of this list is so that
 // internal components that have a StdControl interface can be
@@ -608,7 +603,9 @@ static void process_actorcontrollist(region r, actor_implementation c) {
     }
 }
 
-// Same as require_components() in nesc-configuration.c
+// FIXMEa: comment
+// Body of function is same as require_components() in
+// nesc-configuration.c
 //
 // Loads the components in this actor.  This function is called from
 // process_actor_implementation() in galsc-actor.c.
@@ -644,6 +641,7 @@ static void require_components(region r, actor_implementation c) {
     }
 }
 
+// FIXMEa: comment
 // Data structure used to transfer information to
 // check_function_connected(), used with component_functions_iterate()
 struct cfc_data {
@@ -652,6 +650,7 @@ struct cfc_data {
     data_declaration intf_last_error;
 };
 
+// FIXMEa: comment
 // Check that all ports and functions in actor interface are connected.
 // If this is a port, then
 // - If outport, there is an incoming edge
@@ -710,6 +709,7 @@ static void check_function_connected(data_declaration fndecl, void *data) {
     }
 }
 
+// FIXMEa: comment
 // Checks that all external interfaces/functions of the configuration
 // are connected somewhere in cg.
 //
@@ -724,13 +724,14 @@ static void check_complete_connection(actor_implementation c)
   component_functions_iterate(c->cdecl, check_function_connected, &d);
 }
 
+// FIXMEa: comment
 // Loads the components inside this actor, then creates the connection
 // graph between the components and between the components and the
 // ports of the actor.  Also processes the actorControl section and
 // creates interfaces for the actor.  Checks to make sure all ports
 // and interfaces of the actor are connected to a function of an
 // internal component.
-void process_actor_implementation(region r, actor_implementation c) {
+static void process_actor_implementation(region r, actor_implementation c) {
     int old_errorcount = errorcount;
 
     require_components(parse_region, c);
@@ -742,4 +743,28 @@ void process_actor_implementation(region r, actor_implementation c) {
     // errors in the connections (to avoid duplicate errors).
     if (old_errorcount == errorcount)
         check_complete_connection(c);
+}
+
+// FIXMEa: comment
+// Creates a connection graph for the interface of this actor and
+// loads in internal components and creates the connection graph for
+// them.
+//
+// Called from build() in nesc-semantics.c, which has already parsed
+// the file for this actor and created an AST for it.
+//
+// See build_component() in nesc-component.c
+void build_actor(region r, nesc_declaration cdecl) {
+    actor the_actor = CAST(actor, cdecl->ast);
+
+    the_actor->implementation->cdecl = cdecl;
+    cdecl->impl = the_actor->implementation;
+
+    AST_set_parents(CAST(node, cdecl->ast));
+    
+    // Build the default connection graph (just nodes for the external
+    // endpoints)
+    cdecl->connections = build_external_graph(r, cdecl);
+
+    process_actor_implementation(r, CAST(actor_implementation, cdecl->impl));
 }

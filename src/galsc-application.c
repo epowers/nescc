@@ -35,41 +35,23 @@ Boston, MA 02111-1307, USA. */
 #include "galsc-application.h"
 #include "galsc-env.h"
 
+// FIXMEa: comment
 static const char *galsc_main = NULL;
 
+// FIXMEa: comment
 // Set the name of the "Main" component, which is external to all actors.
 void set_galsc_main(const char *name) {
     galsc_main = name;
 }
 
+// FIXMEa: comment
 static const char *get_galsc_main() {
     return galsc_main;
 }
 
 
-// Creates a connection graph for the interface of this application
-// and loads internal actors and creates the connection graph for
-// them.
-//
-// Called from build() in nesc-semantics.c, which has already parsed
-// the file for this application and created an AST for it.
-//
-// See build_component() in nesc-component.c
-void build_application(region r, nesc_declaration cdecl) {
-    application the_application = CAST(application, cdecl->ast);
 
-    the_application->implementation->cdecl = cdecl;
-    cdecl->impl = the_application->implementation;
-
-    AST_set_parents(CAST(node, cdecl->ast));
-
-    // Build the default connection graph (just nodes for the external
-    // endpoints)
-    cdecl->connections = build_external_graph(r, cdecl);
-
-    process_application_implementation(r, CAST(application_implementation, cdecl->impl));
-}
-
+// FIXMEa: comment
 // Connect the end points in an application level TinyGUYS connection.
 // See connect_function() in nesc-configuration.c
 static void connect_parameters(cgraph cg, struct endp from, struct endp to) {
@@ -87,6 +69,7 @@ static void connect_parameters(cgraph cg, struct endp from, struct endp to) {
         graph_add_edge(gto, fn_lookup(cg, to.function), NULL);
 }
 
+// FIXMEa: comment
 // Similar to connect_function() in nesc-configuration.c, except we do
 // not check for a function implementation since we are connecting
 // ports together.
@@ -105,6 +88,7 @@ static void connect_function(cgraph cg, struct endp from, struct endp to) {
         graph_add_edge(gto, fn_lookup(cg, to.function), NULL);
 }
 
+// FIXMEa: comment
 // Called from process_interface_connection() in galsc-application.c
 //
 // Same as connect_interface() in nesc-configuration.c.  Needed
@@ -134,6 +118,7 @@ static void connect_interface(cgraph cg, struct endp from, struct endp to,
     }
 }
 
+// FIXMEa: comment
 // Same as process_interface_connection() in nesc-configuration.c.
 // Needed because a modified connect_function() is called downstream.
 //
@@ -180,6 +165,7 @@ static void process_interface_connection(cgraph cg, connection conn,
     }
 }
 
+// FIXMEa: comment
 // Process a TinyGUYS application level connection.  Make a connection
 // from the local parameter name to the global parameter name.
 static void process_parameter_connection(cgraph cg, connection conn, struct endp p1, struct endp p2) {
@@ -212,6 +198,7 @@ static void process_parameter_connection(cgraph cg, connection conn, struct endp
     }
 }
 
+// FIXMEa: comment
 // Check the port directions in a port connection and make the
 // connection.  Full type checking is deferred until the global level.
 //
@@ -232,10 +219,11 @@ static void process_port_connection(cgraph cg, global_connection conn,
     }
 }
 
-// Similar to process_connections() in nesc-configuration.c
+// working here
+// Make a graph for the connections between actors (port to port,
+// global parameter to local parameter) in this application.
 //
-// Make a graph for the connections between actors (port to port
-// connections) in this application.
+// See process_connections() in nesc-configuration.c
 static void process_connections(application_implementation c) {
     connection conn;
     struct endp p1, p2;
@@ -256,6 +244,7 @@ static void process_connections(application_implementation c) {
     }
 }
 
+// FIXMEa: comment
 // Make connections from external component x to internal actor a for
 // all matching interfaces.
 //
@@ -381,14 +370,17 @@ static void require_actors(region r, application_implementation c) {
     }
 }
 
-// Load the "Main" component into the application.
+// Load an external component (e.g., "Main") into the application.
+// Note that this component is external to any actors.
 static void require_application_component(region r,
         application_implementation c) {
+    // This name set with set_galsc_main() when the compiler flag
+    // -fgalsc-main=<component name>
     const char *name = get_galsc_main();
     assert(name);
     component_ref comp = new_component_ref(r, dummy_location, build_word(r, name), NULL);
   
-    // From require_actors()
+    // From require_components() in nesc-configuration.c
     struct data_declaration tempdecl;
     data_declaration old_decl;
     const char *cname = comp->word1->cstring.data;
@@ -417,22 +409,52 @@ static void require_application_component(region r,
     c->external_components = comp;
 }
 
-// Loads the actors inside this application, and also loads the "Main"
-// component.  Creates the connection graph between the ports of
-// actors, then connects the interfaces of Main to the interfaces of
-// the actors.
-void process_application_implementation(region r, application_implementation c)
+// Loads the actors inside this application, and also loads an
+// external component (e.g., "Main").  Creates the connection graph
+// between the ports of actors, then connects the interfaces of the
+// external component to the interfaces of the actors.
+static void process_application_implementation(region r, application_implementation c)
 {
+    // Parse and build the actors in the "actor" list of this application.
     require_actors(parse_region, c);
     
-    // Load the "Main" component into the application.
+    // Load an external component (e.g., "Main") into the application.
     require_application_component(parse_region, c);
-    
+
+    // Create the connection graph.
     process_connections(c);
-    
+
+    // Connect the external component.
     process_application_component(r, c);
     
     // Don't need to run check_complete_connections() because there
-    // are no external connections in an application.
-    // FIXME is this still true with TinyGUYS?
+    // are no external connections in an application.  We don't need
+    // to check the TinyGUYS since it is not required that they be
+    // connected.
+}
+
+// Creates a connection graph for the interface of this application
+// (none except global parameters, which are not checked for
+// connection) and loads the internal actors and creates the
+// connection graph for them.
+//
+// Called from build() in nesc-semantics.c, which has already parsed
+// the file for this application and created an AST (in cdecl->ast)
+// for it.
+//
+// See build_component() in nesc-component.c
+void build_application(region r, nesc_declaration cdecl) {
+    application the_application = CAST(application, cdecl->ast);
+
+    the_application->implementation->cdecl = cdecl;
+    cdecl->impl = the_application->implementation;
+
+    AST_set_parents(CAST(node, cdecl->ast));
+
+    // Build the default connection graph (just nodes for the external
+    // endpoints)
+    cdecl->connections = build_external_graph(r, cdecl);
+
+    // Process the "implementation" section of the application.
+    process_application_implementation(r, CAST(application_implementation, cdecl->impl));
 }

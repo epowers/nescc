@@ -147,7 +147,7 @@ int galsc_prt_parameter_get_call(struct connections *c,
 static bool galsc_prt_parameter(declaration d, data_declaration ddecl, psd_options options, bool first, int numargs) {
     if (!is_void_parms(d)) {
         if (options & psd_galsc_print_port_struct) {
-            prt_parameter(d, first, FALSE, options);
+            prt_parameter(d, TRUE, FALSE, options);
             prt_galsc_name_ddecl(ddecl);
             output_string(galsc_separator);
             output("arg%d", numargs);

@@ -309,7 +309,9 @@ void build(nesc_declaration decl, nesc_decl ast)
   switch (decl->kind)
     {
 #ifdef GALSC
-        // After parsing, build either an application or an actor.
+        // After parsing (decl is the resulting AST), build one of the
+        // following: application, actor, interface, component
+        // (configuration or module).
     case l_application:
         build_application(parse_region, decl);
         break;

@@ -30,6 +30,4 @@ void build_actor(region r, nesc_declaration cdecl);
 void declare_port_ref(port_ref iref, declaration gparms,
 			   environment genv);
 
-void process_actor_implementation(region r, actor_implementation c);
-
 #endif
