@@ -28,6 +28,104 @@ Boston, MA 02111-1307, USA.  */
 #include "semantics.h"
 #include "constants.h"
 
+/* Print the variable part of the vdecl in 'd'.
+ * Returns whether there is an initializer.
+ */
+static bool prt_vdecl_variable_part(declaration d) {
+  bool has_initializer = FALSE;
+
+  if (d->kind == kind_data_decl) {
+    data_decl dd = CAST(data_decl, d);
+    declaration vd;
+    scan_declaration (vd, dd->decls) {
+      variable_decl vdd = CAST(variable_decl, vd);
+      data_declaration vdecl = vdd->ddecl;
+
+      // Suppress initializer when printing
+      expression initializer = vdd->arg1;
+      if (initializer != NULL) has_initializer = TRUE;
+      vdd->arg1 = NULL;
+
+      // Force printing 
+      if (vdecl) vdecl->isused = 1;
+
+      prt_data_decl(dd);
+
+      vdd->arg1 = initializer;
+    }
+  }
+  return has_initializer;
+}
+
+
+/* Prints a reference to the variable in the given vdecl.
+ */
+static void prt_vdecl_variable_ref(declaration d) {
+  if (d->kind == kind_data_decl) {
+    data_decl dd = CAST(data_decl, d);
+    declaration vd;
+    scan_declaration (vd, dd->decls) {
+      variable_decl vdd = CAST(variable_decl, vd);
+
+      /* OK, print the variable as in prt_variable_decl, but suppress
+       * the Nido array decl.
+       */
+      prt_declarator(vdd->declarator, NULL, vdd->attributes, 
+	  vdd->ddecl, psd_omit_nido_moteref);
+    }
+  }
+}
+
+
+
+/* Print the initializer part of the vdecl in 'd'.
+ */
+static void prt_vdecl_initializer_part(declaration d) {
+
+  if (d->kind == kind_data_decl) {
+    data_decl dd = CAST(data_decl, d);
+    declaration vd;
+    scan_declaration (vd, dd->decls) {
+      variable_decl vdd = CAST(variable_decl, vd);
+      data_declaration vdecl = vdd->ddecl;
+      expression initializer = vdd->arg1;
+      prt_expression(initializer, P_ASSIGN);
+      output(" /* %s */ ", vdecl->name);
+    }
+  }
+}
+
+/* Returns whether the vdecl in 'd' is an instance variable. */
+static bool vdecl_is_instancevar(declaration d) {
+  bool is_instance = FALSE;
+
+  if (d->kind == kind_data_decl) {
+    data_decl dd = CAST(data_decl, d);
+    declaration vd;
+    scan_declaration (vd, dd->decls) {
+      variable_decl vdd = CAST(variable_decl, vd);
+      data_declaration vdecl = vdd->ddecl;
+      if (is_instance_variable(vdecl)) is_instance = TRUE;
+    }
+  }
+  return is_instance;
+}
+
+/* Returns whether the vdecl in 'd' has an initializer. */
+static bool vdecl_has_initializer(declaration d) {
+  bool has_initializer = FALSE;
+
+  if (d->kind == kind_data_decl) {
+    data_decl dd = CAST(data_decl, d);
+    declaration vd;
+    scan_declaration (vd, dd->decls) {
+      variable_decl vdd = CAST(variable_decl, vd);
+      if (vdd->arg1 != NULL) has_initializer = TRUE;
+    }
+  }
+  return has_initializer;
+}
+
 static void prt_nesc_function_hdr(data_declaration fn_decl,
 				  psd_options options)
 /* Effects: prints the C function declaration for fn_decl
@@ -76,46 +174,31 @@ void prt_nesc_abstract_declarations(nesc_declaration mod)
     /* Instance parameters and magic variables need to go first, so 
      * we can initialize them */
     scan_declaration(d, aplist) {
-      if (d->kind == kind_data_decl) {
-	data_decl dd = CAST(data_decl, d);
-	declaration vd;
-	scan_declaration (vd, dd->decls) {
-	  output("  ");
-       	  prt_data_decl(dd);
-	  output("\n");
-	}
-      }
+      prt_vdecl_variable_part(d);
     }
 
     /* Now add instance variables */
     scan_declaration (d, dlist) {
-      if (d->kind == kind_data_decl) {
-	data_decl dd = CAST(data_decl, d);
-	declaration vd;
-	scan_declaration (vd, dd->decls) {
-	  variable_decl vdd = CAST(variable_decl, vd);
-	  data_declaration vdecl = vdd->ddecl;
-	  if (is_instance_variable(vdecl)) {
-	    output("  ");
-	    prt_data_decl(dd);
-	    output("\n");
-	  }
-	}
+      if (vdecl_is_instancevar(d)) {
+	prt_vdecl_variable_part(d);
       }
     }
 
     output(" } ");
-    output_stripped_string_dollar(mod->name);
-    output(NESC_INSTANCEARR_LITERAL);
-    output("[%d]", mod->abstract_instance_count);
+    output_instanceref(mod, mod->abstract_instance_count);
 
-//#define MDW_BROKEN_NEED_INITIALIZERS
-#ifdef MDW_BROKEN_NEED_INITIALIZERS
+    if (use_nido) {
+      /* Initializations done in nido_initialize() */
+      output(";\n");
+      return;
+    }
+
     /* Initializers */
     output(" = {\n");
     for (i = 0; i < mod->abstract_instance_count; i++) {
       output("{ ");
 
+      /* Abstract parameters */
       scan_declaration(d, aplist) {
 	if (d->kind == kind_data_decl) {
 	  data_decl dd = CAST(data_decl, d);
@@ -124,7 +207,7 @@ void prt_nesc_abstract_declarations(nesc_declaration mod)
 	    variable_decl vdd = CAST(variable_decl, vd);
 	    data_declaration vdecl = vdd->ddecl;
 	    if (!strcmp(vdecl->name, NESC_INSTANCENUM_LITERAL)) {
-	      output("  %d /* %s */, \n", i, NESC_INSTANCENUM_LITERAL);
+	      output("  %d /* %s */, ", i, NESC_INSTANCENUM_LITERAL);
 	    } else {
 	      /* XXX Need to determine constant initializers */
 	      output(" 0 /* XXX PLACEHOLDER */, ");
@@ -132,10 +215,21 @@ void prt_nesc_abstract_declarations(nesc_declaration mod)
 	  }
 	}
       }
+
+      /* Instance variables */
+      scan_declaration(d, dlist) {
+	if (vdecl_is_instancevar(d)) {
+	  if (vdecl_has_initializer(d)) {
+	    prt_vdecl_initializer_part(d);
+	  } else {
+	    output(" 0, ");
+	  }
+	}
+      }
+
       output("},\n");
     }
     output("\n}");
-#endif
 
     output(";\n");
   }
@@ -271,9 +365,8 @@ void prt_ncf_direct_call(struct connections *c,
     fprintf(stderr,"MDW: prt_ncf_direct_call: instance %d\n", ccall->ep->component->instance_number);
 
     output("&(");
-    output_stripped_string_dollar(ccall->ep->component->ctype->name);
-    output(NESC_INSTANCEARR_LITERAL);
-    output("[%d])", ccall->ep->component->instance_number);
+    output_instanceref(ccall->ep->component->ctype, ccall->ep->component->instance_number);
+    output(")");
     first = FALSE;
   }
 
@@ -667,13 +760,13 @@ static bool find_reachable_functions(struct connections *c, gnode n,
     {
       gedge out;
 
-      fprintf(stderr,"  MDW: Recursing into graph_scan_out (ep=0x%lx)\n", ep);
+      fprintf(stderr,"  MDW: Recursing into graph_scan_out (ep=0x%lx)\n", (unsigned long)ep);
       graph_mark_node(n);
       graph_scan_out (out, n)
 	if (find_reachable_functions(c, graph_edge_to(out), gcond, gargs, instance))
 	  return TRUE;
       graph_unmark_node(n);
-      fprintf(stderr,"  MDW: Done with graph_scan_out (ep=0x%lx)\n", ep);
+      fprintf(stderr,"  MDW: Done with graph_scan_out (ep=0x%lx)\n", (unsigned long)ep);
 
     }
   return FALSE;
@@ -717,7 +810,7 @@ void find_function_connections(data_declaration fndecl, void *data)
       if (fndecl->container) {
         fprintf(stderr,"MDW: container is %s (0x%lx) is_abstract %d aic %d\n", 
 	    fndecl->container->name,
-	    fndecl->container,
+	    (unsigned long)fndecl->container,
 	    fndecl->container->is_abstract,
 	    fndecl->container->abstract_instance_count);
       }
@@ -971,6 +1064,78 @@ static void suppress_function(const char *name)
     d->suppress_definition = TRUE;
 }
 
+static void prt_nido_initialize_decl() {
+  outputln("static void nido_initialize(int mote_number);");
+}
+
+
+static void prt_nido_initializations(nesc_declaration mod) {
+  declaration dlist = CAST(module, mod->impl)->decls;
+  declaration aplist = CAST(component, mod->ast)->abs_param_list;
+  declaration d;
+  int instance;
+
+  if (mod->is_abstract) {
+
+    output("/* MDW: prt_nido_initializations: dlist 0x%lx aplist 0x%lx */\n",
+     	(unsigned long)dlist, (unsigned long)aplist);
+
+    for (instance = 0; instance < mod->abstract_instance_count; instance++) {
+      outputln("/* Module %s instance %d */\n", mod->name, instance);
+
+      outputln("/* Instance parameters */\n");
+      /* Instance parameters */
+      scan_declaration(d, aplist) {
+        output_instanceref(mod, instance);
+	output(".");
+        prt_vdecl_variable_ref(d);
+	output("[mote_number] =");
+
+	if (vdecl_has_initializer(d)) {
+	  prt_vdecl_initializer_part(d);
+	  outputln(";");
+	} else {
+	  outputln("0;");
+	}
+      }
+
+      outputln("/* Instance variables */\n");
+      /* Now add instance variables */
+      scan_declaration (d, dlist) {
+	if (vdecl_is_instancevar(d)) {
+	  output_instanceref(mod, instance);
+	  output(".");
+	  prt_vdecl_variable_ref(d);
+	  output("[mote_number] = ");
+	  if (vdecl_has_initializer(d)) {
+	    prt_vdecl_initializer_part(d);
+	    outputln(";");
+	  } else {
+	    output("0;"); // Let's ensure everything is zeroed out
+	  }
+	}
+      }
+
+      outputln("\n");
+    }
+
+    outputln("\n");
+  }
+}
+
+static void prt_nido_initialize(dd_list modules) {
+  dd_list_pos mod;
+  outputln("/* Invoke static initializers for mote 'mote-number' */\n");
+  outputln("static void nido_initialize(int mote_number) {");
+  indent();
+
+  dd_scan (mod, modules) 
+    prt_nido_initializations(DD_GET(nesc_declaration, mod));
+ 
+  unindent();
+  outputln("}");
+}
+
 void generate_c_code(nesc_declaration program, const char *target_name,
 		     cgraph cg, dd_list modules)
 {
@@ -1014,7 +1179,7 @@ void generate_c_code(nesc_declaration program, const char *target_name,
 
   /* Then we set the 'isused' bit on all functions that are reachable
      from spontaneous_calls or global_uses */
-  callgraph =  mark_reachable_code();
+  callgraph = mark_reachable_code();
   inline_functions(callgraph);
 
   fprintf(stderr,"MDW: done with inline_functions\n");
@@ -1023,6 +1188,7 @@ void generate_c_code(nesc_declaration program, const char *target_name,
   /* Then we print the code. */
   /* The C declarations first */
   enable_line_directives();
+  if (use_nido) prt_nido_initialize_decl();
   prt_toplevel_declarations(all_cdecls);
   disable_line_directives();
 
@@ -1049,6 +1215,8 @@ void generate_c_code(nesc_declaration program, const char *target_name,
   fprintf(stderr,"MDW: Printing noninline functions\n");
   outputln("\n/* MDW: prt_noninline_functions */");
   prt_noninline_functions(callgraph);
+
+  if (use_nido) prt_nido_initialize(modules); 
 
   unparse_end();
 

@@ -40,13 +40,17 @@ void print_endp(char *head, endp ep) {
   fprintf(stderr,head);
   // Use of "> 1000" used to catch cases of bad pointers
   fprintf(stderr,"[%s.%s.%s addr 0x%lx COUNT %d INSTANCE %d(%d) c:0x%lx i:0x%lx f:0x%lx a:0x%lx]\n", 
-      ((ep->component>1000)?ep->component->name:"null"),
-      ((ep->interface>1000)?ep->interface->name:"null"),
-      ((ep->function>1000)?ep->function->name:"null"),
-      ep, ep->MDW_hack_count, 
+      ((ep->component)?ep->component->name:"null"),
+      ((ep->interface)?ep->interface->name:"null"),
+      ((ep->function)?ep->function->name:"null"),
+      (unsigned long)ep, 
+      ep->MDW_hack_count, 
       ep->instance,
-      ((ep->component>1000)?ep->component->instance_number:-2),
-      ep->component, ep->interface, ep->function, ep->args);
+      ((ep->component)?ep->component->instance_number:-2),
+      (unsigned long)ep->component, 
+      (unsigned long)ep->interface, 
+      (unsigned long)ep->function, 
+      (unsigned long)ep->args);
 }
 
 static int ep_compare(void *e1, void *e2)

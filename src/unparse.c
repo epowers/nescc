@@ -173,6 +173,12 @@ void copy_file_to_output(char *filename)
   fclose(infile);
 }
 
+void output_instanceref(nesc_declaration module, int instancenum) {
+  output_stripped_string_dollar(module->name);
+  output(NESC_INSTANCEARR_LITERAL);
+  output("[%d]", instancenum);
+}
+
 void output_instancetype(nesc_declaration module) {
   output("struct ");
   output_stripped_string_dollar(module->name);
@@ -483,8 +489,9 @@ void prt_data_decl(data_decl d)
 	     (local ones might have an initialiser which must still be
 	     executed) */
 	  if (((vdecl->kind == decl_function || vdecl->kind == decl_variable)
-	       && !vdecl->isused && !vdecl->islocal))
+	       && !vdecl->isused && !vdecl->islocal)) {
 	    continue;
+	  }
 
 	  extraopts = prefix_decl(vdecl);
 	}
@@ -599,7 +606,7 @@ void prt_ddecl_full_name(data_declaration ddecl, psd_options options)
     }
   output_stripped_string(ddecl->name);
 
-  if (use_nido && is_module_variable(ddecl))
+  if (use_nido && !(options & psd_omit_nido_moteref) && is_module_variable(ddecl))
     output("[%s]", nido_num_nodes);
 }
 
@@ -1249,31 +1256,67 @@ void prt_field_ref(field_ref e, int context_priority)
 
 void prt_instance_ref(instance_ref e, int context_priority)
 {
-  output("%s$%s[", e->ddecl->container->name, NESC_INSTANCEARR_LITERAL);
-  prt_expression(e->arg1, P_TOP);
-  output("]");
-  output(".");
-  output_stripped_string_dollar(e->ddecl->container->name);
-  output_stripped_cstring(e->cstring);
+  fprintf(stderr,"prt_instance_ref: %s\n", e->cstring.data);
+
+  if (e->ddecl->kind == decl_variable) {
+
+    if (!is_instance_variable(e->ddecl)) {
+      error("cannot reference non-instance variable `%s' using `instance'", e->cstring.data);
+      return;
+    }
+
+    output("%s$%s[", e->ddecl->container->name, NESC_INSTANCEARR_LITERAL);
+    // XXX MDW: If arg1 is cst, check if it's in range
+    prt_expression(e->arg1, P_TOP);
+    output("]");
+    output(".");
+    output_stripped_string_dollar(e->ddecl->container->name);
+    output_stripped_cstring(e->cstring);
+
+  } else {
+
+    /* We are an interface_ref, e.g., a call to an instance function.
+     * Just emit the container and interface name; prt_interface_deref
+     * does the rest.
+     */
+    output_stripped_string_dollar(e->ddecl->container->name);
+    output_stripped_cstring(e->cstring);
+  }
 }
 
 void prt_interface_deref(interface_deref e, int context_priority)
 {
   data_declaration decl = e->ddecl;
+  instance_ref iref = NULL;
 
   if (decl->kind == decl_function && decl->uncallable)
     error_with_location(e->location, "%s.%s not connected (MDW: unparse.c 2)",
 			CAST(identifier, e->arg1)->cstring.data,
 			e->cstring.data);
 
+  if (is_instance_ref(e->arg1)) {
+    // OK, we have an instance ref inside, so need to use the 
+    // particular instance rather than 'this'. This is ugly because 
+    // the instance_ref is embedded in the interface_deref, rather 
+    // than the other way around
+    iref = CAST(instance_ref, e->arg1);
+  }
+
   prt_expression(e->arg1, P_CALL);
   output(function_separator);
   output_stripped_cstring(e->cstring);
 
-  /* XXX MDW: 'thisptr' will be an instance array deref for instance_deref */
   if (decl->kind == decl_function && decl->container && decl->container->is_abstract) {
     output("(");
-    output_thisptr(e->ddecl->container);
+
+    if (iref != NULL) {
+      output("&(%s$%s[", iref->ddecl->container->name, NESC_INSTANCEARR_LITERAL);
+      // XXX MDW: If arg1 is cst, check if it's in range
+      prt_expression(iref->arg1, P_TOP);
+      output("])");
+    } else {
+      output_thisptr(e->ddecl->container);
+    }
   }
 
 }

@@ -1023,12 +1023,18 @@ primary:
 		{ $$ = make_va_arg($1.location, $3, $5); }
 	| OFFSETOF '(' typename ',' fieldlist ')'
 		{ $$ = make_offsetof($1.location, $3, $5); }
+/*	| INSTANCE '(' expr_no_commas ')' '.' fieldref
+		{ fprintf(stderr,"MDW: making instance using primary.identifier\n");
+		  $$ = make_instance_ref($2.location, $3, $6); }
+		  */
 	| INSTANCE '(' expr_no_commas ')' '.' identifier
-		{ $$ = make_instance_ref($2.location, $3, $6.id); }
+		{ fprintf(stderr,"MDW: making instance using identifier\n");
+		  $$ = make_instance_ref($2.location, $3, $6.id); }
 	| primary '[' nonnull_exprlist ']' 
 		{ $$ = make_array_ref($2.location, $1, $3); }
-	| primary '.' identifier
-		{ $$ = make_field_ref($2.location, $1, $3.id); }
+        | primary '.' identifier 
+	        { fprintf(stderr,"MDW: making field ref\n"); 
+       	          $$ = make_field_ref($2.location, $1, $3.id); }
 	| primary POINTSAT identifier
 		{ $$ = make_field_ref($2.location, make_dereference($2.location, $1),
 				      $3.id); }

@@ -2670,8 +2670,12 @@ declaration finish_decl(declaration decl, expression init)
 	check_assignment(dd->type, default_conversion_for_assignment(init),
 			 init, "initialization", NULL, NULL, 0);
 
-      if (is_module_variable(dd) && init)
-	error("initialisers not allowed on module variables");
+      if (is_module_variable(dd)) {
+	/* Only allow constant initializers for now */
+	if (init->kind != kind_lexical_cst && init->kind != kind_string_cst) {
+	  error("cannot initialize module variables with non-constant values");
+	}
+      }
     }
 
   return decl;

@@ -310,6 +310,13 @@ bool is_module_variable(data_declaration ddecl)
 
 bool is_instance_variable(data_declaration ddecl) 
 {
+
+  fprintf(stderr,"is_instance_variable: %s\n", ddecl->name);
+  fprintf(stderr,"vtype: %d\n", ddecl->vtype);
+  fprintf(stderr,"Cname: %d\n", ddecl->Cname);
+  fprintf(stderr,"container: %s\n", ddecl->container->name);
+  fprintf(stderr,"container abstract: %d\n", ddecl->container->is_abstract);
+
   return ddecl->kind == decl_variable &&
     ddecl->Cname == FALSE &&
     /* instance-static variable */
@@ -331,31 +338,41 @@ int num_abstract_instances(data_declaration ddecl) {
     return 0;
 }
 
-expression make_instance_ref(location loc, expression index, cstring field)
+expression make_instance_ref(location loc, expression index, cstring field) 
 {
   // XXX For now: Assume that 'field' is an instance variable
   // For command/event/task, 'field' will be an interface_deref, so
   // may want to have a separate function for processing those
   // (Taking interface_deref as argument from c-parse.y)
-
   instance_ref result;
   data_declaration fdecl;
+  cstring fieldstr = field;
 
-  fdecl = lookup_id(field.data, FALSE);
+  fprintf(stderr,"MDW: make_instance_ref: field %s\n", field.data);
+
+  fdecl = lookup_id(fieldstr.data, FALSE);
   if (!fdecl) {
-    error("module has no instance variable named `%s'", field.data);
+    error("module has no instance variable named `%s'", fieldstr.data);
     result->type = error_type;
     return CAST(expression, result);
   }
 
-  if (!is_instance_variable(fdecl)) {
-    error("cannot reference non-instance variable `%s' using `instance'", field.data);
+  fprintf(stderr,"MDW: fdecl kind %d\n", fdecl->kind);
+
+  if (fdecl->kind == decl_interface_ref) {
+    // Call
+    result = new_instance_ref(parse_region, loc, index, fieldstr, fdecl);
+    result->lvalue = FALSE;
+  } else if (fdecl->kind == decl_variable) {
+    // Variable ref
+    result = new_instance_ref(parse_region, loc, index, fieldstr, fdecl);
+    result->lvalue = TRUE;
+  } else {
+    error("cannot reference `%s' using instance()", fieldstr.data);
     result->type = error_type;
     return CAST(expression, result);
   }
 
-  result = new_instance_ref(parse_region, loc, index, field, fdecl);
-  result->lvalue = TRUE;
   result->type = fdecl->type;
   note_identifier_use(fdecl);
   return CAST(expression, result);

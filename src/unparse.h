@@ -63,6 +63,7 @@ const char *binary_op_name(ast_kind kind);
 #define P_CALL 14
 
 void prt_data_decl(data_decl d);
+void prt_variable_decl(variable_decl vd);
 void prt_toplevel_declarations(declaration d);
 void prt_toplevel_declaration(declaration d);
 void prt_nelements(expression array);
@@ -83,7 +84,8 @@ typedef enum {
   psd_rename_parameters = 4,
   psd_rename_identifier = 8,
   psd_print_default = 16,
-  psd_skip_container = 32
+  psd_skip_container = 32,
+  psd_omit_nido_moteref = 64
 } psd_options;
 
 void prt_declarator(declarator d, type_element elements, attribute attributes,
