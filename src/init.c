@@ -1138,6 +1138,8 @@ void process_init_element(expression value)
       if (constructor_index > constructor_array_size)
 	constructor_array_size = constructor_index;
       break;
+    case c_scalar: /* the weird {"foo"} case above */
+      break;
     default: assert(0); break;
     }
 
