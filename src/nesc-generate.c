@@ -430,20 +430,24 @@ void prt_ncf_direct_calls(struct connections *c,
 {
   dd_list_pos call;
   function_declarator called_fd = ddecl_get_fdeclarator(c->called);
+  int num_calls = 0;
 
-  dd_scan (call, calls)
-    {
-      full_connection ccall = DD_GET(full_connection, call);
-
-      assert(!ccall->cond);
-
-      print_endp("MDW: prt_ncf_direct_calls: ", ccall->ep);
-
-      if (instancenum == -1 || instancenum == ccall->caller_instance) {
-	prt_ncf_direct_call(c, ccall, dd_is_end(dd_next(call)), 0,
-	    return_type, called_fd);
-      }
+  dd_scan (call, calls) {
+    full_connection ccall = DD_GET(full_connection, call);
+    if (instancenum == -1 || instancenum == ccall->caller_instance) {
+      num_calls++;
     }
+  }
+
+  dd_scan (call, calls) {
+    full_connection ccall = DD_GET(full_connection, call);
+    assert(!ccall->cond);
+    print_endp("MDW: prt_ncf_direct_calls: ", ccall->ep);
+    if (instancenum == -1 || instancenum == ccall->caller_instance) {
+      prt_ncf_direct_call(c, ccall, (num_calls>0), 0, return_type, called_fd);
+      num_calls--;
+    }
+  }
 }
 
 static int constant_expression_list_compare(expression arg1, expression arg2)
