@@ -13,6 +13,9 @@ Changes in nesC 1.1.1
   can be used if its directory is specified with an explicit -I directive
   (see doc/ncc.html for details).
 - A few small bug fixes
+- msp430 and env targets (env gets the machine specification from an
+  environment variable, see doc/ncc.html for details)
+- support for Tython
 
 Changes in nesC 1.1
 ===================
