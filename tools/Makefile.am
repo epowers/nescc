@@ -33,9 +33,13 @@ bin_SCRIPTS = mig ncg ncc nescc nesdoc galscc
 
 ncclib_DATA = genjava.pm gencstjava.pm migdecode.pm
 emacs_DATA =					\
+	editor-modes/emacs/galsc.el		\
 	editor-modes/emacs/nesc.el 		\
+	editor-modes/emacs/new-galsc.el		\
 	editor-modes/emacs/new-nesc.el		\
+	editor-modes/emacs/old-galsc.el		\
 	editor-modes/emacs/old-nesc.el		\
+	editor-modes/emacs/readme-galsc.txt	\
 	editor-modes/emacs/readme.txt
 vim_DATA =					\
 	editor-modes/vim/nesc.vim		\
