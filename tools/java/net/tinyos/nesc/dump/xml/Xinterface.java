@@ -1,4 +1,4 @@
-// $Id: Xinterface.java,v 1.4 2005/01/11 23:27:53 idgay Exp $
+// $Id: Xinterface.java,v 1.5 2005/01/18 21:48:59 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -19,6 +19,7 @@ public class Xinterface extends DataDefinition
     public boolean provided;
     public Xinstance instance;
     public LinkedList/*Type*/ parameters; /* null for non-parameterised interfaces */
+    public LinkedList/*Xfunction*/ functions;
 
     public NDElement start(Attributes attrs) {
 	Xinterface me = (Xinterface)super.start(attrs);
@@ -32,5 +33,7 @@ public class Xinterface extends DataDefinition
 	    instance = (Xinstance)subElement;
 	if (subElement instanceof Xinterface_parameters)
 	    parameters = ((Xinterface_parameters)subElement).l;
+	if (subElement instanceof Xinterface_functions)
+	    functions = ((Xinterface_functions)subElement).l;
     }
 }

@@ -1,4 +1,4 @@
-// $Id: Xinterfacedef.java,v 1.2 2005/01/07 22:17:51 idgay Exp $
+// $Id: Xinterfacedef.java,v 1.3 2005/01/18 21:48:59 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -12,13 +12,17 @@
 package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
+import java.util.*;
 
 public class Xinterfacedef extends NescDefinition
 {
     public Xparameters parameters;
+    public LinkedList/*Xfunction*/ functions = new LinkedList();
 
     public void child(NDElement subElement) {
 	if (subElement instanceof Xparameters)
 	    parameters = (Xparameters)subElement;
+	if (subElement instanceof Xfunction)
+	    functions.add(subElement);
     }
 }

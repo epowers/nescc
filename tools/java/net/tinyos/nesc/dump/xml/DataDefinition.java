@@ -1,4 +1,4 @@
-// $Id: DataDefinition.java,v 1.6 2005/01/18 17:09:05 idgay Exp $
+// $Id: DataDefinition.java,v 1.7 2005/01/18 21:48:58 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -46,6 +46,12 @@ public class DataDefinition extends CDefinition
     }
 
     public String toString() {
+	if (container == null)
+	    return name;
+	return container.toString() + "." + name;
+    }
+
+    public String debugString() {
 	String base = "";
 	//base += "[" + super.toString() + "]";
 	if (name != null)
