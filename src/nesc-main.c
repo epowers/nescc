@@ -119,6 +119,119 @@ void nesc_compile(const char *filename, const char *target_name)
 	 see the actual file */
       nesc_declaration program = load(l_component, &toplevel, filename, TRUE);
 
+      if (getenv("TYPEHACK"))
+	{
+	  printf("%s: %s", program->name,
+		 program->kind == l_interface ? "interface" :
+		 is_configuration(program->impl) ? "configuration" : "module");
+	  if (program->kind == l_interface)
+	    {
+	      env_scanner scanintf;
+	      const char *fname;
+	      void *fval;
+	      bool cmd = FALSE, event = FALSE;
+
+	      env_scan(program->env->id_env, &scanintf);
+	      while (env_next(&scanintf, &fname, &fval))
+		{
+		  data_declaration fdecl = fval;
+
+		  if (fdecl->ftype == function_command)
+		    cmd = TRUE;
+		  if (fdecl->ftype == function_event)
+		    event = TRUE;
+		}
+	      if (cmd && event)
+		{
+		  printf(" bid");
+		}
+	    }
+	  if (program->kind != l_interface)
+	    {
+	      env_scanner scanenv;
+	      env compenv = program->env->id_env;
+	      const char *name;
+	      void *val;
+	      bool callout = FALSE;
+
+	      env_scan(compenv, &scanenv);
+	      while (env_next(&scanenv, &name, &val))
+		{
+		  data_declaration idecl = val;
+
+		  if ((idecl->kind == decl_interface_ref && idecl->required) ||
+		      (idecl->kind != decl_interface_ref && !idecl->defined))
+		    {
+		      printf(" uses %s", name);
+		      break;
+		    }
+		}
+
+	      env_scan(compenv, &scanenv);
+	      while (env_next(&scanenv, &name, &val))
+		{
+		  data_declaration idecl = val;
+
+		  if (idecl->kind == decl_interface_ref)
+		    {
+		      env_scanner scanintf;
+		      const char *fname;
+		      void *fval;
+
+		      env_scan(idecl->functions->id_env, &scanintf);
+		      while (env_next(&scanintf, &fname, &fval))
+			{
+			  data_declaration fdecl = fval;
+
+			  if (fdecl->ftype == function_command &&
+			      idecl->required)
+			    callout = TRUE;
+			  if (fdecl->ftype == function_event &&
+			      !idecl->required)
+			    callout = TRUE;
+			}
+		    }
+		  else if (!idecl->defined)
+		    callout = TRUE;
+		}
+	      if (callout)
+		printf(" callsout");
+
+	      env_scan(compenv, &scanenv);
+	      while (env_next(&scanenv, &name, &val))
+		{
+		  data_declaration idecl = val;
+
+		  if (idecl->kind == decl_interface_ref)
+		    {
+		      env_scanner scanintf;
+		      const char *fname;
+		      void *fval;
+		      bool cmd = FALSE, event = FALSE;
+
+		      env_scan(idecl->functions->id_env, &scanintf);
+		      while (env_next(&scanintf, &fname, &fval))
+			{
+			  data_declaration fdecl = fval;
+
+			  if (fdecl->ftype == function_command)
+			    cmd = TRUE;
+			  if (fdecl->ftype == function_event)
+			    event = TRUE;
+			}
+		      if (cmd && event)
+			{
+			  assert(callout);
+			  printf(" bidir %s", name);
+			  break;
+			}
+		    }
+		}
+	    }
+	  printf("\n");
+	  exit(0);
+	}
+
       if (errorcount == 0)
 	{
 	  cgraph cg = NULL;
