@@ -55,19 +55,21 @@ typedef enum {
 // Track the uses of a variable within a specific function
 typedef struct var_use {
   data_declaration function;
+  expression expr;
   location location;
   var_use_flags flags;
   struct var_use *next;
 } *var_use;
 
 
-static var_use add_var_use(var_use *first, var_use *last, data_declaration function, location loc, var_use_flags flags)
+static var_use add_var_use(var_use *first, var_use *last, data_declaration function, expression expr, var_use_flags flags)
 {
   var_use u;
   
   u = ralloc(fv_region, struct var_use);
   u->function = function;
-  u->location = loc;
+  u->expr = expr;
+  u->location = expr->location;
   u->flags = flags;
   u->next = NULL;
   
@@ -131,8 +133,9 @@ static pointer_assignment add_pointer_assignment(pointer_assignment *first, poin
 // variables.  nesc-findvars generates a global list of var_list_entry
 // structures.
 typedef struct var_list_entry { 
-  const char *module;  // key in hash
-  const char *name;    // key in hash
+  const char *module;    // key in hash
+  const char *name;      // key in hash
+  const char *function;  // key in hash
   var_use refs;  // list of struct var_use, that define how the var is used in each function that uses it
   var_use last_ref;
 } *var_list_entry;
@@ -146,6 +149,7 @@ static int fv_var_list_compare(void *entry1, void *entry2)
 
   if ( safe_strcmp(v1->name,v2->name) ) return 0;
   if ( safe_strcmp(v1->module,v2->module) ) return 0;
+  if ( safe_strcmp(v1->function,v2->function) ) return 0;
   return 1;
 }
 
@@ -153,18 +157,18 @@ static unsigned long fv_var_list_hash(void *entry)
 {
   var_list_entry v = (var_list_entry) entry;
  
-  return hashStr(v->name) ^ hashStr(v->module);
+  return hashStr(v->name) ^ hashStr(v->module) ^ (hashStr(v->function) << 1);
 }
 
-static var_list_entry get_var_list_entry(const char *module, const char *name)
+static var_list_entry get_var_list_entry(const char *module, const char *name, const char *function)
 {
   var_list_entry v;
   struct var_list_entry vstruct;
   
-
   // look for an existing entry
   vstruct.module = module;
   vstruct.name = name;
+  vstruct.function = function;
   v = dhlookup(fv_var_list, &vstruct); 
   if( v ) 
     return v;
@@ -173,6 +177,7 @@ static var_list_entry get_var_list_entry(const char *module, const char *name)
   v = ralloc(fv_region, struct var_list_entry);
   v->module = module;
   v->name = name;
+  v->function = function;
   
   dhadd(fv_var_list, v);
 
@@ -202,7 +207,8 @@ static void note_var_use(expression e, bool is_read, bool is_write)
   }
   
   // get / add an entry for this variable
-  v = get_var_list_entry(current_module_name, id->cstring.data);
+  v = get_var_list_entry(current_module_name, id->cstring.data, 
+                         id->ddecl->islocal ? current_function->name : NULL);
 
   // add this ref
   flags = 0;
@@ -210,7 +216,7 @@ static void note_var_use(expression e, bool is_read, bool is_write)
   if(is_write) flags |= USE_WRITE;
   if(in_atomic) flags |= USE_IN_ATOMIC;
 
-  add_var_use(&(v->refs), &(v->last_ref), current_function, id->location, flags);
+  add_var_use(&(v->refs), &(v->last_ref), current_function, e, flags);
 
 }
 
@@ -273,13 +279,15 @@ static void note_pointer_use(expression e, bool is_read, bool is_write)
   // find an entry for this type of pointer
   a = get_pointer_use_list_entry( type_points_to(e->type) );
 
+  // FIXME: need to special case for things like *(&x) ??
+
   // add this ref
   flags = USE_VIA_POINTER;
   if(is_read) flags |= USE_READ;
   if(is_write) flags |= USE_WRITE;
   if(in_atomic) flags |= USE_IN_ATOMIC;
 
-  add_var_use(&(a->refs), &(a->last_ref), current_function, e->location, flags);
+  add_var_use(&(a->refs), &(a->last_ref), current_function, e, flags);
 }
 
 
@@ -292,8 +300,10 @@ static void note_pointer_use(expression e, bool is_read, bool is_write)
 //////////////////////////////////////////////////////////////////////
 
 typedef struct aliased_var_list_entry {
-  const char *module;  // key in hash
-  const char *name;    // key in hash
+  const char *module;    // key in hash
+  const char *name;      // key in hash
+  const char *function;  // key in hash
+  expression expr;
   type type;
   pointer_assignment refs;
   pointer_assignment last_ref;
@@ -307,6 +317,7 @@ static int fv_aliased_var_list_compare(void *entry1, void *entry2)
 
   if ( safe_strcmp(v1->name,v2->name) ) return 0;
   if ( safe_strcmp(v1->module,v2->module) ) return 0;
+  if ( safe_strcmp(v1->function,v2->function) ) return 0;
   return 1;
 }
 
@@ -314,7 +325,7 @@ static unsigned long fv_aliased_var_list_hash(void *entry)
 {
   aliased_var_list_entry v = (aliased_var_list_entry) entry;
  
-  return hashStr(v->name) ^ hashStr(v->module);
+  return hashStr(v->name) ^ hashStr(v->module) ^ (hashStr(v->function) << 1);
 }
 
 
@@ -326,13 +337,21 @@ static aliased_var_list_entry get_aliased_var_list_entry(identifier id, expressi
   // look for an existing entry
   vstruct.module = current_module_name;
   vstruct.name = id->cstring.data;
+  vstruct.function = id->ddecl->islocal ? current_function->name : NULL;
   v = dhlookup(fv_aliased_var_list, &vstruct); 
   if( v ) {
-    if( !type_equal(v->type, e->type) ) {
+    if( !type_equal(v->type, id->type) ) {
       // FIXME: need to do something here - why are these different?
+      warning_with_location(v->expr->location, "COMPILER BUG: %s.%s  v: %s   e: %s",
+                            v->module, v->name, type_name(fv_region,v->type), type_name(fv_region,e->type));
       warning_with_location(e->location, "COMPILER BUG: %s.%s  v: %s   e: %s",
                             v->module, v->name, type_name(fv_region,v->type), type_name(fv_region,e->type));
-      v->type = e->type;
+      set_unparse_outfile(stderr);
+      fprintf(stderr, "v->expr:  "); prt_expression(v->expr,TRUE); fprintf(stderr, "\n");
+      fprintf(stderr, "e:        "); prt_expression(e,TRUE); fprintf(stderr, "\n");
+
+      //v->type = e->type;  FIXME - remove
+      v->type = id->type;
     }
     return v;
   }
@@ -341,7 +360,9 @@ static aliased_var_list_entry get_aliased_var_list_entry(identifier id, expressi
   v = ralloc(fv_region, struct aliased_var_list_entry);
   v->module = current_module_name;
   v->name = id->cstring.data;
-  v->type = e->type;
+  //v->type = e->type;  FIXME - remove
+  v->type = id->type;
+  v->expr = e;
   
   dhadd(fv_aliased_var_list, v);
 
@@ -353,6 +374,26 @@ static aliased_var_list_entry get_aliased_var_list_entry(identifier id, expressi
 static void note_pointer_assignment(identifier id, expression e)
 {
   aliased_var_list_entry v;
+
+  // print an error for non-variables, and non-static local variables
+  if(id->ddecl->kind != decl_variable) {
+    error_with_location(id->location, "COMPILER BUG: id is not a variable");
+    fprintf(stderr, "id:    %s.%s\n", current_module_name, id->cstring.data);
+    set_unparse_outfile(stderr);
+    fprintf(stderr, "expr:  "); prt_expression(e, TRUE); fprintf(stderr,"\n");
+    return;
+  }
+  if(id->ddecl->islocal && id->ddecl->vtype != variable_static) {
+    error_with_location(id->location, "COMPILER BUG: id is a non-static local variable");
+    fprintf(stderr, "id:    %s.%s\n", current_module_name, id->cstring.data);
+    set_unparse_outfile(stderr);
+    fprintf(stderr, "expr:  "); prt_expression(e, TRUE); fprintf(stderr,"\n");
+    return;
+  }
+  if(id->ddecl->islocal) {
+    warning_with_location(id->location, "taking address of a static local");
+  }
+
 
   // find an entry for this type of pointer
   v = get_aliased_var_list_entry(id, e);
@@ -485,7 +526,7 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write, e
         find_expression_vars(fce->arg1, TRUE, FALSE, NULL);
 
       scan_expression (e, fce->args) {
-        if( type_pointer(e->type) )
+        if( type_pointer(e->type) || type_array(e->type) )
           find_expression_vars(e, TRUE, FALSE, e);
         else 
           find_expression_vars(e, TRUE, FALSE, NULL);
@@ -505,7 +546,7 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write, e
         find_expression_vars(fce->arg1, TRUE, FALSE, NULL);
 
       scan_expression (e, fce->args) {
-        if( type_pointer(e->type) )
+        if( type_pointer(e->type) || type_array(e->type) )
           find_expression_vars(e, TRUE, FALSE, e);
         else 
           find_expression_vars(e, TRUE, FALSE, NULL);
@@ -567,7 +608,10 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write, e
     case kind_assign:  {
       binary be = CAST(binary, expr);
       find_expression_vars(be->arg1, FALSE, TRUE, NULL);
-      find_expression_vars(be->arg2, TRUE, FALSE, be->arg2);
+      if( type_pointer(be->arg1->type) || type_array(be->arg1->type) )
+        find_expression_vars(be->arg2, TRUE, FALSE, be->arg2);
+      else 
+        find_expression_vars(be->arg2, TRUE, FALSE, NULL);
       break;
     }
     // simple assignment allowed for pointers
@@ -582,7 +626,7 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write, e
     case kind_bitand_assign:  case kind_bitor_assign:  case kind_bitxor_assign: 
     case kind_lshift_assign:  case kind_rshift_assign: {
       binary be = CAST(binary, expr);
-      if( type_pointer(be->arg1->type) )
+      if( type_pointer(be->arg1->type) || type_array(be->arg1->type) )
         error_with_location(expr->location,"strange pointer arithmatic is not allowed");
       find_expression_vars(be->arg1, TRUE, TRUE, NULL);
       find_expression_vars(be->arg2, TRUE, FALSE, NULL);  // FIXME: is this right?
@@ -599,7 +643,7 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write, e
     // other arithmatic not allowed for pointers
     case kind_times:  case kind_divide:  case kind_modulo:  case kind_lshift:  case kind_rshift: {
       binary be = CAST(binary, expr);
-      if( type_pointer(be->arg1->type) )
+      if( type_pointer(be->arg1->type) || type_array(be->arg1->type) )
         error_with_location(expr->location,"strange pointer arithmatic is not allowed");
       find_expression_vars(be->arg1, TRUE, FALSE, NULL);
       find_expression_vars(be->arg2, TRUE, FALSE, NULL);
@@ -650,9 +694,14 @@ static void find_statement_vars(statement stmt, bool is_read, expression pa_expr
 	  {
 	    variable_decl vd;
 
-	    scan_variable_decl (vd, CAST(variable_decl, CAST(data_decl, d)->decls))
-	      if (vd->ddecl->kind == decl_variable && vd->ddecl->vtype != variable_static)
-		find_expression_vars(vd->arg1, TRUE, FALSE, vd->arg1);
+	    scan_variable_decl (vd, CAST(variable_decl, CAST(data_decl, d)->decls)) {
+	      if (vd->ddecl->kind == decl_variable && vd->ddecl->vtype != variable_static) {
+                if( type_pointer(vd->declared_type) || type_array(vd->declared_type) )
+                  find_expression_vars(vd->arg1, TRUE, FALSE, vd->arg1);
+                else
+                  find_expression_vars(vd->arg1, TRUE, FALSE, NULL);
+              }
+            }
 	  }
 
       // pass the is_read and pa_expr flags on to the last statement
@@ -921,11 +970,11 @@ static void process_aliased_vars()
       // could the pointer use have been to part of a?
       if( type_contains(a->type, p->type) ) {
         
-        if( p->refs && !v ) v = get_var_list_entry(a->module, a->name);
+        if( p->refs && !v ) v = get_var_list_entry(a->module, a->name, a->function);
         
         // add this ref
         for(u=p->refs; u; u=u->next)
-          add_var_use(&(v->refs), &(v->last_ref), u->function, u->location, u->flags);
+          add_var_use(&(v->refs), &(v->last_ref), u->function, u->expr, u->flags);
       }
 
     }
@@ -933,6 +982,51 @@ static void process_aliased_vars()
 }
 
 
+static void print_aliased_vars_debug_summary()
+{
+  dhash_scan scanner;
+  aliased_var_list_entry a;
+  pointer_use_list_entry p;
+  
+  // scan the list of aliased vars
+  printf("--- ALIASED VARS ---\n");
+  scanner = dhscan(fv_aliased_var_list);
+  while( (a=dhnext(&scanner)) ) {
+    pointer_assignment pa;
+    printf("%s.%s (%s)   type=%s\n", a->module, a->name, a->function, type_name(fv_region,a->type));
+
+    for(pa=a->refs; pa; pa=pa->next)
+      printf("%s:%ld:  &%s.%s   type=%s\n", pa->location->filename, pa->location->lineno, 
+             a->module, a->name, 
+             type_name(fv_region,pa->type));
+
+    printf("\n");
+  }
+
+
+  // scan the pointer_use_list
+  printf("\n--- POINTER USES ---\n");
+  scanner = dhscan(fv_pointer_use_list);
+  while( (p=dhnext(&scanner)) )  {
+    var_use u;
+    printf("type: %s\n", type_name(fv_region,p->type));
+    
+    if( type_tagged(p->type) ) {
+      tag_declaration tdecl = type_tag(p->type);
+      printf("%s:%ld:  %s definition\n", 
+             tdecl->ast->location->filename, tdecl->ast->location->lineno,
+             tdecl->kind == kind_struct_ref ? "struct" : (tdecl->kind == kind_enum_ref ? "enum" : "union"));
+    }
+    
+
+    // add this ref
+    for(u=p->refs; u; u=u->next)
+      printf("%s:%ld:  %s\n", u->location->filename, u->location->lineno, get_atype(u));
+
+    printf("\n");
+  }
+
+}
 
 
 //////////////////////////////////////////////////////////////////////
@@ -1009,8 +1103,9 @@ void check_for_conflicts(void)
 
   
   // go through the aliased vars, and add conflicts as appropriate
+#ifdef ALIAS_ERRORS
   process_aliased_vars();
-  
+#endif  
   
   // check regular variable conflicts
   scanner = dhscan(fv_var_list);
@@ -1042,33 +1137,10 @@ void check_for_conflicts(void)
 
   printf("\n--------------------------------------------------\n\n");
 
-  /*
-  // check pointer alias conflicts
-  scanner = dhscan(fv_pointer_use_list);
-  while( (a=dhnext(&scanner)) ) {
-    conflict = TRUE;
 
-    // no conflict if all reads
-    if( !a->flags.write && !a->flags.write_in_atomic )
-      conflict = FALSE;
-    
-    // no conflict if all accesses are in atomic
-    else if( !a->flags.read && !a->flags.write )
-      conflict = FALSE;
-
-    // no conflict if all accesses are in tasks
-    else if( accesses_only_in_tasks(a->funcs) ) 
-      conflict = FALSE;
-
-    // otherwise, there is a conflict!
-    
-    // print summary info
-    // FIXME print_alias_debug_summary(a, conflict);
-
-    if( conflict ) 
-      ; //FIXME print_alias_conflict_error_message( a );
-  }
-  */
+#ifdef ALIAS_ERRORS
+  print_aliased_vars_debug_summary();
+#endif
 
 }
 
