@@ -806,11 +806,6 @@ void generate_c_code(nesc_declaration program, const char *target_name,
       outputln("#define dbg_active(mode) 0");
     }
 
-  /* We start by finding each module's connections and marking uncallable
-     functions */
-  //  dd_scan (mod, modules)
-    //    find_connections(cg, DD_GET(nesc_declaration, mod));
-
   /* Then we set the 'isused' bit on all functions that are reachable
      from spontaneous_calls or global_uses */
   inline_functions(callgraph);
