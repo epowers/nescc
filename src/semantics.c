@@ -131,6 +131,13 @@ void init_data_declaration(data_declaration dd, declaration ast,
   dd->uses = NULL;
   dd->connections = NULL;
   dd->spontaneous = FALSE;
+  dd->is_function_call = FALSE;
+  dd->task_context = FALSE;
+  dd->reentrant_interrupt_context = FALSE;
+  dd->atomic_interrupt_context = FALSE;
+  dd->already_seen = FALSE;
+  dd->task_only = FALSE;
+  dd->uninterruptable = FALSE;
   dd->magic_reduce = NULL;
   dd->makeinline = FALSE;
   dd->container_function = NULL;
@@ -575,7 +582,8 @@ static type make_nesc_function_type(int class, type returns, typelist argtypes,
 
 void parse_declarator(type_element modifiers, declarator d, bool bitfield, 
 		      bool require_parm_names,
-		      int *oclass, bool *oinlinep, bool *odefaultp,
+		      int *oclass, int *oconcurrency_spec,
+                      bool *oinlinep, bool *odefaultp,
 		      const char **ointf, const char **oname,
 		      type *ot, bool *owarn_defaulted_int,
 		      function_declarator *ofunction_declarator,
@@ -583,6 +591,7 @@ void parse_declarator(type_element modifiers, declarator d, bool bitfield,
 {
   location loc = d ? d->location : modifiers->location;
   int specbits = 0, nclasses = 0;
+  int nconcurrency_specs = 0;
   type_quals specquals = no_qualifiers;
   bool longlong = FALSE, defaultp;
   const char *printname;
@@ -600,6 +609,8 @@ void parse_declarator(type_element modifiers, declarator d, bool bitfield,
   printname = *oname ? *oname : "type name";
 
   *oclass = 0;
+  *oconcurrency_spec = 0;
+
 
   scan_type_element (spec, modifiers)
     {
@@ -626,6 +637,12 @@ void parse_declarator(type_element modifiers, declarator d, bool bitfield,
 		*oclass = id;
 		nclasses++;
 		break;
+
+              case RID_TASK_ONLY:
+              case RID_UNINTERRUPTABLE:
+                *oconcurrency_spec = id;
+                nconcurrency_specs++;
+                break;
 
 	      case RID_LONG: /* long long detection */
 		if (specbits & 1 << RID_LONG) 
@@ -727,6 +744,9 @@ void parse_declarator(type_element modifiers, declarator d, bool bitfield,
 
   if (nclasses > 1)
     error_with_location(loc, "multiple storage classes in declaration of `%s'", printname);
+
+  if (nconcurrency_specs > 1)
+    error_with_location(loc, "multiple concurrency specifiers in declaration of `%s'", printname);
 
   /* Now process the modifiers that were specified
      and check for invalid combinations.  */
@@ -1902,6 +1922,7 @@ bool start_function(type_element elements, declarator d, attribute attribs,
 		    bool nested)
 {
   int class;
+  int concurrency_spec;
   bool inlinep;
   const char *name, *intf;
   type function_type, actual_function_type;
@@ -1922,7 +1943,7 @@ bool start_function(type_element elements, declarator d, attribute attribs,
   if (!nested)
     assert(current.env->global_level && current.function_decl == NULL);
 
-  parse_declarator(elements, d, FALSE, TRUE, &class, &inlinep, &defaultp,
+  parse_declarator(elements, d, FALSE, TRUE, &class, &concurrency_spec, &inlinep, &defaultp,
 		   &intf, &name, &function_type, &defaulted_int, &fdeclarator,
 		   &extra_attr);
 
@@ -2129,6 +2150,13 @@ bool start_function(type_element elements, declarator d, attribute attribs,
     fdecl->ddecl->doc_location = doc_location;
   }
 
+  /* save the concurrency class info, if any */
+  if( concurrency_spec == RID_TASK_ONLY ) 
+    fdecl->ddecl->task_only = TRUE;
+  else if( concurrency_spec == RID_UNINTERRUPTABLE )
+    fdecl->ddecl->uninterruptable = TRUE;
+
+  /* save environments */
   current.env = fdeclarator->env;
   current.env->fdecl = current.function_decl = fdecl;
 
@@ -2288,6 +2316,7 @@ dd_list check_parameter(data_declaration dd,
 /* Returns: Attributes found while parsing the declarator */
 {
   int class;
+  int concurrency_spec;
   bool inlinep;
   const char *name, *printname;
   bool defaulted_int;
@@ -2295,7 +2324,7 @@ dd_list check_parameter(data_declaration dd,
   dd_list extra_attr;
 
   parse_declarator(elements, vd->declarator, FALSE, FALSE,
-		   &class, &inlinep, NULL, NULL, &name, &parm_type,
+		   &class, &concurrency_spec, &inlinep, NULL, NULL, &name, &parm_type,
 		   &defaulted_int, NULL, &extra_attr);
   vd->declared_type = parm_type;
   printname = name ? name : "type name";
@@ -2310,6 +2339,12 @@ dd_list check_parameter(data_declaration dd,
   if (inlinep)
     pedwarn_with_decl(CAST(declaration, vd),
 		      "parameter `%s' declared `inline'", printname);
+
+  if (concurrency_spec == RID_TASK_ONLY)
+    error("Bad keyword for parameter `%s'.  'task_only' only valid for functions", printname);
+  if (concurrency_spec == RID_UNINTERRUPTABLE)
+    error("Bad keyword for parameter `%s'.  'uninterruptable' only valid for functions", printname);
+
 
   /* A parameter declared as an array of T is really a pointer to T.
      One declared as a function is really a pointer to a function.  */
@@ -2409,6 +2444,7 @@ declaration start_decl(declarator d, asm_stmt astmt, type_element elements,
   else
     {
       int class;
+      int concurrency_spec;
       bool inlinep;
       const char *name, *printname;
       bool defaulted_int;
@@ -2417,7 +2453,7 @@ declaration start_decl(declarator d, asm_stmt astmt, type_element elements,
       function_declarator fdeclarator;
 
       parse_declarator(elements, d, FALSE, FALSE,
-		       &class, &inlinep, NULL, NULL, &name, &var_type,
+		       &class, &concurrency_spec, &inlinep, NULL, NULL, &name, &var_type,
 		       &defaulted_int, &fdeclarator, &extra_attr);
       vd->declared_type = var_type;
       printname = name ? name : "type name";
@@ -2487,6 +2523,12 @@ declaration start_decl(declarator d, asm_stmt astmt, type_element elements,
 	     declare_interface_ref */
 	  bool nested = !current.env->global_level && class == RID_AUTO;
 
+          if (concurrency_spec == RID_TASK_ONLY)
+            tempdecl.task_only = TRUE;
+          else if (concurrency_spec == RID_UNINTERRUPTABLE)
+            tempdecl.uninterruptable = TRUE;
+
+
 	  assert(fdeclarator);
 	  if (initialised)
 	    error("function `%s' is initialized like a variable",
@@ -2537,6 +2579,10 @@ declaration start_decl(declarator d, asm_stmt astmt, type_element elements,
 	  /* It's a variable.  */
 	  if (inlinep)
 	    pedwarn("variable `%s' declared `inline'", printname);
+          if (concurrency_spec == RID_TASK_ONLY)
+            error("Bad keyword for parameter `%s'.  'task_only' only valid for functions", printname);
+          else if (concurrency_spec == RID_UNINTERRUPTABLE)
+            error("Bad keyword for parameter `%s'.  'uninterruptable' only valid for functions", printname);
 #if 0
 	  /* Don't allow initializations for incomplete types
 	     except for arrays which might be completed by the initialization.  */
@@ -2961,6 +3007,7 @@ type_element finish_struct(type_element t, declaration fields,
 	      type field_type;
 	      const char *name;
 	      int class;
+              int concurrency_spec;
 	      bool inlinep;
 	      const char *printname;
 	      bool defaulted_int;
@@ -2972,11 +3019,17 @@ type_element finish_struct(type_element t, declaration fields,
 
 	      parse_declarator(flist->modifiers, field->declarator,
 			       field->arg1 != NULL, FALSE,
-			       &class, &inlinep, NULL, NULL, &name, &tmpft,
+			       &class, &concurrency_spec, &inlinep, NULL, NULL, &name, &tmpft,
 			       &defaulted_int, NULL, &extra_attr);
 	      field_type = tmpft;
 
 	      printname = name ? name : "(anonymous)";
+
+              if ( concurrency_spec == RID_TASK_ONLY )
+                error_with_location(floc, "field `%s' declared as task_only", printname);
+              else if ( concurrency_spec == RID_UNINTERRUPTABLE )
+                error_with_location(floc, "field `%s' declared as task_only", printname);
+
 
 	      if (type_function(field_type))
 		{
@@ -3336,6 +3389,7 @@ asttype make_type(type_element elements, declarator d)
 {
   location l = elements ? elements->location : d->location;
   int class;
+  int concurrency_spec;
   bool inlinep;
   const char *name;
   bool defaulted_int;
@@ -3343,9 +3397,9 @@ asttype make_type(type_element elements, declarator d)
   dd_list extra_attr;
 
   parse_declarator(t->qualifiers, t->declarator, FALSE, FALSE,
-		   &class, &inlinep, NULL, NULL, &name, 
+		   &class, &concurrency_spec, &inlinep, NULL, NULL, &name, 
 		   &t->type, &defaulted_int, NULL, &extra_attr);
-  assert(t->type && !(defaulted_int || inlinep || class || name));
+  assert(t->type && !(defaulted_int || inlinep || class || concurrency_spec || name));
 
   return t;
 }
@@ -3471,6 +3525,8 @@ static char *rid_name_int(int id)
     case RID_COMMAND: return "command";
     case RID_EVENT: return "event";
     case RID_TASK: return "task";
+    case RID_TASK_ONLY: return "task_only";
+    case RID_UNINTERRUPTABLE: return "uninterruptable";
     case RID_DEFAULT: return "default";
     default: assert(0); return NULL;
     }
@@ -3542,6 +3598,7 @@ void note_identifier_use(data_declaration ddecl)
   else
     dd_add_last(parse_region, global_uses, ddecl);
 }
+
 
 void init_semantics(void)
 {

@@ -1366,6 +1366,19 @@ expression make_function_call(location loc, expression fn, expression arglist)
   if (is_identifier(fn))
     {
       identifier fnid = CAST(identifier, fn);
+      
+      // FIXME: sanity check that the data_declaration for fn is in the uses list 
+      {
+        dd_list_pos p = NULL;
+
+        if (current.function_decl)
+          p = dd_find(current.function_decl->ddecl->uses,fnid->ddecl);
+        else
+          p = dd_find(global_uses,fnid->ddecl);
+        
+        assert(p);
+      }
+      fnid->ddecl->is_function_call = TRUE;
 
       if (fnid->ddecl->kind == decl_function)
 	{

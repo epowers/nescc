@@ -201,4 +201,8 @@ extern struct semantic_state current;
 extern dd_list spontaneous_calls;
 /* List of spontaneously-called functions */
 
+
+bool builtin_declaration(data_declaration dd); /* returns true if dd is a builtin */
+
+
 #endif

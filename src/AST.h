@@ -88,6 +88,9 @@ void set_parent_list(node sameregion *list, node parent);
 
 void AST_print(node n);
 
+dhash_table AST_find_vars(region r, node n);
+
+
 #define AST_SET(parent, ptr, value) \
   (*(ptr) = (value), (value) ? (set_parent(CASTSRPTR(node, (ptr)), CAST(node, (parent))), 0) : 0)
 

@@ -300,7 +300,7 @@ void get_latest_docstring(char **short_s, char **long_s, struct location **loc)
 
 void separate_short_docstring(char *str, char **short_s, char **long_s)
 {
-  char *dot, *at;
+  char *end=NULL, *dot, *at, *nl, *nl2;
   assert(short_s != NULL);
   assert(long_s != NULL);
   
@@ -310,44 +310,58 @@ void separate_short_docstring(char *str, char **short_s, char **long_s)
     return;
   }
 
-  /* find the first period, followed by whitespace, or the first '@', preceded by whitespace */
+  /* find the first period, followed by whitespace */ 
   dot = str;
   do {
     dot = strchr(dot,'.');
     if(dot == NULL) break;
     dot++;
   } while(*dot != '\0'  &&  *dot != ' '   &&  *dot != '\t'   &&  *dot != '\r'   &&  *dot != '\n');
+  end = dot;
 
-  at = str-2;
-  do {
-    at = strchr(at+2,'@');
+  /* find the first '@', preceded by whitespace */
+  at = str;
+  while (1) {
+    at = strchr(at,'@');
     if(at == NULL) break;
     at--;
-    if(at < str) at++;
-  } while(*at != ' '   &&  *at != '\t'   &&  *at != '\r'   &&  *at != '\n');
-
-  if(at && at < dot) 
-    dot = at;
-
-
+    if(at < str || *at == ' ' || *at == '\t' || *at == '\r' || *at == '\n') break;
+    at += 2;
+  }
+  if(end==NULL || (at && at < end)) 
+    end = at;
+ 
+  /* find the first '\n *\n' */ 
+  nl = str;
+  while(1) {
+    nl = strchr(nl,'\n');
+    if(nl == NULL) break;
+    nl2 = nl+1;
+    while(*nl2 == ' ' || *nl2 == '\t' || *nl2 == '\r') nl2++;
+    if(*nl2 == '\n') break;
+    nl = nl2+1;
+  } 
+  if(end==NULL || (nl && nl < end)) 
+    end = nl;
+  
   /* check for the beginning of the next sentance */
-  if(dot != NULL) {
-    dot += strspn(dot, " \t\n\r.");
-    if( *dot == '\0' ) 
-      dot = NULL;
+  if(end != NULL) {
+    end += strspn(end, " \t\n\r.");
+    if( *end == '\0' ) 
+      end = NULL;
   }
 
   /* short description only  */
-  if(dot == NULL) {
+  if(end == NULL) {
     *short_s = str;
     *long_s = NULL;
   } 
 
   /* both short and long descriptions */
   else {
-    *(dot - 1)= '\0';
+    *(end - 1)= '\0';
     *short_s = rstrdup(parse_region, str);
-    *(dot - 1)= ' ';
+    *(end - 1)= ' ';
     *long_s = str;
   }
 }

@@ -13,3 +13,6 @@ K(signal, SIGNAL, NORID)
 K(task, SCSPEC, RID_TASK)
 K(uses, USES, NORID)
 K(includes, INCLUDES, NORID)
+K(task_only, SCSPEC, RID_TASK_ONLY)
+K(uninterruptable, SCSPEC, RID_UNINTERRUPTABLE)
+

@@ -19,6 +19,7 @@ Boston, MA 02111-1307, USA.  */
 #include "c-parse.h"
 #include "nesc-generate.h"
 #include "nesc-inline.h"
+#include "nesc-concurrency.h"
 #include "nesc-component.h"
 #include "nesc-semantics.h"
 #include "nesc-c.h"
@@ -544,6 +545,7 @@ static void mark_connected_function_list(cgraph cg,
     {
       full_connection conn = DD_GET(full_connection, connected);
 
+      conn->ep->function->is_function_call = TRUE;
       mark_reachable_function(cg, caller, conn->ep->function);
     }
 }
@@ -716,6 +718,14 @@ void generate_c_code(nesc_declaration program, const char *target_name,
 	}
     }
   
+  /* We start by finding each module's connections and marking uncallable
+     functions */
+  dd_scan (mod, modules)
+    find_connections(cg, DD_GET(nesc_declaration, mod));
+
+  /* mark reachable code, and perform some concurrency analysis */
+  callgraph =  mark_reachable_code();
+  perform_concurrency_checks(callgraph);
 
   unparse_start(output ? output : stdout);
   disable_line_directives();
@@ -733,12 +743,11 @@ void generate_c_code(nesc_declaration program, const char *target_name,
 
   /* We start by finding each module's connections and marking uncallable
      functions */
-  dd_scan (mod, modules)
-    find_connections(cg, DD_GET(nesc_declaration, mod));
+  //  dd_scan (mod, modules)
+    //    find_connections(cg, DD_GET(nesc_declaration, mod));
 
   /* Then we set the 'isused' bit on all functions that are reachable
      from spontaneous_calls or global_uses */
-  callgraph =  mark_reachable_code();
   inline_functions(callgraph);
 
   /* Then we print the code. */

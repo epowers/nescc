@@ -65,6 +65,10 @@ enum rid
   RID_EVENT,
   RID_TASK,
 
+  /* for concurrency model specifiers on functions */
+  RID_TASK_ONLY,
+  RID_UNINTERRUPTABLE,
+
   RID_MAX
 };
 

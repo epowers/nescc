@@ -117,6 +117,18 @@ typedef struct data_declaration {
   bool spontaneous;		/* TRUE if called by environment (main,
 				   interrupt handlers, e.g.). Set by the 
 				   `spontaneous' attribute */
+  bool is_function_call;        /* TRUE if this is a function call, rather than a function reference */
+
+  /* used for functions.  describes the types of entry points from
+     which the function is called. */
+  bool task_context;
+  bool reentrant_interrupt_context;
+  bool atomic_interrupt_context;
+  bool already_seen;
+
+  /* keywords for specifying concurrency information about a function */
+  bool task_only;
+  bool uninterruptable;
 
   /* For functions */
   enum { function_implicit, function_normal, function_static, function_nested,

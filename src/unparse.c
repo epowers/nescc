@@ -758,6 +758,7 @@ void prt_rid(rid r, pte_options options)
   switch (r->id)
     {
     case RID_COMMAND: case RID_EVENT: case RID_TASK: 
+    case RID_TASK_ONLY: case RID_UNINTERRUPTABLE:
       // show these in documenation mode, but not otherwise
       if (documentation_mode && !(options & pte_skip_command_event)) 
 	output("%s", rid_name(r));
