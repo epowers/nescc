@@ -1879,3 +1879,49 @@ const char *type_name(region r, type t)
   else
     return prefix;
 }
+
+
+enum {
+  TYPE_HASH_PRIMITIVE = 1,
+  TYPE_HASH_COMPLEX = TYPE_HASH_PRIMITIVE + tp_last,
+  TYPE_HASH_ERROR = TYPE_HASH_COMPLEX + tp_last,
+  TYPE_HASH_VOID,
+  TYPE_HASH_FUNCTION
+};
+
+
+/* Return a hash value to distinguish types.  Note that we are much
+   less careful here than in type_equal, since hash collisions only
+   effect performance. */
+unsigned long type_hash(type t)
+{
+  switch (t->kind)
+    {
+    case tk_error:
+      return TYPE_HASH_ERROR;
+
+    case tk_primitive: 
+      return TYPE_HASH_PRIMITIVE + t->u.primitive;
+
+    case tk_complex:
+      return TYPE_HASH_COMPLEX + t->u.primitive;
+
+    case tk_void:
+      return TYPE_HASH_VOID;
+
+    case tk_tagged:
+      return hashPtr(t->u.tag);
+
+    case tk_pointer:
+      return (type_hash(t->u.pointsto) << 1) ^ 0x51353157;
+
+    case tk_function:
+      return TYPE_HASH_FUNCTION;
+
+    case tk_array:
+      return (type_hash(t->u.array.arrayof) << 1) ^ 0x40142453 ;
+
+    default: 
+      assert(0);
+    }
+}

@@ -218,4 +218,7 @@ data_declaration type_combiner(type t);
 
 const char *type_name(region r, type t);
 
+unsigned long type_hash(type t);
+
+
 #endif
