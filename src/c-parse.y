@@ -2080,14 +2080,22 @@ stmt_or_label:
 	;
 
 atomic_stmt:
-	  ATOMIC { current.in_atomic++; }
+	  ATOMIC { 
+		   atomic_stmt last_atomic = current.in_atomic;
+
+		   current.in_atomic = new_atomic_stmt(pr, $1.location, NULL);
+		   current.in_atomic->containing_atomic = last_atomic;
+		 }
 	  stmt_or_error
 	  	{
-	  	  current.in_atomic--;
+		  atomic_stmt this_atomic = current.in_atomic;
+
+		  this_atomic->stmt = $3;
+	  	  current.in_atomic = this_atomic->containing_atomic;
 		  if (current.in_atomic) /* Ignore nested atomics */
 		    $$ = $3;
 		  else
-		    $$ = CAST(statement, new_atomic_stmt(pr, $1.location, $3));
+		    $$ = CAST(statement, this_atomic);
 		}
 	;
 
@@ -2202,12 +2210,11 @@ stmt:
 		{ stmt_count++;
 		  $$ = CAST(statement, new_goto_stmt(pr, $1.location, $2));
 		  use_label($2);
-		  fail_in_atomic("goto");
 		}
 	| GOTO '*' expr ';'
 		{ if (pedantic)
 		    pedwarn("ANSI C forbids `goto *expr;'");
-		  fail_in_atomic("goto");
+		  fail_in_atomic("goto *");
 		  stmt_count++;
 		  $$ = CAST(statement, new_computed_goto_stmt(pr, $1.location, $3)); 
 		  check_computed_goto($3); }

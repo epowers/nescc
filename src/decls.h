@@ -197,6 +197,7 @@ typedef struct label_declaration {
   id_label firstuse; /* Never NULL */
   id_label definition; /* NULL until actually defined */
   function_decl containing_function;
+  atomic_stmt containing_atomic;
 } *label_declaration;
 
 struct environment
