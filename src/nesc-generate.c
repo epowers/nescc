@@ -597,6 +597,9 @@ static void mark_connected_function_list(cgraph cg,
     }
 }
 
+int call_edge;
+int atomic_call_edge;
+
 static void mark_reachable_function(cgraph cg,
 				    data_declaration caller,
 				    data_declaration ddecl,
@@ -606,12 +609,13 @@ static void mark_reachable_function(cgraph cg,
 
   if (caller && ddecl->kind == decl_function)
     {
-      static int notnull;
       void *iscall = NULL;
 
       /* FIXME: gratuitous n^2 behaviour */
-      if (force_call || dd_find(caller->calls, ddecl))
-	iscall = &notnull;
+      if (force_call || (caller->calls && dd_find(caller->calls, ddecl)))
+	iscall = &call_edge;
+      else if (caller->atomic_calls && dd_find(caller->atomic_calls, ddecl))
+	iscall = &atomic_call_edge;
 
       graph_add_edge(fn_lookup(cg, caller), fn_lookup(cg, ddecl), iscall);
     }
@@ -643,8 +647,9 @@ static void mark_reachable_function(cgraph cg,
      anything */
   fn_lookup(cg, ddecl);
 
-  dd_scan (use, ddecl->uses)
-    mark_reachable_function(cg, ddecl, DD_GET(data_declaration, use), FALSE);
+  if (ddecl->uses)
+    dd_scan (use, ddecl->uses)
+      mark_reachable_function(cg, ddecl, DD_GET(data_declaration, use), FALSE);
 }
 
 static cgraph mark_reachable_code(void)

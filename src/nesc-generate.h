@@ -23,4 +23,11 @@ Boston, MA 02111-1307, USA.  */
 void generate_c_code(nesc_declaration program, const char *target_name,
 		     cgraph cg, dd_list modules);
 
+/* The address of these variables shows up on the edges of callgraphs 
+   to indicate edges which are calls, respectively atomic calls
+   (use edges have NULL data) */
+extern int call_edge;
+extern int atomic_call_edge;
+
+
 #endif

@@ -159,7 +159,9 @@ typedef struct data_declaration {
   typelist oldstyle_args; /* Type of arguments from old-style declaration */
   dd_list uses;			/* list of declarations of identifiers used */
   dd_list calls;		/* list of declarations of (known) functions
-				   called */
+				   called not lexically in atomic sections */
+  dd_list atomic_calls;		/* list of declarations of (known) functions
+				   called lexically in atomic sections */
   struct connections *connections; /* See nesc-generate.c: what this command
 				      or event is connected to. */
   /* reduction function for magic functions */

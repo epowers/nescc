@@ -131,6 +131,7 @@ void init_data_declaration(data_declaration dd, declaration ast,
   dd->Cname = FALSE;
   dd->uses = NULL;
   dd->calls = NULL;
+  dd->atomic_calls = NULL;
   dd->connections = NULL;
   dd->spontaneous = FALSE;
   dd->contexts = 0;
@@ -1668,8 +1669,6 @@ void check_function(data_declaration dd, declaration fd, int class,
 
   init_data_declaration(dd, fd, name, function_type);
   dd->kind = decl_function;
-  dd->uses = dd_new_list(parse_region);
-  dd->calls = dd_new_list(parse_region);
   dd->isexternalscope = FALSE;
   if (nested)
     dd->ftype = function_nested;
@@ -1768,11 +1767,6 @@ static data_declaration declare_builtin(const char *name, data_kind kind, type t
   tempdecl.needsmemory = TRUE;
   tempdecl.in_system_header = TRUE;
   tempdecl.vtype = variable_static;
-  if (kind == decl_function)
-    {
-      tempdecl.uses = dd_new_list(parse_region);
-      tempdecl.calls = dd_new_list(parse_region);
-    }
 
   return declare(global_env, &tempdecl, TRUE);
 }
@@ -2102,8 +2096,6 @@ data_declaration implicitly_declare(identifier fnid)
   init_data_declaration(&tempdecl, pseudo_ast,
 			fnid->cstring.data, implicit_function_type);
   tempdecl.kind = decl_function;
-  tempdecl.uses = dd_new_list(parse_region);
-  tempdecl.calls = dd_new_list(parse_region);
   tempdecl.isexternalscope = TRUE;
   tempdecl.isfilescoperef = TRUE;
   tempdecl.ftype = function_implicit;
@@ -3493,6 +3485,13 @@ void split_type_elements(type_element tlist, type_element *odeclspecs,
   *oattributes = attributes;
 }
 
+static void dd_note(dd_list *l, data_declaration x)
+{
+  if (!*l)
+    *l = dd_new_list(parse_region);
+  dd_add_last(parse_region, *l, x);
+}
+
 void note_identifier_use(data_declaration ddecl, bool iscall)
 /* Effects: an identifier expression has just been built for ddecl
      Collects usage information in current.function_decl->ddecl->uses
@@ -3501,12 +3500,14 @@ void note_identifier_use(data_declaration ddecl, bool iscall)
 {
   if (current.function_decl)
     {
-      dd_add_last(parse_region, current.function_decl->ddecl->uses, ddecl);
+      data_declaration fn = current.function_decl->ddecl;
+
+      dd_note(&fn->uses, ddecl);
       if (iscall)
-	dd_add_last(parse_region, current.function_decl->ddecl->calls, ddecl);
+	dd_note(current.in_atomic ? &fn->atomic_calls : &fn->calls, ddecl);
     }
   else
-    dd_add_last(parse_region, global_uses, ddecl);
+    dd_note(&global_uses, ddecl);
 }
 
 

@@ -99,8 +99,6 @@ void copy_interface_functions(data_declaration iref)
       data_declaration fndecl = fnentry, fncopy;
 
       fncopy = declare(icopy, fndecl, FALSE);
-      fncopy->uses = dd_new_list(parse_region);
-      fncopy->calls = dd_new_list(parse_region);
       fncopy->shadowed = fndecl;
       fncopy->container = current.container;
       fncopy->interface = iref;
