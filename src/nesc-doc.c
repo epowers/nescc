@@ -2789,11 +2789,11 @@ arrow indicates that the original wiring is \"<em>C = D</em>\".<p>
 //////////////////////////////////////////////////
 // Generate all docs
 //////////////////////////////////////////////////
-void generate_docs(const char *filename, cgraph cg)
+bool generate_docs(const char *filename, cgraph cg)
 {
   // if no docdir is specified, then the user didn't request doc generation
   if( !docdir ) 
-    return;
+    return FALSE;
 
   // Initialization
   {
@@ -2905,6 +2905,7 @@ void generate_docs(const char *filename, cgraph cg)
 
     assert(chdir(original_wd) == 0);
   }
+  return TRUE;
 }
 
 

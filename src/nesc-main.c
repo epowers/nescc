@@ -15,6 +15,8 @@ along with nesC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
 Boston, MA 02111-1307, USA.  */
 
+#include <errno.h>
+
 #include "parser.h"
 #include "semantics.h"
 #include "nesc-env.h"
@@ -215,6 +217,22 @@ bool nesc_option(char *p)
   return TRUE;
 }
 
+static void destroy_target(const char *name)
+{
+  if (name)
+    {
+      /* unlink would be nicer, but would have nasty consequences for
+	 -o /dev/null when run by root... */
+      /* Note: truncate returns EINVAL for /dev/null */
+      if (truncate(name, 0) < 0 && errno != EINVAL)
+	{
+	  fprintf(stderr, "%s: ", name);
+	  perror("failed to truncate target");
+	}
+    }
+
+}
+
 void nesc_compile(const char *filename, const char *target_name)
 {
   struct location toplevel;
@@ -252,16 +270,23 @@ void nesc_compile(const char *filename, const char *target_name)
 
       if (errorcount == 0)
 	{
-	  cgraph cg = NULL;
+	  /* Destroy target in all circumstances (prevents surprises
+	     when "compiling" interfaces) */
+	  destroy_target(target_name);
 
-	  if (!dump_msg_layout() && program->kind == l_component)
+	  if (dump_msg_layout())
+	    ;
+	  else if (program->kind == l_component)
 	    {
+	      cgraph cg;
 	      dd_list modules, components;
 
 	      connect_graphs(parse_region, program, &cg, &modules, &components);
-	      generate_c_code(program, target_name, cg, modules);
+	      if (!generate_docs(filename, cg))
+		generate_c_code(program, target_name, cg, modules);
 	    }
-	  generate_docs(filename, cg);
+	  else /* generate docs for interfaces if requested */
+	    generate_docs(filename, NULL);
 	}
     }
   else
@@ -269,6 +294,12 @@ void nesc_compile(const char *filename, const char *target_name)
       /* load C file and extract any requested message formats */
       load_c(&toplevel, filename, TRUE);
       if (errorcount == 0)
-	dump_msg_layout();
+	{
+	  /* Destroy target in all circumstances (prevents surprises
+	     when "compiling" interfaces) */
+	  destroy_target(target_name);
+
+	  dump_msg_layout();
+	}
     }
 }
