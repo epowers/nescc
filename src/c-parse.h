@@ -84,8 +84,6 @@ struct yystype {
 
 #define YYSTYPE struct yystype
 
-int yyparse(void) deletes;
-
 /* Region in which to allocate parse structures. Idea: the AST user can set
    this to different regions at appropriate junctures depending on what's
    being done with the AST */
@@ -96,7 +94,7 @@ extern region parse_region;
    a bug) */
 bool unevaluated_expression(void);
 
-void parse(void) deletes;
+nesc_decl parse(void) deletes;
 
 declaration make_error_decl(void);
 
