@@ -394,8 +394,12 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write,
   if (is_string(expr))
     return;
 
-  // skip constant expressions that are neither pointers nor arrays
-  if(expr->cst &&  !type_array(expr->type) && !type_pointer(expr->type) && !type_tagged(expr->type)) {
+  /* A read of an array-type expression actually takes the address of the container */
+  if (is_read && type_array(expr->type) && !addressof_expr)
+    addressof_expr = expr;
+
+  // skip constant expressions that are not having their address taken
+  if (expr->cst && !addressof_expr) {
 #if 0
     printf("SKIPPING CST: ");
     set_unparse_outfile(stdout);
@@ -525,11 +529,17 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write,
 
     case kind_array_ref: {
       array_ref are = CAST(array_ref, expr);
+      expression arg;
 
-      /* Check for direct array uses. I'll ignore 1[a] for now */
-      if (is_identifier(are->arg1) && type_array(are->arg1->type) && !addressof_expr)
+      /* Check for direct array uses. I'll ignore 1[a] for now. Hacky. */
+      arg = are->arg1;
+      while (is_field_ref(arg))
+	arg = CAST(field_ref, arg)->arg1;
+
+      /* Something of the form a.b.c[expr] where a.b.c is an array */
+      if (is_identifier(arg) && type_array(are->arg1->type) && !addressof_expr)
 	{
-	  note_var_use(are->arg1, is_read, is_write);
+	  note_var_use(arg, is_read, is_write);
 	  find_expression_vars(are->arg2, TRUE, FALSE, NULL);
 	  break;
 	}
