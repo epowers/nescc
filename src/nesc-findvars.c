@@ -25,7 +25,8 @@ static const char *current_module_name = NULL;
 static int in_atomic;
 
 
-
+// ugly, non-reentrant print function.  See below
+static char* ddecl_name(data_declaration ddecl);
 
 
 
@@ -133,9 +134,7 @@ static pointer_assignment add_pointer_assignment(pointer_assignment *first, poin
 // variables.  nesc-findvars generates a global list of var_list_entry
 // structures.
 typedef struct var_list_entry { 
-  const char *module;    // key in hash
-  const char *name;      // key in hash
-  const char *function;  // key in hash
+  data_declaration ddecl;  // key in hash
   var_use refs;  // list of struct var_use, that define how the var is used in each function that uses it
   var_use last_ref;
 } *var_list_entry;
@@ -147,37 +146,30 @@ static int fv_var_list_compare(void *entry1, void *entry2)
   var_list_entry v1 = (var_list_entry) entry1;
   var_list_entry v2 = (var_list_entry) entry2;
 
-  if ( safe_strcmp(v1->name,v2->name) ) return 0;
-  if ( safe_strcmp(v1->module,v2->module) ) return 0;
-  if ( safe_strcmp(v1->function,v2->function) ) return 0;
-  return 1;
+  return v1->ddecl == v2->ddecl;
 }
 
 static unsigned long fv_var_list_hash(void *entry)
 {
   var_list_entry v = (var_list_entry) entry;
  
-  return hashStr(v->name) ^ hashStr(v->module) ^ (hashStr(v->function) << 1);
+  return hashPtr(v->ddecl);
 }
 
-static var_list_entry get_var_list_entry(const char *module, const char *name, const char *function)
+static var_list_entry get_var_list_entry(data_declaration ddecl)
 {
   var_list_entry v;
   struct var_list_entry vstruct;
   
   // look for an existing entry
-  vstruct.module = module;
-  vstruct.name = name;
-  vstruct.function = function;
+  vstruct.ddecl = base_identifier(ddecl);
   v = dhlookup(fv_var_list, &vstruct); 
   if( v ) 
     return v;
 
   // allocate a new entry
   v = ralloc(fv_region, struct var_list_entry);
-  v->module = module;
-  v->name = name;
-  v->function = function;
+  v->ddecl = base_identifier(ddecl);
   
   dhadd(fv_var_list, v);
 
@@ -207,8 +199,7 @@ static void note_var_use(expression e, bool is_read, bool is_write)
   }
   
   // get / add an entry for this variable
-  v = get_var_list_entry(current_module_name, id->cstring.data, 
-                         id->ddecl->islocal ? current_function->name : NULL);
+  v = get_var_list_entry(id->ddecl);
 
   // add this ref
   flags = 0;
@@ -300,9 +291,7 @@ static void note_pointer_use(expression e, bool is_read, bool is_write)
 //////////////////////////////////////////////////////////////////////
 
 typedef struct aliased_var_list_entry {
-  const char *module;    // key in hash
-  const char *name;      // key in hash
-  const char *function;  // key in hash
+  data_declaration ddecl; // key in hash
   expression expr;
   type type;
   pointer_assignment refs;
@@ -315,17 +304,14 @@ static int fv_aliased_var_list_compare(void *entry1, void *entry2)
   aliased_var_list_entry v1 = (aliased_var_list_entry) entry1;
   aliased_var_list_entry v2 = (aliased_var_list_entry) entry2;
 
-  if ( safe_strcmp(v1->name,v2->name) ) return 0;
-  if ( safe_strcmp(v1->module,v2->module) ) return 0;
-  if ( safe_strcmp(v1->function,v2->function) ) return 0;
-  return 1;
+  return v1->ddecl == v2->ddecl;
 }
 
 static unsigned long fv_aliased_var_list_hash(void *entry)
 {
   aliased_var_list_entry v = (aliased_var_list_entry) entry;
  
-  return hashStr(v->name) ^ hashStr(v->module) ^ (hashStr(v->function) << 1);
+  return hashPtr(v->ddecl);
 }
 
 
@@ -335,22 +321,19 @@ static aliased_var_list_entry get_aliased_var_list_entry(identifier id, expressi
   struct aliased_var_list_entry vstruct;
   
   // look for an existing entry
-  vstruct.module = current_module_name;
-  vstruct.name = id->cstring.data;
-  vstruct.function = id->ddecl->islocal ? current_function->name : NULL;
+  vstruct.ddecl = base_identifier(id->ddecl);
   v = dhlookup(fv_aliased_var_list, &vstruct); 
   if( v ) {
     if( !type_equal(v->type, id->type) ) {
       // FIXME: need to do something here - why are these different?
-      warning_with_location(v->expr->location, "COMPILER BUG: %s.%s  v: %s   e: %s",
-                            v->module, v->name, type_name(fv_region,v->type), type_name(fv_region,e->type));
-      warning_with_location(e->location, "COMPILER BUG: %s.%s  v: %s   e: %s",
-                            v->module, v->name, type_name(fv_region,v->type), type_name(fv_region,e->type));
+      warning_with_location(v->expr->location, "COMPILER BUG: %s  v: %s   e: %s",
+                            ddecl_name(v->ddecl), type_name(fv_region,v->type), type_name(fv_region,e->type));
+      warning_with_location(e->location, "COMPILER BUG: %s  v: %s   e: %s",
+                            ddecl_name(v->ddecl), type_name(fv_region,v->type), type_name(fv_region,e->type));
       set_unparse_outfile(stderr);
       fprintf(stderr, "v->expr:  "); prt_expression(v->expr,TRUE); fprintf(stderr, "\n");
       fprintf(stderr, "e:        "); prt_expression(e,TRUE); fprintf(stderr, "\n");
 
-      //v->type = e->type;  FIXME - remove
       v->type = id->type;
     }
     return v;
@@ -358,9 +341,7 @@ static aliased_var_list_entry get_aliased_var_list_entry(identifier id, expressi
 
   // allocate a new entry
   v = ralloc(fv_region, struct aliased_var_list_entry);
-  v->module = current_module_name;
-  v->name = id->cstring.data;
-  //v->type = e->type;  FIXME - remove
+  v->ddecl = base_identifier(id->ddecl);
   v->type = id->type;
   v->expr = e;
   
@@ -377,21 +358,14 @@ static void note_pointer_assignment(identifier id, expression e)
 
   // print an error for non-variables, and non-static local variables
   if(id->ddecl->kind != decl_variable) {
-    error_with_location(id->location, "COMPILER BUG: id is not a variable");
-    fprintf(stderr, "id:    %s.%s\n", current_module_name, id->cstring.data);
-    set_unparse_outfile(stderr);
-    fprintf(stderr, "expr:  "); prt_expression(e, TRUE); fprintf(stderr,"\n");
-    return;
-  }
-  if(id->ddecl->islocal && id->ddecl->vtype != variable_static) {
-    error_with_location(id->location, "COMPILER BUG: id is a non-static local variable");
-    fprintf(stderr, "id:    %s.%s\n", current_module_name, id->cstring.data);
+    error_with_location(id->location, "COMPILER BUG: taking address of non-variable %s", ddecl_name(id->ddecl));
     set_unparse_outfile(stderr);
     fprintf(stderr, "expr:  "); prt_expression(e, TRUE); fprintf(stderr,"\n");
     return;
   }
   if(id->ddecl->islocal) {
-    warning_with_location(id->location, "taking address of a static local");
+    warning_with_location(id->location, "taking address of local '%s' in function %s", 
+                          ddecl_name(id->ddecl), current_function->name);
   }
 
 
@@ -520,6 +494,7 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write,
       function_call fce = CAST(function_call, expr);
       expression e;
 
+      // FIXME: remove this when better mechanism is available
       // special case for dbg() calls
       if( is_identifier(fce->arg1) && strcmp(CAST(identifier,fce->arg1)->cstring.data,"dbg")==0 )
         break;
@@ -543,9 +518,8 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write,
       generic_call fce = CAST(generic_call, expr);
       expression e;
 
-      scan_expression (e, fce->args) {
+      scan_expression (e, fce->args)
 	find_expression_vars(e, TRUE, FALSE, NULL);
-      }
       break;
     }
 
@@ -823,29 +797,51 @@ static const char *context_name(data_declaration fn)
 
 }
 
+// Ugly, non-reentrant function, to make printing messages cleaner.
+// This could be done with memory allocation or a buf parameter
+// instead, but it's more conveninent this way.
+static char* ddecl_name(data_declaration ddecl)
+{
+  static char buf[1024];
+
+  buf[0] = '\0';
+  if(ddecl->container) {
+    strcat(buf, ddecl->container->name);
+    strcat(buf, ".");
+  }
+  strcat(buf, ddecl->name);
+  return buf;
+}
 
 static char* get_atype(var_use u)
 {
-  static char atype[40];
-
-  atype[0] = '\0';
-  if(u->flags & USE_VIA_POINTER) strcat(atype, "aliased ");
-  if(u->flags & USE_IN_ATOMIC) strcat(atype, "atomic ");
-  if(u->flags & USE_READ) strcat(atype, "r");
-  if(u->flags & USE_WRITE) strcat(atype, "w");
-
-  return atype;
+  static char* atype[] = {
+    "aliased atomic rw",
+    "aliased atomic r",
+    "aliased atomic w",
+    "aliased atomic ??",
+    "aliased rw",
+    "aliased r",
+    "aliased w",
+    "aliased ??",
+    "atomic rw",
+    "atomic r",
+    "atomic w",
+    "atomic ??",
+    "rw",
+    "r",
+    "w",
+    "??"
+  };
+  
+  return atype[ u->flags & 0xF ];
 }
 
 static void print_var_conflict_error_message(var_list_entry v)
 {
   var_use u;
   
-  error("Detected data conflict for %s%s%s.  List of accesses follow:",
-        v->module ? v->module : "",
-        v->module ? "." : "",
-        v->name);
-
+  error("Detected data conflict for %s.  List of accesses follow:", ddecl_name(v->ddecl));
 
   // print unsafe refs
   u = v->refs;
@@ -854,7 +850,8 @@ static void print_var_conflict_error_message(var_list_entry v)
       fprintf(stderr,"%s:%ld   %s %s in %s.  context=%s, use=%s\n", 
               u->location->filename, u->location->lineno,
               u->flags & USE_VIA_POINTER ? "UNSAFE pointer ref to" : "UNSAFE use of",
-              v->name, u->function->name, 
+              v->ddecl->name, 
+              u->function->name, 
               context_name(u->function), 
               get_atype(u));
     
@@ -868,7 +865,8 @@ static void print_var_conflict_error_message(var_list_entry v)
       fprintf(stderr,"%s:%ld   %s %s in %s.  context=%s, use=%s\n", 
               u->location->filename, u->location->lineno,
               u->flags & USE_VIA_POINTER ? "safe pointer ref to" : "safe use of",
-              v->name, u->function->name, 
+              v->ddecl->name, 
+              u->function->name, 
               context_name(u->function), 
               get_atype(u));
     
@@ -886,21 +884,19 @@ static void print_var_debug_summary(var_list_entry v, bool conflict,
   var_use u;
   data_declaration f;
 
-  printf("  %c  %c  %c  %c  %c   : %s%s%s\n",
+  printf("  %c  %c  %c  %c  %c   : %s\n",
          conflict ? 'X' : ' ',
          read ? 'r' : ' ',
          write ? 'w' : ' ',
          aread ? 'r' : ' ',
          awrite ? 'w' : ' ',
-         v->module ? v->module : "", v->module ? "." : "", v->name);
+         ddecl_name(v->ddecl));
   
   u = v->refs;
   while( u ) {
     f = u->function;
-    printf("                    - %s%s%s (%s, %s)\n", 
-           f->container ? f->container->name : "",
-           f->container ? "." : "",
-           f->name, 
+    printf("                    - %s (%s, %s)\n", 
+           ddecl_name(f),
            context_name(f),
            get_atype(u));
     u = u->next;
@@ -952,7 +948,7 @@ static void process_aliased_vars()
       // could the pointer use have been to part of a?
       if( type_contains(a->type, p->type) ) {
         
-        if( p->refs && !v ) v = get_var_list_entry(a->module, a->name, a->function);
+        if( p->refs && !v ) v = get_var_list_entry(a->ddecl);
         
         // add this ref
         for(u=p->refs; u; u=u->next)
@@ -962,7 +958,6 @@ static void process_aliased_vars()
     }
   }
 }
-
 
 static void print_aliased_vars_debug_summary()
 {
@@ -975,11 +970,11 @@ static void print_aliased_vars_debug_summary()
   scanner = dhscan(fv_aliased_var_list);
   while( (a=dhnext(&scanner)) ) {
     pointer_assignment pa;
-    printf("%s.%s (%s)   type=%s\n", a->module, a->name, a->function, type_name(fv_region,a->type));
+    printf("%s   type=%s\n", ddecl_name(a->ddecl), type_name(fv_region,a->type));
 
     for(pa=a->refs; pa; pa=pa->next)
-      printf("%s:%ld:  &%s.%s   type=%s\n", pa->location->filename, pa->location->lineno, 
-             a->module, a->name, 
+      printf("%s:%ld:  &%s   type=%s\n", pa->location->filename, pa->location->lineno, 
+             ddecl_name(a->ddecl),
              type_name(fv_region,pa->type));
     // FIXME: print the expr here
 
@@ -1048,10 +1043,7 @@ void find_function_vars(data_declaration fn)
   else {
 #if 0
     // FIXME: deal with these
-    error("can't find definition for function %s%s%s!!", 
-          fn->container ? fn->container->name : "",
-          fn->container ? "." : "", 
-          fn->name);
+    error("can't find definition for function %s!!", ddecl_name(fn));
 #endif
     return;
   }
@@ -1087,6 +1079,7 @@ void check_for_conflicts(void)
 
   
   // go through the aliased vars, and add conflicts as appropriate
+#define ALIAS_ERRORS 1
 #ifdef ALIAS_ERRORS
   process_aliased_vars();
 #endif  
