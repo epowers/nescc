@@ -316,6 +316,7 @@ void parse(void) deletes
   pstate.unevaluated_expression = 0;
   pstate.declspec_stack = NULL;
   pstate.ds_region = newsubregion(parse_region);
+  parsed_nesc_decl = NULL;
   result = yyparse();
   if (result)
     parsed_nesc_decl = NULL;
