@@ -726,7 +726,7 @@ static void prt_galsc_port_sizes(dd_list ports) {
 //     int MyCount$outputComplete$count; // number of tokens in queue
 // } GALSC_ports;
 //
-static void prt_galsc_ports(dd_list ports) {
+static void prt_galsc_port_struct(dd_list ports) {
     outputln("struct GALSC_ports_t {");
     indent();
     
@@ -748,10 +748,16 @@ static void prt_galsc_ports(dd_list ports) {
 
 // Print struct containing global parameters.
 //
+// typedef struct _GALSC_params_t GALSC_params_t;
 // struct _GALSC_params_t {
 //     uint16_t sensorData;
 // };
+//
+// GALSC_params_t GALSC_params;
+// GALSC_params_t GALSC_params_buffer;
 static void prt_galsc_parameter_struct(dd_list parameters) {
+    outputln("typedef struct _GALSC_params_t GALSC_params_t;");
+    
     outputln("struct _GALSC_params_t {");
     indent();
     
@@ -772,6 +778,9 @@ static void prt_galsc_parameter_struct(dd_list parameters) {
 
     unindent();
     outputln("};");
+
+    outputln("GALSC_params_t GALSC_params;");
+    outputln("GALSC_params_t GALSC_params_buffer;");
 }
 
 // Print declarations for the put() and get() function of each port.
@@ -910,6 +919,22 @@ static void prt_galsc_sched_start_function(dd_list appstart) {
     outputln("}");
 }
 
+// Print the GALSC_copy_params() function, which copies the parameters
+// from the buffer into the parameters.
+//
+// void GALSC_copy_params(void) {
+//     GALSC_params = GALSC_params_buffer;
+// }
+static void prt_galsc_copy_params() {
+    outputln("void GALSC_copy_params(void) {");
+    indent();
+
+    outputln("GALSC_params = GALSC_params_buffer;");
+    
+    unindent();
+    outputln("}");
+}
+
 // Top level function for generating C code for a galsC application.
 //
 // Called from nesc_compile in nesc-main.c
@@ -970,9 +995,6 @@ void galsc_generate_c_code(nesc_declaration program, const char *target_name,
     // Print the enum's that declare the galsC port and eventqueue sizes.
     prt_galsc_port_sizes(ports);
 
-    // Print the struct that declares the parameters.
-    prt_galsc_parameter_struct(parameters);
-  
     // Then we print the code.
     
     // The C declarations first.
@@ -982,12 +1004,11 @@ void galsc_generate_c_code(nesc_declaration program, const char *target_name,
 
     // Print declaration for the port queues, along with queue pointers.
     //prt_galsc_ports(connections);
-    prt_galsc_ports(ports);
+    prt_galsc_port_struct(ports);
 
-    // Print the GALSC_sched_init() function, which initializes the
-    // galsC scheduler data structures.
-    prt_galsc_sched_init_function(ports, parameters);
-
+    // Print the struct that declares the parameters.
+    prt_galsc_parameter_struct(parameters);
+    
     dd_scan (mod, modules)
         prt_nesc_function_declarations(DD_GET(nesc_declaration, mod));
 
@@ -1030,10 +1051,18 @@ void galsc_generate_c_code(nesc_declaration program, const char *target_name,
     prt_galsc_port_functions(ports);
     // Print the put() and get() functions for each parameter.
     prt_galsc_parameter_functions(parameters);
+
+    // Print the GALSC_sched_init() function, which initializes the
+    // galsC scheduler data structures.
+    prt_galsc_sched_init_function(ports, parameters);
     
     // Print the GALSC_sched_start() function, which creates initial
     // tokens in the ports.
     prt_galsc_sched_start_function(appstart);
+
+    // Print the GALSC_copy_params() function, which copies the
+    // parameters from the buffer into the parameters.
+    prt_galsc_copy_params();
 
     unparse_end();
     

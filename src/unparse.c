@@ -913,12 +913,6 @@ void prt_tag_ref(tag_ref tr, pte_options options)
   if (tr->kind == kind_enum_ref && tr->word1 &&
       !strcmp(tr->word1->cstring.data, "_GALSC_eventqueue_size_t"))
     return;
-    // Don't print out the struct with this name.  This is a hack to
-    // get sched.c to compile correctly, even though the body of
-    // _GALSC_params_t has not been defined.
-  if (tr->kind == kind_struct_ref && tr->word1 && tr->fields &&
-      !strcmp(tr->word1->cstring.data, "_GALSC_params_t"))
-    return;
 #endif
     
   if (!tr->tdecl->collapsed)
