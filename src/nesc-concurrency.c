@@ -78,7 +78,7 @@ static void print_ddecl(FILE *out, data_declaration ddecl)
 
 static FILE *outfile = NULL;
 static region conc_region = NULL;
-static bool print_call_graph = 0;
+static bool print_call_graph = 1;
 
 #define conc_debug(format, args...) if(print_call_graph) fprintf(outfile, format, ## args)
 
@@ -374,6 +374,8 @@ static void check_variable_refs(cgraph callgraph) //data_declaration fn, entry_p
 {
   ggraph cg = cgraph_graph(callgraph);
   gnode n;
+  gedge edge;
+  bool iscall;
 
   fv_init();
 
@@ -381,21 +383,15 @@ static void check_variable_refs(cgraph callgraph) //data_declaration fn, entry_p
   graph_scan_nodes (n, cg) {
     data_declaration fn = NODE_GET(endp, n)->function;
 
-#if 0
-    {
-      node temp;
-
-      printf("\n\n\n++++++++++++++++++++++++++++++++++++++++\n");
-      temp = fn->ast->next;
-      fn->ast->next = NULL;
-      AST_print( CAST(node,fn->ast) );
-      fn->ast->next = temp;
-      printf("----------------------------------------\n");
+    /*    
+    iscall = FALSE;
+    graph_scan_in(edge,n) {
+      if( EDGE_GET(void *, edge) != NULL)
+        iscall = TRUE;
     }
-#endif    
+    */
 
-    // FIXME: do I need to deal w/ the variable_decls in the graph??
-    if( is_function_decl(fn->ast) )
+    if( iscall && !builtin_declaration(fn) )
       find_function_vars(fn);
   }
 
