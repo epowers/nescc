@@ -38,8 +38,8 @@ Boston, MA 02111-1307, USA. */
 #include "galsc-generate.h"
 #include "galsc-a.h"
 
-// The string to use to separate substrings in the generated
-// port-related functions/variables/names.
+// The string used to separate substrings in the generated
+// functions/variables/names of ports/parameters.
 static char *galsc_separator = "$";
 #endif
 
@@ -200,7 +200,10 @@ static bool prt_arguments(declaration parms, bool first)
 }
 
 #ifdef GALSC
-// FIXME comment
+// Same as prt_ncf_direct_call() below #else, except modified to also
+// print out port/parameter info that depends on the argument list of
+// the connected function/port/parameter.
+//
 /* Effects: prints call to 'calls' in a connection function.
      Assigns result if last_call is TRUE.
 */
@@ -354,7 +357,7 @@ void prt_ncf_default_call(struct connections *c,
   struct full_connection default_target;
   struct endp default_ep;
 #ifdef GALSC
-  // FIXME comment
+  // Initialize data structures.
   init_full_connection(&default_target);
   init_endp(&default_ep);
 #endif
@@ -376,7 +379,7 @@ bool prt_ncf_direct_calls(struct connections *c,
   dd_list_pos call;
   bool first_call = TRUE;
 #ifdef GALSC
-  // FIXME comment
+  // Find called function (not port).
   function_declarator called_fd = NULL;
   if (!(c->called->kind == decl_port_ref))
       called_fd = ddecl_get_fdeclarator(c->called);
@@ -390,7 +393,7 @@ bool prt_ncf_direct_calls(struct connections *c,
 
       assert(!ccall->cond);
 #ifdef GALSC
-      // FIXME comment
+      // Print call to a port.
       if (c->called->kind == decl_port_ref && c->called->in) {
           // Print the call to the get() function.
           prt_ncf_direct_call(c, ccall, first_call, psd_galsc_print_port_get_call, return_type, called_fd);
@@ -649,32 +652,28 @@ void prt_nesc_module(cgraph cg, nesc_declaration mod)
 }
 
 #ifdef GALSC
-// FIXME fix comment
-// This function is first called from galsc_find_connected_functions()
-// in galsc-generate.c with "gnode n" set to the node in the connection
+// Same as find_reachable_functions() below #else, except modified to
+// account for the new endp fields (port, actor, parameter).
+//
+// This function is first called from find_connected_functions() in
+// nesc-generate.c with "gnode n" set to the node in the connection
 // graph corresponding to the called function.
-// galsc_find_reachable_functions() follows the call chain of
-// functions until it reaches an implementation for the function
-// (i.e., the function is in a module).  At this point, it adds the
-// implementation ("target") to either the c->generic_calls or
-// c->normal_calls list.  When this routine encounters an input port
-// as part of the call chain of functions, it adds the connection
-// information to c->ports and also adds c to the "dd_list
-// connections" list.
-#endif
-
-#ifdef GALSC
+// find_reachable_functions() follows the call chain of functions
+// until it reaches an implementation for the function (i.e., the
+// function is in a module) or a parameter (this is a TinyGUYS PUT
+// call).  At this point, it adds the implementation ("target") to
+// either the c->generic_calls or c->normal_calls list.  When this
+// routine encounters an input port as part of the call chain of
+// functions, it ends the call chain by adding the target to the
+// generic_calls or normal_calls list, and starts a new invocation of
+// find_reachable_functions() with the target of the port as the new
+// "gnode n".
 static bool find_reachable_functions(struct connections *c, gnode n,
 				     expression gcond, expression gargs,
-        dd_list parameters) // parameters whose target is n
-#else
-static bool find_reachable_functions(struct connections *c, gnode n,
-				     expression gcond, expression gargs)
-#endif
+        dd_list parameters) // List of parameters whose target is 'gnode n'.
 {
   endp ep = NODE_GET(endp, n);
 
-#ifdef GALSC
   {
       if (!parameters && c->called->parameters) {
           dd_list_pos pos;
@@ -691,7 +690,6 @@ static bool find_reachable_functions(struct connections *c, gnode n,
           }
       }
   }
-#endif
 
   if (ep->args)
     {
@@ -716,24 +714,13 @@ static bool find_reachable_functions(struct connections *c, gnode n,
     }
   if (graph_node_markedp(n))
     return TRUE;
-#ifdef GALSC
   else if ((!ep->args && ep->function && ep->function->defined &&
             ep->function->container &&
             is_module(((nesc_declaration)ep->function->container)->impl)) ||
           (ep->parameter && ep->parameter->container &&
           is_application_implementation(((nesc_declaration)ep->parameter->container)->impl))) {
-#else
-  else if (!ep->args && ep->function->defined &&
-	   is_module(((nesc_declaration)ep->function->container)->impl))
-#endif
     {
-        
-#ifdef GALSC
         full_connection target = new_full_connection(c->r, ep, gcond, gargs, parameters);
-#else
-      full_connection target = new_full_connection(c->r, ep, gcond, gargs);
-#endif
-
 
       assert(!graph_first_edge_out(n));
 
@@ -742,23 +729,16 @@ static bool find_reachable_functions(struct connections *c, gnode n,
 		    c->generic_calls : c->normal_calls, 
 		  target);
     }
-#ifdef GALSC
   } else if ((ep->actor && ep->port && ep->port->in)) {
             // There is a port connected after c->called.
             full_connection target = new_full_connection(c->r, ep, gcond, gargs, parameters);
-            // Add connection information to c->ports.
-            //dd_add_last(c->r, c->ports, target);
-            // Add c to the global connections list (contains call
-            // chains that have ports).
-            // FIXME: what if already added the port?
-            //dd_add_last(regionof(connections), connections, c);
 
             dd_add_last(c->r, 
                 c->called->gparms && !gcond ?
                 c->generic_calls : c->normal_calls, 
                 target);
             
-            // from galsc_find_function_connections()
+            // From find_function_connections()
             data_declaration decl = ep->port;
             struct connections *connections;
             decl->connections = connections = ralloc(c->r, struct connections);
@@ -768,36 +748,83 @@ static bool find_reachable_functions(struct connections *c, gnode n,
             connections->generic_calls = dd_new_list(c->r);
             connections->normal_calls = dd_new_list(c->r);
 
-            // FIXME save parameters
-            
-            // from below
+            // Copied code from below.
             gedge out;
             graph_mark_node(n);
             graph_scan_out (out, n) {
-                // FIXME null parameters
                 if (find_reachable_functions(connections, graph_edge_to(out), NULL, NULL, NULL)) { // FIXME is NULL correct? or should pass gcond, gargs?
                     return TRUE;
                 }
             }
             graph_unmark_node(n);
   }
-#endif
   else
     {
       gedge out;
 
       graph_mark_node(n);
       graph_scan_out (out, n)
-#ifdef GALSC
           if (find_reachable_functions(c, graph_edge_to(out), gcond, gargs, parameters))
-#else
-          if (find_reachable_functions(c, graph_edge_to(out), gcond, gargs))
-#endif
 	  return TRUE;
       graph_unmark_node(n);
     }
   return FALSE;
 }
+
+#else
+static bool find_reachable_functions(struct connections *c, gnode n,
+				     expression gcond, expression gargs)
+{
+  endp ep = NODE_GET(endp, n);
+
+  if (ep->args)
+    {
+      /* First set of arguments is a condition if 'called' is generic */
+      if (c->called->gparms && !gcond)
+	gcond = ep->args;
+      else if (gargs)
+	{
+	  /* We already have some arguments, so this is a condition again.
+	     If the condition doesn't match gargs, then the call is
+	     filtered out. If they do match, we set gargs to null (we're
+	     back to a non-parameterised call) */
+	  if (constant_expression_list_compare(gargs, ep->args) != 0)
+	    return FALSE;
+	  gargs = NULL;
+	}
+      else
+	{
+	  assert(!gargs);
+	  gargs = ep->args;
+	}
+    }
+  if (graph_node_markedp(n))
+    return TRUE;
+  else if (!ep->args && ep->function->defined &&
+	   is_module(((nesc_declaration)ep->function->container)->impl))
+    {
+      full_connection target = new_full_connection(c->r, ep, gcond, gargs);
+
+      assert(!graph_first_edge_out(n));
+
+      dd_add_last(c->r, 
+		  c->called->gparms && !gcond ?
+		    c->generic_calls : c->normal_calls, 
+		  target);
+    }
+  else
+    {
+      gedge out;
+
+      graph_mark_node(n);
+      graph_scan_out (out, n)
+          if (find_reachable_functions(c, graph_edge_to(out), gcond, gargs))
+	  return TRUE;
+      graph_unmark_node(n);
+    }
+  return FALSE;
+}
+#endif
 
 static void find_connected_functions(struct connections *c)
 {
@@ -984,7 +1011,7 @@ static void mark_reachable_function(cgraph cg,
   dd_list_pos use;
 
 #ifdef GALSC
-  // FIXME
+  // Lookup the information for this function, port, or parameter.
   assert(ddecl);
   if (caller && ((ddecl->kind == decl_function) || (ddecl->kind == decl_port_ref) || (ddecl->kind == decl_variable && ddecl->container && ddecl->container->kind == l_application))) {
       gnode gcaller = (caller->kind == decl_function) ? fn_lookup(cg, caller) : (caller->kind == decl_port_ref ? port_lookup(cg, caller) : parameter_lookup(cg, caller));
@@ -1098,7 +1125,7 @@ static void topological_prt(gnode gep, bool force)
   gedge out;
   data_declaration fn;
 #ifdef GALSC
-  // FIXME comment
+  // Find the function, port, or parameter for this node.
   endp ep = NODE_GET(endp, gep);
   fn = (ep->function) ? ep->function : (ep->port ? ep->port : ep->parameter);
   assert(fn);
@@ -1117,7 +1144,7 @@ static void topological_prt(gnode gep, bool force)
       graph_scan_out (out, gep)
 	topological_prt(graph_edge_to(out), FALSE);
 #ifdef GALSC
-      // FIXME comment
+      // Print normally only if this is a function.
       if (ep->function) {
           prt_nesc_function(fn);
       }
@@ -1139,7 +1166,7 @@ static void prt_inline_functions(cgraph callgraph)
   graph_scan_nodes (fns, cgraph_graph(callgraph))
     {
 #ifdef GALSC
-        // FIXME comment
+        // Find the function, port, or parameter for this node.
         endp ep = NODE_GET(endp, fns);
         data_declaration fn = (ep->function) ? ep->function : (ep->port ? ep->port : ep->parameter);
         assert(fn);
@@ -1184,7 +1211,7 @@ static void prt_noninline_functions(cgraph callgraph)
   graph_scan_nodes (fns, cgraph_graph(callgraph))
     {
 #ifdef GALSC
-        // FIXME comment
+        // Find the function, port, or parameter for this node.
         endp ep = NODE_GET(endp, fns);
         data_declaration fn = (ep->function) ? ep->function : (ep->port ? ep->port : ep->parameter);
         assert(fn);

@@ -655,9 +655,6 @@ An atomic_stmt is not made for lexically nested atomic statements")
 (deftype actor nesc_decl (portlist implementation)
   "actor WORD1 { PORTS IMPLEMENTATION }")
 
-;; reusing connections field
-;; FIXME
-;;(deftype application_implementation implementation (actors global_connections tinyguys_mappings startlist external_components)
 (deftype application_implementation implementation (actors connections startlist external_components)
   "implementation { ACTORS CONNECTIONS STARTLIST }
 CONNECTIONS is split into global_connections ('=>') and tinyguys_mappings ('=')

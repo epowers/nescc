@@ -33,12 +33,10 @@ Boston, MA 02111-1307, USA. */
 #include "galsc-a.h"
 #include "galsc-generate.h"
 
-// FIXMEa: comment
-// The string to use to separate substrings in
+// The string used to separate substrings in the generated
 // functions/variables/names of ports/parameters.
 static char *galsc_separator = "$";
 
-// FIXMEa: comment
 // Print the full port name (using the galsc_separator string) when
 // given an endp.
 //
@@ -50,24 +48,27 @@ static void prt_galsc_port_name(endp ep) {
     output_string(ep->port->name);
 }
 
-// FIXMEa: comment
 // Print the full name (using the galsc_separator string) when given a
 // data_declaration.
 //
-// Example:
+// Examples:
 //   MyLeds$display
+// or
+//   SenseToLeds$sensorData
 static void prt_galsc_name_ddecl(data_declaration p) {
     output_string(p->container->name);
     output_string(galsc_separator);
     output_string(p->name);
 }
 
-// FIXME comment
-//
 // Print argument list to pass to the target of a TinyGUYS GET or
 // GET/PUT call.
 //
 // Called from prt_ncf_direct_call() in nesc-generate.c
+//
+// Example:
+//
+// ..., GALSC_PARAM__SenseToLeds$sensorData$get(), ...
 int galsc_prt_parameter_get_call(struct connections *c,
                                  full_connection ccall,
                                  psd_options options,
@@ -100,8 +101,7 @@ int galsc_prt_parameter_get_call(struct connections *c,
                             first_arg = FALSE;
                         } else {
                             error_with_location(c->called->ast->location,
-                                    "trying to read from more than one TinyGUYS for the same function/port argument");
-                            // FIXME fix error message
+                                    "cannot read from more than one parameter in a parameter GET() call");
                         }
                         first_param = FALSE;
                     }
@@ -143,7 +143,10 @@ int galsc_prt_parameter_get_call(struct connections *c,
     return first_arg;
 }
 
-// FIXME comment
+// Print port information that depends on an element of the argument
+// list of a connected function.
+//
+// Called from galsc_prt_parameters() in galsc-generate.c
 static bool galsc_prt_parameter(declaration d, data_declaration ddecl, psd_options options, bool first, int numargs) {
     if (!is_void_parms(d)) {
         if (options & psd_galsc_print_port_struct) {
@@ -179,12 +182,22 @@ static bool galsc_prt_parameter(declaration d, data_declaration ddecl, psd_optio
             outputln(";");
         }
     }
-        return first;
+    return first;
 }
 
-// FIXME comment
+// Print port information that depends on the argument list of a
+// connected function.
+//
 // ddecl is the port p
+//
+// For prt_galsc_port_get_function() in galsc-generate.c
+// For prt_galsc_port_put_function() in galsc-generate.c
+// For prt_galsc_sched_init_function() in galsc-generate.c
+// for prt_galsc_port_put_function_header() in galsc-generate.c
 // For prt_galsc_ports() in galsc-generate.c
+//
+// Called from prt_simple_declarator() in unparse.c
+//
 // See prt_parameters() in unparse.c
 void galsc_prt_parameters(declaration gparms, declaration parms, psd_options options, data_declaration ddecl) {
     assert(ddecl->kind = decl_port_ref);
@@ -192,15 +205,15 @@ void galsc_prt_parameters(declaration gparms, declaration parms, psd_options opt
     declaration d;
     bool first = TRUE;
 
-    // Check if void argument list
+    // Check if the connected function has a void argument list.
     bool void_parms = FALSE;
     if ( (!gparms || is_void_parms(gparms)) &&
             (!parms || is_void_parms(parms)) )
         void_parms = TRUE;
 
-    // If there are args
-    // FIXME void
-    if ( !void_parms ) {//gparms || parms ) {
+    // If the connected function contains actual arguments, print port
+    // queue info.
+    if ( !void_parms ) {
         if (options & psd_galsc_print_port_get_function) {
             output_string("int oldhead = GALSC_ports.");
             prt_galsc_name_ddecl(ddecl);
@@ -272,8 +285,9 @@ void galsc_prt_parameters(declaration gparms, declaration parms, psd_options opt
             output("void");
         output(")");
     }
-    // If there are args
-    //if ( (gparms || parms) && (numargs != 0)) {
+
+    // If the connected function contains actual arguments, print port
+    // queue info.
     if (!void_parms) {
         if (options & psd_galsc_print_port_struct) {
             // Print the port queue pointers.
@@ -294,19 +308,18 @@ void galsc_prt_parameters(declaration gparms, declaration parms, psd_options opt
     }
 }
 
-// FIXME comment
-// FIXME what if a port is connected instead of a function
-// Print call to connected function with arguments.  Example:
-// IntToLedsM$IntOutput$output(GALSC_ports.MyLeds$display$arg0[ oldhead ]);
+// Print call to connected element with arguments.  'p' contains the
+// input port to which these calls are connected.
 //
-// ep contains the port to which these calls are connected.
+// Example (a function is connected to this input port 'p'):
+// IntToLedsM$IntOutput$output(GALSC_ports.MyLeds$display$arg0[ oldhead ]);
 //
 // Called from prt_galsc_port_get_function() in galsc-generate.c
 static void prt_galsc_port_call(data_declaration p) {
 
     // From prt_nesc_connection_function();
-
     struct connections *c = p->connections;
+
     type return_type = type_function_return_type(get_actual_function_type(c->called->type));
 
     set_fixed_location(c->called->ast->location);
@@ -325,7 +338,9 @@ static void prt_galsc_port_call(data_declaration p) {
     }
 }
 
-// FIXME comment
+// Print the header for the put() function of the parameter 'p'.
+//
+// static result_t GALSC_PARAM__SenseToLeds$sensorData$put(uint16_t arg_0x85020f0)
 void prt_galsc_parameter_put_function_header(data_declaration p) {
     if (p->makeinline)
         output("inline ");
@@ -362,7 +377,7 @@ void prt_galsc_parameter_put_function_header(data_declaration p) {
     }
 }
     
-// FIXME comment
+// Print the put() function of the parameter 'p' (decl_variable).
 //
 // static result_t GALSC_PARAM__SenseToLeds$sensorData$put(uint16_t arg_0x85020f0) {
 //     GALSC_params_buffer.sensorData = arg_0x85020f0;
@@ -388,7 +403,10 @@ void prt_galsc_parameter_put_function(data_declaration p) {
     outputln("}");
 }
     
-// FIXME comment
+// Print the header for the get() function of the parameter 'p'.
+//
+// uint16_t GALSC_PARAM__SenseToLeds$sensorData$get()
+//
 void prt_galsc_parameter_get_function_header(data_declaration p) {
     if (p->makeinline)
         output("inline ");
@@ -407,7 +425,7 @@ void prt_galsc_parameter_get_function_header(data_declaration p) {
     output("get()");
 }
 
-// FIXME comment
+// Print the get() function of the parameter 'p' (decl_variable).
 //
 // uint16_t GALSC_PARAM__SenseToLeds$sensorData$get() {
 //     return GALSC_params.sensorData;
@@ -428,6 +446,7 @@ void prt_galsc_parameter_get_function(data_declaration p) {
     outputln("}");
 }
 
+// Print the put() and get() function of each parameter.
 void prt_galsc_parameter_functions(dd_list parameters) {
     dd_list_pos pos;
     dd_scan (pos, parameters) {
@@ -437,8 +456,7 @@ void prt_galsc_parameter_functions(dd_list parameters) {
     }
 }
 
-// FIXME comment
-// Print put() and get() function for each parameter.
+// Print declarations for the put() and get() function of each parameter.
 void prt_galsc_parameter_function_declarations(dd_list parameters) {
     dd_list_pos pos;
     dd_scan (pos, parameters) {
@@ -450,8 +468,7 @@ void prt_galsc_parameter_function_declarations(dd_list parameters) {
     }
 }
 
-// FIXMEa: comment
-// Print the header for the  port queue get() function.
+// Print the header for the get() function of the port 'p'.
 //
 // void GALSC__MyLeds$display$get()
 void prt_galsc_port_get_function_header(data_declaration p) {
@@ -466,8 +483,7 @@ void prt_galsc_port_get_function_header(data_declaration p) {
     output_string("get() ");
 }
     
-// FIXMEa: comment
-// Print the port queue get() function.
+// Print the get() function of the port 'p' (decl_port_ref).
 //
 // void GALSC__MyLeds$display$get() {
 //     if (GALSC_ports.MyLeds$display$count > 0) {
@@ -479,7 +495,6 @@ void prt_galsc_port_get_function_header(data_declaration p) {
 //         IntToLedsM$IntOutput$output(GALSC_ports.MyLeds$display$arg0[ oldhead ]);
 //     }
 // }
-//
 void prt_galsc_port_get_function(data_declaration p) {
     prt_galsc_port_get_function_header(p);
     outputln(" {");
@@ -514,8 +529,7 @@ void prt_galsc_port_get_function(data_declaration p) {
     outputln("}");
 }
 
-// FIXMEa: comment
-// Print the header for the port queue put() function.
+// Print the header for the put() function of the port 'p'.
 //
 // static result_t GALSC__MyLeds$display$put(uint16_t arg_0x85020f0)
 void prt_galsc_port_put_function_header(data_declaration p) {
@@ -540,8 +554,7 @@ void prt_galsc_port_put_function_header(data_declaration p) {
     prt_simple_declarator(tdeclarator, p, psd_galsc_print_port_put_function_header);
 }
 
-// FIXME comment
-// Print the port queue put() function.
+// Print the put() function of the port 'p'.
 //
 // static result_t GALSC__MyLeds$display$put(uint16_t arg_0x85020f0) {
 //     if (GALSC_ports.MyLeds$display$count < GALSC_PORT_SIZE_MyLeds$display) {
@@ -631,7 +644,6 @@ void prt_galsc_port_put_function(data_declaration p) {
     }
 }
 
-// FIXMEa: comment
 // For each inport, print the port size:
 //
 //  enum {
@@ -696,15 +708,6 @@ static void prt_galsc_port_sizes(dd_list ports) {
     outputln("};");
 }
 
-// FIXMEa: comment
-// This function is for use with prt_galsc_ports to print the
-// following type of line for each parameter in the xparms declaration
-// list:
-//
-//     uint16_t MyLeds$display$arg0[GALSC_PORT_SIZE_MyLeds$display];
-//
-// FIXME comment
-
 // Print scheduler data type containing port queues and queue
 // pointers.
 //
@@ -742,7 +745,8 @@ static void prt_galsc_ports(dd_list ports) {
     outputln("} GALSC_ports;");
 }
 
-// FIXME comment
+// Print struct containing global parameters.
+//
 // struct _GALSC_params_t {
 //     uint16_t sensorData;
 // };
@@ -769,8 +773,7 @@ static void prt_galsc_parameter_struct(dd_list parameters) {
     outputln("};");
 }
 
-// FIXME comment
-// Print put() and get() function for each port.
+// Print declarations for the put() and get() function of each port.
 void prt_galsc_port_function_declarations(dd_list ports) {
     dd_list_pos port;
     dd_scan (port, ports) {
@@ -784,8 +787,7 @@ void prt_galsc_port_function_declarations(dd_list ports) {
     }
 }
 
-// FIXME comment
-// Print put() and get() function for each port.
+// Print the put() and get() function of each port.
 void prt_galsc_port_functions(dd_list ports) {
     dd_list_pos port;
     dd_scan (port, ports) {
@@ -797,7 +799,6 @@ void prt_galsc_port_functions(dd_list ports) {
     }
 }
 
-// FIXMEa: comment
 // Print the GALSC_sched_init() function, which initializes the galsC
 // scheduler data structures.
 //
@@ -876,7 +877,6 @@ static void prt_galsc_sched_init_function(dd_list ports, dd_list parameters) {
     outputln("}");
 }
 
-// FIXMEa: comment
 // Print the GALSC_sched_start() function, which places initial tokens in port.
 //
 // void GALSC_sched_start(void) {
@@ -910,14 +910,14 @@ static void prt_galsc_sched_start_function(dd_list appstart) {
     outputln("}");
 }
 
-// FIXMEa: comment
 // Top level function for generating C code for a galsC application.
 //
 // Called from nesc_compile in nesc-main.c
 //
 // See generate_c_code() in nesc-generate.c
 void galsc_generate_c_code(nesc_declaration program, const char *target_name,
-		     cgraph cg, dd_list modules, dd_list ports, dd_list parameters, dd_list appstart) {
+        cgraph cg, dd_list modules, dd_list ports,
+        dd_list parameters, dd_list appstart) {
     dd_list_pos mod;
     cgraph callgraph;
     FILE *output = NULL;
@@ -970,7 +970,7 @@ void galsc_generate_c_code(nesc_declaration program, const char *target_name,
     // Print the enum's that declare the galsC port and eventqueue sizes.
     prt_galsc_port_sizes(ports);
 
-    // Print the struct that declares the TinyGUYS.
+    // Print the struct that declares the parameters.
     prt_galsc_parameter_struct(parameters);
   
     // Then we print the code.
@@ -991,8 +991,10 @@ void galsc_generate_c_code(nesc_declaration program, const char *target_name,
     dd_scan (mod, modules)
         prt_nesc_function_declarations(DD_GET(nesc_declaration, mod));
 
-    // FIXME comment
+    // Print declarations for the put() and get() functions of each port.
     prt_galsc_port_function_declarations(ports);
+    
+    // Print declarations for the put() and get() functions of each parameter.
     prt_galsc_parameter_function_declarations(parameters);
 
     enable_line_directives();
@@ -1024,8 +1026,9 @@ void galsc_generate_c_code(nesc_declaration program, const char *target_name,
    */
 
     disable_line_directives();
-    // FIXME comment
+    // Print the put() and get() functions for each port.
     prt_galsc_port_functions(ports);
+    // Print the put() and get() functions for each parameter.
     prt_galsc_parameter_functions(parameters);
     
     // Print the GALSC_sched_start() function, which creates initial
