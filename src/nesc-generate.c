@@ -369,7 +369,9 @@ void prt_ncf_direct_call(struct connections *c,
   /* Emit instance pointer if this is a call to an abstract component */
   if (ccall->ep->component && 
       ccall->ep->component->kind == decl_component_ref &&
-      ccall->ep->component->instance_number != -1) {
+      ccall->ep->component->instance_number != -1 &&
+      (ccall->ep->interface == NULL ||
+      !ccall->ep->interface->static_interface)) {
 
     fprintf(stderr,"MDW: prt_ncf_direct_call: function %s\n", ccall->ep->function->name);
     print_endp("MDW: prt_ncf_direct_call: ep is ", ccall->ep);
@@ -603,7 +605,7 @@ static void prt_nesc_connection_function(data_declaration fn, endp ep)
   print_endp("    * MDW: prt_nesc_connection_function: ", ep);
   output("/* MDW: prt_nesc_connection_function on %s */\n", c->called->name);
   output("/* MDW: EP instance is %d */\n", ep->instance);
-  if (fn->container && fn->container->is_abstract) {
+  if (fn->container && fn->container->is_abstract && !fn->interface->static_interface) {
     output("/* MDW: Call is ");
     if (dd_is_empty(c->normal_calls))
       prt_ncf_default_call(c, return_type,
@@ -621,7 +623,7 @@ static void prt_nesc_connection_function(data_declaration fn, endp ep)
   prt_ncf_header(c, return_type);
 
   num_instances = num_abstract_instances(fn);
-  if (num_instances > 0) {
+  if (num_instances > 0 && !fn->interface->static_interface) {
     int instance;
 
     output("switch (");

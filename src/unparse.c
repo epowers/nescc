@@ -945,6 +945,7 @@ void prt_parameters(declaration gparms, declaration parms, data_declaration fnde
       // fndecl->defined && 
       fndecl->container != NULL &&
       fndecl->container->is_abstract &&
+      (fndecl->interface == NULL || !fndecl->interface->static_interface) &&
       fndecl->ftype != function_static) {
     output_instancetype(fndecl->container);
     output(" *");
@@ -1149,12 +1150,20 @@ void prt_identifier(identifier e, int context_priority)
   set_location(e->location);
   if (decl->container && !decl->Cname) {
     if (is_instance_variable(decl)) {
+      //fprintf(stderr,"MDW: prt_identifier for %s, container_function %s with interface %s\n", e->cstring.data, decl->container_function, decl->container_function->interface);
+      if (e->parent_function != NULL &&
+	  e->parent_function->ddecl->interface != NULL &&
+	  e->parent_function->ddecl->interface->static_interface) {
+	error_with_location(e->location, "cannot reference instance variable `%s' from static interface", e->cstring.data);
+	return;
+      }
+
       /* Instance variable */
       output_thisptr(decl->container);
       output("->");
       output_stripped_string_dollar(decl->container->name);
     } else if (is_abstract_parameter(decl)) {
-      /* Abstract parameter */
+      /* Abstract parameter - do nothing */
     } else {
       /* Static variable */
       output_stripped_string_dollar(decl->container->name);
@@ -1293,7 +1302,7 @@ void prt_interface_deref(interface_deref e, int context_priority)
   instance_ref iref = NULL;
   bool is_abstract = FALSE;
 
-  fprintf(stderr,"MDW: prt_interface_deref: decl %s kind %d decl->interface %s kind %d\n", decl->name, decl->kind, decl->interface->name, decl->interface->kind);
+  fprintf(stderr,"MDW: prt_interface_deref: decl %s kind %d decl->interface %s kind %d static_interface %d\n", decl->name, decl->kind, decl->interface->name, decl->interface->kind, decl->interface->static_interface);
 
   if (decl->kind == decl_function && decl->uncallable) {
     if (is_instance_ref(e->arg1)) {
@@ -1307,8 +1316,9 @@ void prt_interface_deref(interface_deref e, int context_priority)
     }
   } 
 
-  if (decl->kind == decl_function && decl->container && decl->container->is_abstract) 
+  if (decl->kind == decl_function && decl->container && decl->container->is_abstract && !decl->interface->static_interface) {
     is_abstract = TRUE;
+  }
 
   if (is_instance_ref(e->arg1)) {
     // OK, we have an instance ref inside, so need to use the 
@@ -1320,6 +1330,15 @@ void prt_interface_deref(interface_deref e, int context_priority)
       error("cannot use `instance' in non-abstract component");
     if (decl->interface->static_interface)
       error("cannot use `instance' to invoke static interface");
+  }
+
+  if (is_abstract) {
+    if (iref == NULL &&
+	e->parent_function != NULL &&
+	e->parent_function->ddecl->interface != NULL &&
+	e->parent_function->ddecl->interface->static_interface) {
+      error_with_location(e->location,"cannot invoke abstract interface from static interface");
+    }
   }
 
   prt_expression(e->arg1, P_CALL);

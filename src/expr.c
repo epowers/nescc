@@ -1184,7 +1184,7 @@ expression make_identifier(location loc, cstring id, bool maybe_implicit)
 {
   /* XXX: Should pass decl as argument (lexer looked it up already) */
   data_declaration decl = lookup_id(id.data, FALSE);
-  identifier result = new_identifier(parse_region, loc, id, NULL);
+  identifier result = new_identifier(parse_region, loc, id, NULL, current.function_decl);
 
   if (decl && decl->islimbo) /* Limbo declarations don't really exist */
     decl = NULL;

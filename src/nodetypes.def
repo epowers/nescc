@@ -389,8 +389,8 @@ NEXT_LABEL points to the switches first label")
   "CONDITION ? ARG1 : ARG2
    GCC specific: ARG1 is optional")
 
-(deftype identifier expression (cstring ddecl)
-  "The identrifier CSTRING
+(deftype identifier expression (cstring ddecl parent_function)
+  "The identrifier CSTRING referenced from function FUNCTION
 DEAD_USE is true for identifiers used as the target of a regular assignment")
 
 (deftype compound_expr expression (stmt)
@@ -590,9 +590,10 @@ Legal if exactly one of EP1 and EP2 are interfaces of the component")
 implementations
 For now at least, DECLARATOR is always an identifier_declarator")
 
-(deftype interface_deref unary (cstring ddecl)
+(deftype interface_deref unary (cstring ddecl parent_function)
   "ARG1.CSTRING where ARG1 is an interface_ref.
-DDECL is the command or event's declaration")
+   DDECL is the command or event's declaration
+   PARENT_FUNCTION is the function making the reference")
 
 (deftype instance_ref unary (cstring ddecl)
   "INSTANCES(ARG1).CSTRING")

@@ -55,7 +55,7 @@ expression make_interface_deref(location loc, expression object, cstring field)
   data_declaration iref = type_iref(object->type);
   data_declaration fdecl = interface_lookup(iref, field.data);
 
-  result = new_interface_deref(parse_region, loc, object, field, fdecl);
+  result = new_interface_deref(parse_region, loc, object, field, fdecl, current.function_decl);
   if (!fdecl)
     {
       error("interface has no command or event named `%s'", field.data);

@@ -241,7 +241,7 @@ cval value_of_enumerator(enumerator e)
 
 expression build_identifier(region r, location loc, data_declaration id)
 {
-  identifier e = new_identifier(r, loc, str2cstring(r, id->name), id);
+  identifier e = new_identifier(r, loc, str2cstring(r, id->name), id, NULL);
 
   assert(id->kind == decl_variable || id->kind == decl_function);
   e->type = id->type;
