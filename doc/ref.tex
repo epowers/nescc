@@ -362,7 +362,6 @@ Here is a full specification example:
 configuration GenericComm {
   provides {
     interface StdControl as Control;
-    interface SendVarLenPacket;
     
     // The interface are parameterised by the active message id
     interface SendMsg[uint8_t id];
@@ -379,8 +378,6 @@ In this example, \code{GenericComm}:
 \begin{itemize}
 \item Provides simple interface instance \code{Control} of type
 \code{StdControl}.
-\item Provides simple interface instance \code{SendVarLenPacket} of type
-\code{SendVarLenPacket}.
 \item Provides parameterised instances of interface type \code{SendMsg} and
 \code{ReceiveMsg}; the parameterised instances are named \code{SendMsg} and
 \code{ReceiveMsg} respectively.
