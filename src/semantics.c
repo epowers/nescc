@@ -36,6 +36,7 @@ Boston, MA 02111-1307, USA. */
 #include "nesc-semantics.h"
 #include "nesc-cpp.h"
 #include "machine.h"
+#include "attributes.h"
 
 /* Predefined __builtin_va_list type */
 type builtin_va_list_type;
@@ -542,8 +543,8 @@ static void check_legal_qualifiers(location l, type_quals quals)
   /* Placeholder for checks for any extra qualifiers */
 }
 
-static type_quals parse_qualifiers(location l, type_element qlist,
-				   dd_list *oattributes)
+static type parse_qualifiers(type t, location l, type_element qlist,
+			     dd_list *oattributes)
 {
   type_element q;
   type_quals tqs = no_qualifiers;
@@ -558,13 +559,12 @@ static type_quals parse_qualifiers(location l, type_element qlist,
       }
     else if (is_attribute(q))
       {
-	/* currently we don't handle any attributes on types. If we did,
-	   there would be a test here to see if q was a type attribute.
-	   If it were, then we wouldn't do the next statement */
-	*oattributes = push_attribute(*oattributes, CAST(attribute, q));
+	/* Filter out type-only attributes */
+	if (!handle_type_attribute(CAST(attribute, q), &t))
+	  *oattributes = push_attribute(*oattributes, CAST(attribute, q));
       }
   check_legal_qualifiers(l, tqs);
-  return tqs;
+  return make_qualified_type(t, tqs);
 }
 
 static type make_nesc_function_type(int class, type returns, typelist argtypes,
@@ -949,7 +949,6 @@ void parse_declarator(type_element modifiers, declarator d, bool bitfield,
 	case kind_function_declarator:
 	  {
 	    function_declarator fd = CAST(function_declarator, d);
-	    type_quals fnquals = parse_qualifiers(fd->location, fd->qualifiers, NULL);
 	    bool newstyle;
 
 	    d = fd->declarator;
@@ -1025,7 +1024,7 @@ void parse_declarator(type_element modifiers, declarator d, bool bitfield,
 	    else  /* Old-style function */
 	      t = make_function_type(t, NULL, FALSE, TRUE);
 
-	    t = make_qualified_type(t, fnquals);
+	    t = parse_qualifiers(t, fd->location, fd->qualifiers, NULL);
 	    break;
 	  }
 
@@ -1043,7 +1042,7 @@ void parse_declarator(type_element modifiers, declarator d, bool bitfield,
 	    qualified_declarator qd = CAST(qualified_declarator, d);
 
 	    d = qd->declarator;
-	    t = make_qualified_type(t, parse_qualifiers(qd->location, qd->modifiers, &attributes));
+	    t = parse_qualifiers(t, qd->location, qd->modifiers, &attributes);
 	    break;
 	  }
 
@@ -1566,108 +1565,10 @@ static int duplicate_decls(data_declaration newdecl, data_declaration olddecl,
   return 1;
 }
 
-void ignored_attribute(attribute attr)
-{
-  warning_with_location(attr->location, "`%s' attribute directive ignored",
-			attr->word1->cstring.data);
-}
-
 static void transparent_union_argument(data_declaration ddecl)
 {
   ddecl->type = make_qualified_type
     (ddecl->type, type_qualifiers(ddecl->type) | transparent_qualifier);
-}
-
-/* Note: fdecl->bitwidth is not yet set when this is called */
-void handle_attribute(attribute attr, data_declaration ddecl, 
-		      field_declaration fdecl, tag_declaration tdecl)
-{
-  const char *name = attr->word1->cstring.data;
-
-  if (!strcmp(name, "transparent_union") ||
-      !strcmp(name, "__transparent_union__"))
-    {
-      if (attr->word2 || attr->args)
-	error_with_location(attr->location, "wrong number of arguments specified for `transparent_union' attribute");
-
-      if (ddecl && ddecl->kind == decl_variable && ddecl->isparameter &&
-	  type_union(ddecl->type))
-	transparent_union_argument(ddecl);
-      else if (ddecl && ddecl->kind == decl_typedef && type_union(ddecl->type))
-	transparent_union_argument(ddecl);
-      else if (tdecl && tdecl->kind == kind_union_ref)
-	{
-	  tdecl->transparent_union = TRUE;
-	  /* XXX: Missing validity checks (need cst folding I think) */
-	}
-      else
-	ignored_attribute(attr);
-    }
-  else if (!strcmp(name, "packed") || !strcmp(name, "__packed__"))
-    {
-      if (tdecl)
-	tdecl->packed = TRUE;
-      else if (fdecl)
-	fdecl->packed = TRUE;
-      else
-	ignored_attribute(attr);
-    }
-  else if (!strcmp(name, "C"))
-    {
-      if (ddecl)
-	{
-	  if (!ddecl->isexternalscope)
-	    error_with_location(attr->location, "`C' attribute is for symbols with external scope only");
-	  else
-	    ddecl->Cname = TRUE;
-	}
-      else
-	ignored_attribute(attr);
-    }
-  else if (!strcmp(name, "spontaneous"))
-    {
-      if (ddecl)
-	{
-	  if (ddecl->kind == decl_function && ddecl->ftype == function_normal)
-	    ddecl->spontaneous = TRUE;
-	  else
-	    error_with_location(attr->location, "`spontaneous' attribute is for external functions only");
-	}
-      else
-	ignored_attribute(attr);
-    }
-}
-
-void handle_attributes(attribute alist, data_declaration ddecl, 
-		       field_declaration fdecl, tag_declaration tdecl)
-{
-  scan_attribute (alist, alist)
-    handle_attribute(alist, ddecl, fdecl, tdecl);
-}
-
-void handle_dd_attributes(dd_list alist, data_declaration ddecl, 
-			  field_declaration fdecl, tag_declaration tdecl)
-{
-  dd_list_pos attr;
-
-  if (alist)
-    dd_scan (attr, alist)
-      handle_attribute(DD_GET(attribute, attr), ddecl, fdecl, tdecl);
-}
-
-void ignored_attributes(attribute alist)
-{
-  scan_attribute (alist, alist)
-    ignored_attribute(alist);
-}
-
-void ignored_dd_attributes(dd_list alist)
-{
-  dd_list_pos attr;
-
-  if (alist)
-    dd_scan (attr, alist)
-      ignored_attribute(DD_GET(attribute, attr));
 }
 
 bool is_doublecharstar(type t)
@@ -2044,8 +1945,8 @@ bool start_function(type_element elements, declarator d, attribute attribs,
 		 inlinep, name, function_type, nested, FALSE, defaulted_int);
   tempdecl.definition = tempdecl.ast;
 
-  handle_attributes(attribs, &tempdecl, NULL, NULL);
-  handle_dd_attributes(extra_attr, &tempdecl, NULL, NULL);
+  handle_decl_attributes(attribs, &tempdecl);
+  handle_decl_dd_attributes(extra_attr, &tempdecl);
 
   if (intf)
     {
@@ -2400,8 +2301,8 @@ declaration start_decl(declarator d, asm_stmt astmt, type_element elements,
     {
       extra_attr = check_parameter(&tempdecl, elements, vd);
 
-      handle_attributes(attributes, &tempdecl, NULL, NULL);
-      handle_dd_attributes(extra_attr, &tempdecl, NULL, NULL);
+      handle_decl_attributes(attributes, &tempdecl);
+      handle_decl_dd_attributes(extra_attr, &tempdecl);
 
       if (type_void(tempdecl.type))
 	{
@@ -2641,8 +2542,8 @@ declaration start_decl(declarator d, asm_stmt astmt, type_element elements,
 	  !current.env->global_level && !tempdecl.in_system_header)
 	warning("nested extern declaration of `%s'", printname);
 
-      handle_attributes(attributes, &tempdecl, NULL, NULL);
-      handle_dd_attributes(extra_attr, &tempdecl, NULL, NULL);
+      handle_decl_attributes(attributes, &tempdecl);
+      handle_decl_dd_attributes(extra_attr, &tempdecl);
 
       old_decl = lookup_id(name, !tempdecl.Cname);
       /* Check the global environment if declaring something with file
@@ -2771,8 +2672,8 @@ declaration declare_parameter(declarator d, type_element elements,
 	check_generic_parameter_type(l, ddecl);
 
 
-      handle_attributes(attributes, ddecl, NULL, NULL);
-      handle_dd_attributes(extra_attr, ddecl, NULL, NULL);
+      handle_decl_attributes(attributes, ddecl);
+      handle_decl_dd_attributes(extra_attr, ddecl);
     }
   else
     {
@@ -2933,7 +2834,7 @@ type_element finish_struct(type_element t, declaration fields,
 
   s->fields = fields;
   s->attributes = attribs;
-  handle_attributes(attribs, NULL, NULL, tdecl);
+  handle_tag_attributes(attribs, tdecl);
   tdecl->fields = new_env(parse_region, NULL);
 
   scan_declaration (fdecl, fields)
@@ -3052,8 +2953,8 @@ type_element finish_struct(type_element t, declaration fields,
 		}
 
 	      fdecl->type = field_type;
-	      handle_attributes(field->attributes, NULL, fdecl, NULL);
-	      handle_dd_attributes(extra_attr, NULL, fdecl, NULL);
+	      handle_field_attributes(field->attributes, fdecl);
+	      handle_field_dd_attributes(extra_attr, fdecl);
 	      field_type = fdecl->type; /* attributes might change type */
 
 	      bitwidth = -1;
@@ -3247,7 +3148,7 @@ type_element finish_enum(type_element t, declaration names,
 
   s->fields = names;
   s->attributes = attribs;
-  handle_attributes(attribs, NULL, NULL, tdecl);
+  handle_tag_attributes(attribs, tdecl);
   tdecl->fields = 0;
   tdecl->defined = TRUE;
   tdecl->being_defined = FALSE;
