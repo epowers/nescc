@@ -52,12 +52,11 @@ Boston, MA 02111-1307, USA.  */
 #include "nesc-concurrency.h"
 #include "constants.h"
 #include "unparse.h"
+#include "nesc-findvars.h"
 
 
 static FILE *outfile = NULL;
 static region conc_region = NULL;
-
-#undef SEPARATE_CONTAINER
 
 static void print_ddecl(data_declaration ddecl)
 {
@@ -66,9 +65,6 @@ static void print_ddecl(data_declaration ddecl)
   if (ddecl->definition && !ddecl->suppress_definition)
     opts |= psd_print_default;
 
-#ifdef SEPARATE_CONTAINER
-  opts |= psd_skip_container;
-#endif
 
   if (is_function_decl(ddecl->ast))
     {
@@ -121,6 +117,7 @@ static void check_variable_refs(data_declaration fn, entry_point_type type)
 
   
   //vars = AST_find_vars(conc_region, CAST(node, CAST(function_decl,fn->ast)->stmt));
+  find_function_vars(fn);
   scanner = dhscan(vars);
   for(n=(node)dhnext(&scanner); n; n=(node)dhnext(&scanner)) {
     AST_print( n );
@@ -156,9 +153,6 @@ static void mark_functions(gnode parent, entry_point_type type, int indent,
   // debugging output
   fprintf(outfile, "%*s",indent,"");
   print_ddecl(fn);
-#ifdef SEPARATE_CONTAINER
-  fprintf(outfile," --- %s", fn->container ? fn->container->name : "null");
-#endif
   if( !iscall ) {
     fprintf(outfile, "  (ref only)");
     if( fn->definition ) {
