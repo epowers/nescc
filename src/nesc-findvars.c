@@ -593,8 +593,9 @@ static void note_var_use(expression e, bool is_read, bool is_write)
   //if( id->cst )
   //return;
 
-  // ignore local variables
-  if(id->ddecl->islocal) {
+  // ignore non-variables, and non-static local variables
+  if(id->ddecl->kind != decl_variable ||
+     (id->ddecl->islocal && id->ddecl->vtype != variable_static)) {
     //printf(" -         : %s.%s\n", current_module_name, id->cstring.data);
     return; 
   }
