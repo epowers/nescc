@@ -124,8 +124,9 @@ static void connect_port(cgraph cg, struct endp from, struct endp to) {
     assert((from.port && to.port));
     
     graph_add_edge(gfrom, gto, NULL);
+    
+    // FIXME : is fn_lookup ok?
     /* If an endpoint has args, we must also connect the node w/o args */
-    // FIXME args
     if (from.args)
         graph_add_edge(fn_lookup(cg, from.function), gfrom, NULL);
     if (to.args)
@@ -378,7 +379,7 @@ static void process_connections(actor_implementation c) {
 
         // The connection is of the form:
         // '(' endpoint_list ')' POINTSAT endpoint ';'
-        if (is_tg_get_connection(conn)) {
+        if (is_parameter_get_connection(conn)) {
             // TinyGUYS GET or GET/PUT connections [(x, l) -> x]
             // 
             // GET
@@ -537,7 +538,7 @@ static void process_actorcontrollist(region r, actor_implementation c) {
         // Make a new connection and endpoint (endp).
         // y' (p2) = x.y (p1)
         
-        // GALSC FIXME2: what about args to interface?
+        // GALSC FIXME: what about args to interface?
         word1 = CAST(interface_ref, p2.interface->ast)->word1;
         pid = new_parameterised_identifier(r, dummy_location, word1, NULL);
         ep2 = new_endpoint(r, dummy_location, pid);

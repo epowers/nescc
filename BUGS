@@ -1,0 +1,40 @@
+Limitations and known bugs in galsC 0.1 release:
+
+- Type checker does not currently check the command/event type for a
+parameter GET connection.
+
+- TinyGUYS PUT call may not be generated before call to another
+connected function.  
+        Example: [f -> l], [f -> f].  
+The first call should be generated first.
+
+- Cycles around actors should be allowed (currently flagged as an
+error by the type checker).
+
+- nesC concurrency checker has not beed updated to reflect lack of
+race conditions and port boundaries.
+
+- Global parameter access is not currently allowed.  
+        Example: [(p, g) -> p] in an application file.
+
+- Function names are not allowed in the actorControl list (only whole
+interfaces allowed).
+
+- Parameterised interfaces may not work in actorControl list.
+
+- Multiple functions may connect to an input or output port.
+
+- Multiple ports may connect to a port.
+
+- Parameterised ports allowed in grammar, but not implemented in compiler.
+
+- Queue sizes must be determined heuristically (trial and error).
+
+- nesdoc (documentation generator) does not work.
+
+- TOSSIM/nido (make pc) does not work.
+
+- Only one external component ("Main") is currently allowed.
+
+
+

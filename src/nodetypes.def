@@ -142,7 +142,7 @@
 (deffield cdecl nesc_declaration ())
 
 ;; begin galsC-specific code
-;; galsc fields
+
 (deffield actors actor_ref (init tree))
 (deffield global_connections global_connection (init tree))
 (deffield startlist start_function_call (init tree))
@@ -151,10 +151,7 @@
 (deffield in bool (init))
 (deffield actorcontrollist endpoint (init tree))
 (deffield aep endpoint (init tree))
-
-;; TinyGUYS
-(deffield tinyguys declaration (init tree))
-(deffield tinyguys_mappings eq_connection (init tree))
+(deffield parameters declaration (init tree))
 
 ;; end galsC-specific code
 
@@ -641,23 +638,19 @@ DDECL is the command or event's declaration")
 An atomic_stmt is not made for lexically nested atomic statements")
 
 ;; begin galsC-specific code
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; galsC extensions
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; galsC: the different kinds of files
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(deftype application nesc_decl (tinyguys implementation)
-  "application WORD1 { TINYGUYS IMPLEMENTATION }")
+(deftype application nesc_decl (parameters implementation)
+  "application WORD1 { PARAMETERS IMPLEMENTATION }")
 
 (deftype actor nesc_decl (portlist implementation)
   "actor WORD1 { PORTS IMPLEMENTATION }")
 
 (deftype application_implementation implementation (actors connections startlist external_components)
   "implementation { ACTORS CONNECTIONS STARTLIST }
-CONNECTIONS is split into global_connections ('=>') and tinyguys_mappings ('=')
 EXTERNAL_COMPONENTS is filled in later to point to externally loaded components")
 
 (deftype actor_implementation implementation (components connections actorcontrollist)
@@ -693,11 +686,11 @@ WORD2 is optional
 if PARMS == null, then this is just 'in/out WORD1 WORD2'")
 
 ;; TinyGUYS
-(defnode tg_get_connection connection
+(defnode parameter_get_connection connection
   "EP1 <- EP2, where EP1 is a list consisting of (p | f) (l)*, where
    p is port
    f is function
-   l is localname of TinyGUYS
+   l is localname of parameter
    Legal if the number of arguments and types of EP1 match those of EP2")
 
 ;; end galsC-specific code

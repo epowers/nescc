@@ -18,7 +18,7 @@ Boston, MA 02111-1307, USA. */
 #include "parser.h"
 #include "nesc-cg.h"
 #include "nesc-semantics.h"
-#include "c-parse.h" // FIXME only needed for parse_region
+#include "c-parse.h"
 #include "galsc-a.h"
 
 // Construct and return the argument list for the source trigger in
@@ -28,7 +28,6 @@ static typelist get_sourceargs(galsc_parameter_connection pconn) {
     endpoint trigger_ep = pconn->conn->ep2;
     environment trigger_configuration_env = pconn->configuration_env;
     
-    // FIXME parse_region
     typelist sourceargs = new_typelist(parse_region);
     endpoint ep;
     struct endp temp;
@@ -212,7 +211,6 @@ bool match_parameter_put(endp target, endp source) {
 
     // Construct an argument list consisting only of the type of the
     // target parameter.
-    // FIXME parse_region
     typelist parameter_type = new_typelist(parse_region);
     typelist_append(parameter_type, target->parameter->type);
 
@@ -266,7 +264,6 @@ static type galsc_endpoint_type(endp p) {
     
     if (p->args) {
         if (p->function) {
-            // FIXME need get_actual_function_type()?
             t = type_function_return_type(p->function->type);
         } else if (p->port) {
             t = type_function_return_type(p->port->type);

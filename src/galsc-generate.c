@@ -126,7 +126,6 @@ int galsc_prt_parameter_get_call(struct connections *c,
                     }
                 } else if (temp.function) {
                     if (c->called->kind == decl_function) {
-                        // FIXME void args
                         if (called_fd->parms) {
                             prt_arguments(called_fd->parms, first_arg);
                             first_arg = FALSE;
@@ -173,7 +172,6 @@ static bool galsc_prt_parameter(declaration d, data_declaration ddecl, psd_optio
             output("arg%d", numargs);
             first = FALSE;
         } else if (options & psd_galsc_print_port_put_function_body) {
-            // FIXME if void?
             output_string("GALSC_ports.");
             prt_galsc_name_ddecl(ddecl);
             output_string(galsc_separator);
@@ -353,8 +351,7 @@ void prt_galsc_parameter_put_function_header(data_declaration p) {
         declarator tdeclarator;
         type_element tmodifiers;
         type return_type = type_function_return_type(get_actual_function_type(p->parameter_put_type));
-        // FIXME parse_region
-        type2ast(parse_region, dummy_location, return_type, NULL, &tdeclarator, &tmodifiers);
+        type2ast(regionof(return_type), dummy_location, return_type, NULL, &tdeclarator, &tmodifiers);
         
         // Printing out tmodifiers from return_type gives "static"; does
         // not when you print out tmodifiers from p->type.
@@ -511,8 +508,7 @@ void prt_galsc_port_get_function(data_declaration p) {
         {
             declarator tdeclarator;
             type_element tmodifiers;
-            // FIXME parse_region
-            type2ast(parse_region, dummy_location, p->type, NULL, &tdeclarator, &tmodifiers);
+            type2ast(regionof(p->type), dummy_location, p->type, NULL, &tdeclarator, &tmodifiers);
             prt_simple_declarator(tdeclarator, p, psd_galsc_print_port_get_function);
             
             output_string("GALSC_ports.");
@@ -538,7 +534,6 @@ void prt_galsc_port_put_function_header(data_declaration p) {
     declarator tdeclarator;
     type_element tmodifiers;
     type return_type = type_function_return_type(get_actual_function_type(p->type));
-    // FIXME parse_region
     type2ast(parse_region, dummy_location, return_type, NULL, &tdeclarator, &tmodifiers);
     
     // Printing out tmodifiers from return_type gives "static"; does
@@ -734,7 +729,6 @@ static void prt_galsc_ports(dd_list ports) {
         if (p->in) {
             declarator tdeclarator;
             type_element tmodifiers;
-            // FIXME parse_region
             type2ast(parse_region, dummy_location, p->type, NULL, &tdeclarator, &tmodifiers);
 
             prt_simple_declarator(tdeclarator, p, psd_galsc_print_port_struct);
@@ -841,7 +835,6 @@ static void prt_galsc_sched_init_function(dd_list ports, dd_list parameters) {
         if (p->in) {
             declarator tdeclarator;
             type_element tmodifiers;
-            // FIXME parse_region
             type2ast(parse_region, dummy_location, p->type, NULL, &tdeclarator, &tmodifiers);
             prt_simple_declarator(tdeclarator, p, psd_galsc_print_sched_init); 
 

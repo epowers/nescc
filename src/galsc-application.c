@@ -56,8 +56,10 @@ static void connect_parameters(cgraph cg, struct endp from, struct endp to) {
     assert(from.parameter && to.parameter);
 
     graph_add_edge(gfrom, gto, NULL);
+    
+    // FIXME is fn_lookup ok?
     // If an endpoint has args, we must also connect the node w/o args.
-    if (from.args) // GALSC FIXME: didn't check for from.function!
+    if (from.args)
         graph_add_edge(fn_lookup(cg, from.function), gfrom, NULL);
     if (to.args)
         graph_add_edge(gto, fn_lookup(cg, to.function), NULL);
@@ -73,11 +75,12 @@ static void connect_function(cgraph cg, struct endp from, struct endp to) {
 
     // GALSC FIXME: we are currently allowing multiple functions to connect
     // to an inport and multiple functions to connect to an outport.
-    //assert(from.port && to.port);
 
     graph_add_edge(gfrom, gto, NULL);
+    
+    // FIXME is fn_lookup ok?
     // If an endpoint has args, we must also connect the node w/o args.
-    if (from.args) // GALSC FIXME: didn't check for from.function!
+    if (from.args)
         graph_add_edge(fn_lookup(cg, from.function), gfrom, NULL);
     if (to.args)
         graph_add_edge(gto, fn_lookup(cg, to.function), NULL);

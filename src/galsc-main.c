@@ -72,7 +72,6 @@ static void galsc_connect(nesc_declaration cdecl,
         cgraph cg, dd_list modules, dd_list components,
         dd_list ports, dd_list parameters) {
 
-    // GALSC FIXME: is it ok to add application to components list?
     if (!dd_find(components, cdecl)) {
         dd_add_last(regionof(components), components, cdecl);
         
@@ -84,7 +83,6 @@ static void galsc_connect(nesc_declaration cdecl,
         application_implementation app = CAST(application_implementation, cdecl->impl);
         scan_actor_ref (actordecl, app->actors) {
             nesc_declaration adecl = actordecl->cdecl;
-            // GALSC FIXME: is it ok to add actor to components list?
             if (!dd_find(components, adecl)) {
                 dd_add_last(regionof(components), components, adecl);
                 // Connect internals of actor.

@@ -712,10 +712,10 @@ local_connection:
                 { $$ = CAST(connection, new_rp_connection(pr, $2.location, $3, $1)); }
 	| endpoint TASTNIOP endpoint ';'
                 { $$ = CAST(connection, new_rp_connection(pr, $2.location, $1, $3)); }
-        | '(' endpoint_list ')' POINTSAT endpoint ';' // TinyGUYS
-                { $$ = CAST(connection, new_tg_get_connection(pr, $4.location, $5, endpoint_reverse($2))); }
-        | endpoint TASTNIOP '(' endpoint_list ')' ';' // TinyGUYS
-                { $$ = CAST(connection, new_tg_get_connection(pr, $2.location, $1, endpoint_reverse($4))); }
+        | '(' endpoint_list ')' POINTSAT endpoint ';' // TinyGUYS GET
+                { $$ = CAST(connection, new_parameter_get_connection(pr, $4.location, $5, endpoint_reverse($2))); }
+        | endpoint TASTNIOP '(' endpoint_list ')' ';' // TinyGUYS GET
+                { $$ = CAST(connection, new_parameter_get_connection(pr, $2.location, $1, endpoint_reverse($4))); }
 	;
 
 // For TinyGUYS
