@@ -374,7 +374,6 @@ static void check_variable_refs(cgraph callgraph) //data_declaration fn, entry_p
 {
   ggraph cg = cgraph_graph(callgraph);
   gnode n;
-  gedge edge;
   bool iscall;
 
   fv_init();
@@ -382,14 +381,6 @@ static void check_variable_refs(cgraph callgraph) //data_declaration fn, entry_p
   // first pass - collect the list of all vars
   graph_scan_nodes (n, cg) {
     data_declaration fn = NODE_GET(endp, n)->function;
-
-    /*    
-    iscall = FALSE;
-    graph_scan_in(edge,n) {
-      if( EDGE_GET(void *, edge) != NULL)
-        iscall = TRUE;
-    }
-    */
 
     if( iscall && !builtin_declaration(fn) )
       find_function_vars(fn);

@@ -101,12 +101,8 @@ static void find_expression_vars(expression expr, bool is_read, bool is_write)
 
   // skip constant expressions that are neither pointers nor arrays
   // FIXME: there's more to this.
-  if(expr->cst) {
-    if( !is_identifier(expr) ) 
-      return;
-    if( !type_array(expr->type) && !type_pointer(expr->type))
-      return;
-  }
+  if(expr->cst && !is_identifier(expr) && !type_array(expr->type) && !type_pointer(expr->type))
+    return;
 
 #if 0
   if (expr->cst) {
