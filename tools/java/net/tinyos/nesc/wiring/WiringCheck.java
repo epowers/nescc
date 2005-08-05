@@ -1,4 +1,4 @@
-// $Id: WiringCheck.java,v 1.5 2005/01/19 23:01:01 idgay Exp $
+// $Id: WiringCheck.java,v 1.6 2005/08/05 00:09:04 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -19,7 +19,7 @@ import org.xml.sax.*;
 
 /* Expects an xml dump of:
      wiring 
-     interfaces
+     interfaces(!abstract())
      referenced(interfacedefs, components)
 */
 public class WiringCheck
