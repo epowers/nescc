@@ -1,4 +1,4 @@
-// $Id: Xinterface.java,v 1.6 2005/01/27 21:33:55 idgay Exp $
+// $Id: Xinterface.java,v 1.7 2005/09/27 04:05:39 celaine Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -42,7 +42,9 @@ public class Xinterface extends DataDefinition
     public LinkedList/*Xfunction*/ functions;
 
     public NDElement start(Attributes attrs) {
-	Xinterface me = (Xinterface)super.start(attrs);
+	
+    NDElement temp = super.start(attrs);
+    Xinterface me = (Xinterface) temp;
 	me.provided = attrs.getValue("provided").equals("1");
 	return me;
     }

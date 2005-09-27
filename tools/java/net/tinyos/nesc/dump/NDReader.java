@@ -1,4 +1,4 @@
-// $Id: NDReader.java,v 1.7 2005/02/03 20:14:49 idgay Exp $
+// $Id: NDReader.java,v 1.8 2005/09/27 04:05:38 celaine Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -35,6 +35,7 @@
 package net.tinyos.nesc.dump;
 
 import net.tinyos.nesc.dump.xml.NDElement;
+import net.tinyos.nesc.dump.xml.Xnesc;
 import org.xml.sax.*;
 import org.xml.sax.helpers.*;
 import java.io.*;
@@ -80,6 +81,7 @@ public class NDReader extends DefaultHandler
      */
     public boolean parse(InputSource source) throws IOException {
 	try {
+        Xnesc.reset();
 	    parser.parse(source);
 	    return true;
 	}
@@ -187,10 +189,12 @@ public class NDReader extends DefaultHandler
      */
     public static void main(String[] args) throws IOException {
 	try {
-	    if (new NDReader().parse(args[0]))
-		System.out.println("parse ok");
-	    else
-		System.out.println("parse exceptions occured");
+        for (int i = 0; i < args.length; i++) {
+        	if (new NDReader().parse(args[i]))
+        		System.out.println("parse ok");
+        	else
+        		System.out.println("parse exceptions occured");
+        }
 	}
 	catch (SAXException e) {
 	    System.err.println("no xml reader found");

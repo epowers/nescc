@@ -1,4 +1,4 @@
-// $Id: TagDefinition.java,v 1.6 2005/01/27 21:33:55 idgay Exp $
+// $Id: TagDefinition.java,v 1.7 2005/09/27 04:05:39 celaine Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -20,8 +20,6 @@ import java.util.*;
  */
 abstract public class TagDefinition extends CDefinition
 {
-    static protected DefinitionTable defs = new DefinitionTable();
-
     /**
      * Name of this tag, not globally unique, may be null.
      */
@@ -61,7 +59,7 @@ abstract public class TagDefinition extends CDefinition
     }
 
     public synchronized NDElement start(Attributes attrs) {
-	TagDefinition me = (TagDefinition)defs.define(attrs.getValue("ref"), attrs, this);
+	TagDefinition me = (TagDefinition)Xnesc.defsTagDefinition.define(attrs.getValue("ref"), attrs, this);
 	me.size = Constant.decode(attrs.getValue("size"));
 	me.alignment = Constant.decode(attrs.getValue("alignment"));
 	me.defined = boolDecode(attrs.getValue("defined"));
@@ -71,6 +69,6 @@ abstract public class TagDefinition extends CDefinition
 
     static synchronized Definition lookup(NDReader reader, Attributes attrs, 
 					  String elementName) {
-	return defs.lookup(reader, attrs.getValue("ref"), attrs, elementName);
+	return Xnesc.defsTagDefinition.lookup(reader, attrs.getValue("ref"), attrs, elementName);
     }
 }

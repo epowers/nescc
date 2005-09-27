@@ -1,4 +1,4 @@
-// $Id: Xinterfaces.java,v 1.5 2005/02/03 20:15:21 idgay Exp $
+// $Id: Xinterfaces.java,v 1.6 2005/09/27 04:05:39 celaine Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -19,10 +19,8 @@ import java.util.*;
  */
 public class Xinterfaces extends NDList
 {
-    public static LinkedList/*Xinterface*/ list;
-
     public NDElement end() {
-	list = l;
+        Xnesc.interfaceList = l;
 	return this;
     }
 }

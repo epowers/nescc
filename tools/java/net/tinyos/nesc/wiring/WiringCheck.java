@@ -1,4 +1,4 @@
-// $Id: WiringCheck.java,v 1.6 2005/08/05 00:09:04 idgay Exp $
+// $Id: WiringCheck.java,v 1.7 2005/09/27 04:05:39 celaine Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -118,7 +118,7 @@ public class WiringCheck
     }
 
     void checkWiring() {
-	ListIterator toCheck = Xinterfaces.list.listIterator();
+	ListIterator toCheck = Xnesc.interfaceList.listIterator();
 
 	while (toCheck.hasNext()) {
 	    int min = -1, max = -1;

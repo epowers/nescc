@@ -1,4 +1,4 @@
-// $Id: NescDefinition.java,v 1.8 2005/01/27 21:33:55 idgay Exp $
+// $Id: NescDefinition.java,v 1.9 2005/09/27 04:05:39 celaine Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -20,8 +20,6 @@ import java.util.*;
  */
 abstract public class NescDefinition extends Definition
 {
-    static protected DefinitionTable defs = new DefinitionTable();
-
     /**
      * Name of this nesC component or interface definition. For instances
      * of generic components, this is the full instantiation path. Globally
@@ -35,12 +33,12 @@ abstract public class NescDefinition extends Definition
     }
 
     public synchronized NDElement start(Attributes attrs) {
-	return defs.define(attrs.getValue("qname"), attrs, this);
+	return Xnesc.defsNescDefinition.define(attrs.getValue("qname"), attrs, this);
     }
 
     static synchronized Definition lookup(Attributes attrs, NDReader reader,
 					  String elementName) {
-	return defs.lookup(reader, attrs.getValue("qname"), attrs, elementName);
+	return Xnesc.defsNescDefinition.lookup(reader, attrs.getValue("qname"), attrs, elementName);
     }
 
     public String toString() {

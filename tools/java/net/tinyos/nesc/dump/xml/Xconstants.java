@@ -1,4 +1,4 @@
-// $Id: Xconstants.java,v 1.1 2005/09/20 17:37:20 idgay Exp $
+// $Id: Xconstants.java,v 1.2 2005/09/27 04:05:39 celaine Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -19,10 +19,8 @@ import java.util.*;
  */
 public class Xconstants extends NDList
 {
-    public static LinkedList/*Xconstant*/ list;
-
     public NDElement end() {
-	list = l;
+        Xnesc.constantList = l;
 	return this;
     }
 }

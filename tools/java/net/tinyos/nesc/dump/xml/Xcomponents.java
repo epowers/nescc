@@ -1,4 +1,4 @@
-// $Id: Xcomponents.java,v 1.5 2005/01/27 21:33:55 idgay Exp $
+// $Id: Xcomponents.java,v 1.6 2005/09/27 04:05:39 celaine Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -18,13 +18,8 @@ import java.util.*;
  */
 public class Xcomponents extends NDList
 {
-    /**
-     * The list of all components in the dump.
-     */
-    public static LinkedList/*Xcomponent*/ list;
-
     public NDElement end() {
-	list = l;
+        Xnesc.componentList = l;
 	return this;
     }
 }
