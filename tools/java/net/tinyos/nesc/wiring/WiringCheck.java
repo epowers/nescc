@@ -1,4 +1,4 @@
-// $Id: WiringCheck.java,v 1.7 2005/09/27 04:05:39 celaine Exp $
+// $Id: WiringCheck.java,v 1.8 2005/12/14 21:20:55 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -141,9 +141,9 @@ public class WiringCheck
 	    WiringNode checkNode = Xwiring.wg.lookup(check1);
 
 	    if (providing)
-		reported = check1Wire(new WiringScanForwards(checkNode), min, max);
+		reported = check1Wire(new WiringScanBackwards(checkNode), min, max);
 	    if (using && !reported)
-		check1Wire(new WiringScanBackwards(checkNode), min, max);
+		check1Wire(new WiringScanForwards(checkNode), min, max);
 	}
     }
 
