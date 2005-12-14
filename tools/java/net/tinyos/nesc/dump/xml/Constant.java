@@ -1,4 +1,4 @@
-// $Id: Constant.java,v 1.4 2005/02/03 20:15:20 idgay Exp $
+// $Id: Constant.java,v 1.5 2005/12/14 21:21:41 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -33,6 +33,10 @@ abstract public class Constant
      * @return An object representing the constant encoded by s
      */
     public static Constant decode(String s) {
+	/* Constants un in generic components don't have a known value */
+	if (s == null)
+	    return new UnknownConstant();
+
 	switch (s.charAt(0)) {
 	case 'I': return new IntegerConstant(s);
 	case 'F': return new FloatConstant(s);

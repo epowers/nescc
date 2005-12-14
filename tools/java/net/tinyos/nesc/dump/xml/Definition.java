@@ -1,4 +1,4 @@
-// $Id: Definition.java,v 1.8 2005/10/20 03:27:33 celaine Exp $
+// $Id: Definition.java,v 1.9 2005/12/14 21:21:41 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -66,10 +66,10 @@ abstract public class Definition extends NDElement
      */
     public boolean definitionAvailable;
 
-    /* (definition only) The attributes on this nesC object */
+    /** (definition only) The attributes on this nesC object */
     public LinkedList/*Xattribute_value*/ attributes;
 
-    /* (definition only) The source code location where this object
+    /** (definition only) The source code location where this object
        is defined. May be null. */
     public Location location;
 
