@@ -1,4 +1,4 @@
-// $Id: Xtypedef.java,v 1.2 2005/02/03 20:15:22 idgay Exp $
+// $Id: Xtypedef.java,v 1.3 2006/01/03 23:50:52 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -12,10 +12,23 @@
 package net.tinyos.nesc.dump.xml;
 
 import org.xml.sax.*;
+import net.tinyos.nesc.dump.*;
 
 /**
  * A C typedef.
  */
 public class Xtypedef extends DataDefinition
 {
+    public NDElement start(NDReader reader, Attributes attrs) {
+	if (attrs.getValue("ref") == null) {
+	    /* work around nesC 1.2.1 bug. This should really be a typename */
+	    try {
+		NDElement me = reader.makeElement("typename");
+		return me.start(reader, attrs);
+	    }
+	    catch (Exception e) { /* stuff is broken */ }
+	}
+	return super.start(reader, attrs);
+    }
+
 }

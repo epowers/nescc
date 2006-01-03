@@ -1,4 +1,4 @@
-// $Id: Xtype_pointer.java,v 1.4 2006/01/03 23:50:52 idgay Exp $
+// $Id: Xtypename.java,v 1.1 2006/01/03 23:50:52 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -14,24 +14,17 @@ package net.tinyos.nesc.dump.xml;
 import org.xml.sax.*;
 
 /**
- * A pointer type.
+ * The typedef used to define a type.
  */
-public class Xtype_pointer extends Type
+public class Xtypename extends NDElement
 {
     /**
-     * The type pointed to.
+     * The typedef stored in this typename element
      */
-    public Type subType;
+    public Xtypedef tdef;
 
     public void child(NDElement subElement) {
-	if (subElement instanceof Type)
-	    subType = (Type)subElement;
-	super.child(subElement);
-    }
-
-    public boolean equals(Object obj) {
-	if (!(obj instanceof Xtype_pointer))
-	    return false;
-	return subType.equals(((Xtype_array)obj).subType);
+	if (subElement instanceof Xtypedef)
+	    tdef = (Xtypedef)subElement;
     }
 }

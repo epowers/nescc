@@ -1,4 +1,4 @@
-// $Id: Type.java,v 1.2 2005/01/27 21:33:55 idgay Exp $
+// $Id: Type.java,v 1.3 2006/01/03 23:50:52 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -30,9 +30,22 @@ abstract public class Type extends NDElement
      */
     public Constant alignment;
 
+    /**
+     * Typedef used to define this type, or NULL if none.
+     */
+    public Xtypedef typename;
+
     public NDElement start(Attributes attrs) {
 	size = Constant.decode(attrs.getValue("size"));
 	alignment = Constant.decode(attrs.getValue("alignment"));
 	return this;
+    }
+
+    /**
+     * Extract typedef from typename elements
+     */
+    public void child(NDElement subElement) {
+	if (subElement instanceof Xtypename)
+	    typename = ((Xtypename)subElement).tdef;
     }
 }
