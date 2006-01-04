@@ -1,4 +1,4 @@
-// $Id: NDReader.java,v 1.8 2005/09/27 04:05:38 celaine Exp $
+// $Id: NDReader.java,v 1.9 2006/01/04 22:31:13 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -70,7 +70,19 @@ public class NDReader extends DefaultHandler
      */
     public NDReader(String userPkg) throws SAXException {
 	this.userPkg = userPkg;
-	parser = XMLReaderFactory.createXMLReader();
+	/* Try to create an XML reader, starting with the default one, then 
+	   trying those provided with Sun and IBM's JREs */
+	try {
+	    parser = XMLReaderFactory.createXMLReader();
+	}
+	catch (SAXException e1) {
+	    try {
+		parser = XMLReaderFactory.createXMLReader("org.apache.xerces.parsers.SAXParser");
+	    }
+	    catch (SAXException e2) {
+		parser = XMLReaderFactory.createXMLReader("org.apache.crimson.parser.XMLReaderImpl");
+	    }
+	}
 	parser.setContentHandler(this);
     }
 
@@ -81,7 +93,7 @@ public class NDReader extends DefaultHandler
      */
     public boolean parse(InputSource source) throws IOException {
 	try {
-        Xnesc.reset();
+	    Xnesc.reset();
 	    parser.parse(source);
 	    return true;
 	}
