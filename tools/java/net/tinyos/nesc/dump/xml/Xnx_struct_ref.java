@@ -1,4 +1,4 @@
-// $Id: Xnx_struct_ref.java,v 1.1 2005/02/03 20:15:21 idgay Exp $
+// $Id: Xnx_struct_ref.java,v 1.2 2006/01/05 19:49:24 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -23,6 +23,6 @@ import org.xml.sax.*;
 public class Xnx_struct_ref extends NDElement
 {
     public NDElement start(NDReader reader, Attributes attrs) {
-	return TagDefinition.lookup(reader, attrs, "nw_struct");
+	return TagDefinition.lookup(reader, attrs, "nx_struct");
     }
 }
