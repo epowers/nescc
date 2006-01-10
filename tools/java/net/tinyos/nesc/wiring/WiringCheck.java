@@ -1,4 +1,4 @@
-// $Id: WiringCheck.java,v 1.9 2005/12/14 22:03:50 idgay Exp $
+// $Id: WiringCheck.java,v 1.10 2006/01/10 16:51:02 idgay Exp $
 /*									tab:4
  * Copyright (c) 2004-2005 Intel Corporation
  * All rights reserved.
@@ -51,7 +51,7 @@ public class WiringCheck
     }
 
     boolean explain(String error, WiringScan from) {
-	System.err.println("Interface " + from.node.ep + " " + error);
+	System.err.println(from.node.ep.location + ": interface " + from.node.ep + " " + error);
 	printPath(2, from);
 	return true;
     }
