@@ -15,7 +15,7 @@ along with nesC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
 Boston, MA 02111-1307, USA.  */
 
-//$Id: env_machine.c,v 1.4 2006/06/12 16:43:56 idgay Exp $
+//$Id: env_machine.c,v 1.5 2006/06/21 23:17:28 idgay Exp $
 //@author Cory Sharp <cssharp@eecs.berkeley.edu>
 
 /* Basic pointer sizes and alignments for a machine set in the environment
@@ -35,6 +35,7 @@ static machine_spec env_machine = {
   FALSE,		/* pcc_bitfield_type_matters */
   8,			/* empty_field_boundary */
   8,			/* structure_size_boundary */
+  1,			/* word size */
   {2, 1},		/* pointer */
   {4, 1},		/* float */
   {4, 1},		/* double */
@@ -164,6 +165,18 @@ static bool scan_env_machine(machine_spec * machine, const char *envname)
 	  if (scan_intlist(value, space, intlist, 1) == TRUE)
 	    {
 	      machine->structure_size_boundary = intlist[0];
+	    }
+	  else
+	    {
+	      error("%s.%s, expected one int", envname, name);
+	      n_errors++;
+	    }
+	}
+      else if (is_literali(name = "word_size", begin, equal))
+	{
+	  if (scan_intlist(value, space, intlist, 1) == TRUE)
+	    {
+	      machine->word_size = intlist[0];
 	    }
 	  else
 	    {
