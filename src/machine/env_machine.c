@@ -15,7 +15,7 @@ along with nesC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
 Boston, MA 02111-1307, USA.  */
 
-//$Id: env_machine.c,v 1.5 2006/06/21 23:17:28 idgay Exp $
+//$Id: env_machine.c,v 1.6 2008/01/17 20:39:34 idgay Exp $
 //@author Cory Sharp <cssharp@eecs.berkeley.edu>
 
 /* Basic pointer sizes and alignments for a machine set in the environment
@@ -32,6 +32,7 @@ Boston, MA 02111-1307, USA.  */
 static machine_spec env_machine = {
   "env", NULL,
   /* [default] */       /* [keyname] */
+  FALSE,		/* big_endian */
   FALSE,		/* pcc_bitfield_type_matters */
   8,			/* empty_field_boundary */
   8,			/* structure_size_boundary */
@@ -141,6 +142,19 @@ static bool scan_env_machine(machine_spec * machine, const char *envname)
 	  if (b != -1)
 	    {
 	      machine->pcc_bitfield_type_matters = b ? TRUE : FALSE;
+	    }
+	  else
+	    {
+	      error("%s.%s, expected 'false' or 'true'", envname, name);
+	      n_errors++;
+	    }
+	}
+      else if (is_literali(name = "big_endian", begin, equal))
+	{
+	  int b = scan_boolean(value, space);
+	  if (b != -1)
+	    {
+	      machine->big_endian = b ? TRUE : FALSE;
 	    }
 	  else
 	    {
