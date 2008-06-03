@@ -15,7 +15,7 @@ along with nesC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
 Boston, MA 02111-1307, USA.  */
 
-//$Id: env_machine.c,v 1.9 2008/01/22 19:45:49 idgay Exp $
+//$Id: env_machine.c,v 1.10 2008/06/03 21:20:22 idgay Exp $
 //@author Cory Sharp <cssharp@eecs.berkeley.edu>
 
 /* Basic pointer sizes and alignments for a machine set in the environment
@@ -53,7 +53,7 @@ static machine_spec env_machine = {
   NULL,				/* adjust_field_align */
 
   NULL, NULL, NULL, NULL,	/* Attributes: need some way to specify this */
-  NULL, NULL,			/* preint, init */
+  NULL, NULL,			/* preinit, init */
   NULL,				/* token */
   NULL,				/* keil special */
   gcc_global_cpp_init,		/* global cpp support */
