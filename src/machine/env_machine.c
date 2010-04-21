@@ -15,7 +15,7 @@ along with nesC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
 Boston, MA 02111-1307, USA.  */
 
-//$Id: env_machine.c,v 1.10 2008/06/03 21:20:22 idgay Exp $
+//$Id: env_machine.c,v 1.11 2010/04/21 20:05:52 idgay Exp $
 //@author Cory Sharp <cssharp@eecs.berkeley.edu>
 
 /* Basic pointer sizes and alignments for a machine set in the environment
@@ -49,6 +49,7 @@ static machine_spec env_machine = {
   1, 1, 1, 1,		/* int1248_align */
   2, 2,			/* wchar_size_size */
   TRUE, TRUE,		/* char_wchar_signed */
+  NULL,			/* no attribute for async functions */
 
   NULL,				/* adjust_field_align */
 
@@ -259,6 +260,15 @@ static bool scan_env_machine(machine_spec * machine, const char *envname)
 		     envname, name);
 	      n_errors++;
 	    }
+	}
+      else if (is_literali(name = "async_functions", begin, equal))
+	{
+	  int l = space - value;
+	  char *s = rstralloc(permanent, l + 1);
+
+	  memcpy(s, value, l);
+	  s[l] = '\0';
+	  machine->async_functions_atribute = s;
 	}
       else
 	{
